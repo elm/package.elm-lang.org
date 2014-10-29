@@ -30,33 +30,33 @@ flags = Flags
 
 -- | Set up the server.
 main :: IO ()
-main = do
-  setNumCapabilities =<< getNumProcessors
-  setupLogging
-  error "compile all Elm files"
-  cargs <- cmdArgs flags
-  httpServe (setPort (port cargs) defaultConfig) $
-      ifTop (serveFile "public/Home.html")
-      <|> route [ ("catalog"  , Route.catalog)
-                , ("versions" , Route.versions)
-                , ("register" , Route.register)
-                , ("metadata" , Route.metadata)
-                , ("resources", serveDirectoryWith directoryConfig "resources")
-                ]
-      <|> serveDirectoryWith directoryConfig "public"
-      <|> do modifyResponse $ setResponseStatus 404 "Not found"
-             serveFile "public/Error404.html"
+main =
+  do  setNumCapabilities =<< getNumProcessors
+      setupLogging
+      error "compile all Elm files"
+      cargs <- cmdArgs flags
+      httpServe (setPort (port cargs) defaultConfig) $
+          ifTop (serveFile "public/Home.html")
+          <|> route [ ("catalog"  , Route.catalog)
+                    , ("versions" , Route.versions)
+                    , ("register" , Route.register)
+                    , ("metadata" , Route.metadata)
+                    , ("resources", serveDirectoryWith directoryConfig "resources")
+                    ]
+          <|> serveDirectoryWith directoryConfig "public"
+          <|> do modifyResponse $ setResponseStatus 404 "Not found"
+                 serveFile "public/Error404.html"
 
 
 setupLogging :: IO ()
 setupLogging =
-    do createDirectoryIfMissing True "log"
-       createIfMissing "log/access.log"
-       createIfMissing "log/error.log"
-    where
-      createIfMissing path = do
-        exists <- doesFileExist path
-        when (not exists) $ BS.writeFile path ""
+  do  createDirectoryIfMissing True "log"
+      createIfMissing "log/access.log"
+      createIfMissing "log/error.log"
+  where
+    createIfMissing path =
+      do  exists <- doesFileExist path
+          when (not exists) $ BS.writeFile path ""
 
 
 directoryConfig :: MonadSnap m => DirectoryConfig m
