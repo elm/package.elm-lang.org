@@ -1,0 +1,61 @@
+Name: elm-public-library
+Version: 0.1
+
+Synopsis:
+  Server for hosting the Elm Public Library
+
+Description:
+  Generates web pages for docemuntation
+
+Homepage: http://library.elm-lang.org
+
+License: BSD3
+License-file: LICENSE
+
+Author:     Evan Czaplicki
+Maintainer: info@elm-lang.org
+Copyright:  Copyright (c) 2013-2014 Evan Czaplicki
+
+Category: Language
+
+Build-type: Simple
+Cabal-version: >=1.9
+
+source-repository head
+  type:     git
+  location: git://github.com/elm-lang/package.elm-lang.org.git
+
+Executable run-server
+  hs-source-dirs:
+    backend
+
+  Main-is:
+    Main.hs
+
+  ghc-options:
+    -threaded -O2 -W -rtsopts
+
+  Build-depends:
+    aeson,
+    aeson-pretty,
+    base >=4.2 && <5,
+    binary,
+    blaze-html,  
+    bytestring,
+    cmdargs,
+    containers,
+    Elm >= 0.12,
+    elm-package >= 0.1,
+    directory,
+    filepath,
+    http-client >= 0.3.2,
+    http-types,
+    mtl,
+    network,
+    parsec,
+    process,
+    snap-core,
+    snap-server,
+    unordered-containers,
+    vector
+

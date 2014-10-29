@@ -1,0 +1,14 @@
+{
+    "version": "1.0.0",
+    "summary": "website for browsing packages and exploring documentation",
+    "repository": "https://github.com/elm-lang/package.elm-lang.org.git",
+    "license": "BSD3",
+    "source-directories": [
+        "frontend"
+    ],
+    "exposed-modules": [],
+    "dependencies": {
+        "evancz/elm-html": "1.0.0",
+        "evancz/elm-markdown": "1.0.0"
+    }
+}
