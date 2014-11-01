@@ -1,9 +1,9 @@
-module Website.Skeleton (skeleton,home) where
+module Skeleton (skeleton,home) where
 
 import Graphics.Input as Input
 import Graphics.Input.Field as F
 import Text
-import Website.ColorScheme as C
+import ColorScheme as C
 import Window
 
 headerHeight = 80

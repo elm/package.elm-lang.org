@@ -1,7 +1,6 @@
+module Message (report) where
 
-module Website.Message (report) where
-
-import Website.ColorScheme as C
+import ColorScheme as C
 import Window
 
 accents = [C.accent0, C.accent1, C.accent2, C.accent3, C.accent4]

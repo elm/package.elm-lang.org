@@ -1,8 +1,8 @@
 module Home where
 
 import String
-import Website.ColorScheme as C
-import Website.Skeleton (home)
+import ColorScheme as C
+import Skeleton (home)
 import Window
 
 port title : String
