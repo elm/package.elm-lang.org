@@ -96,9 +96,11 @@ register =
       verifyVersion name version
 
       let directory = packageRoot name version
+      liftIO (createDirectoryIfMissing True directory)
       uploadFiles directory
       description <- Desc.read (directory </> Path.description)
-      NativeWhitelist.verify (Desc.name description)
+      verifyWhitelist (Desc.name description)
+      liftIO (PackageSummary.add description)
 
 
 verifyVersion :: N.Name -> V.Version -> Snap ()
@@ -120,16 +122,34 @@ verifyVersion name version =
               ("The tag " ++ V.toString version ++ " has not been pushed to GitHub.")
 
 
+verifyWhitelist :: N.Name -> Snap ()
+verifyWhitelist name =
+  do  whitelist <- liftIO NativeWhitelist.read
+      case True of -- name `elem` whitelist of
+        True -> return ()
+        False -> httpStringError 400 (whitelistError name)
+
+
+whitelistError :: N.Name -> String
+whitelistError name =
+    "You are trying to publish a project that has native-modules. For now,\n\
+    \any modules that use Native code must go through a formal review process to\n\
+    \make sure the exposed API is pure and the Native code is absolutely\n\
+    \necessary. Please open an issue with the title:\n\n"
+    ++ "    \"Native review for " ++ N.toString name ++ "\"\n\n"
+    ++ "to begin the review process at <https://github.com/elm-lang/elm-get/issues>"
+
+
 -- UPLOADING FILES
 
 uploadFiles :: FilePath -> Snap ()
 uploadFiles directory =
-  do  liftIO $ createDirectoryIfMissing True directory
-      handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handleParts directory)
+    handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handleParts directory)
   where
-    perPartPolicy info
-        | okayPart "docs" info || okayPart "deps" info = allowWithMaximumSize $ 2^(19::Int)
-        | otherwise = disallow
+    perPartPolicy info =
+        if okayPart "documentation" info || okayPart "description" info
+          then allowWithMaximumSize $ 2^(19::Int)
+          else disallow
 
 
 okayPart :: BSC.ByteString -> PartInfo -> Bool
@@ -142,12 +162,12 @@ handleParts :: FilePath -> [(PartInfo, Either PolicyViolationException FilePath)
 handleParts dir parts =
     case parts of
       [(info1, Right temp1), (info2, Right temp2)]
-        | okayPart "docs" info1 && okayPart "deps" info2 ->
+        | okayPart "documentation" info1 && okayPart "description" info2 ->
             liftIO $
             do  BS.readFile temp1 >>= BS.writeFile (dir </> documentationPath)
                 BS.readFile temp2 >>= BS.writeFile (dir </> Path.description)
 
-        | okayPart "docs" info2 && okayPart "deps" info1 ->
+        | okayPart "documentation" info2 && okayPart "description" info1 ->
             liftIO $
             do  BS.readFile temp2 >>= BS.writeFile (dir </> documentationPath)
                 BS.readFile temp1 >>= BS.writeFile (dir </> Path.description)
