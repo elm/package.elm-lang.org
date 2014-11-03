@@ -33,7 +33,6 @@ main :: IO ()
 main =
   do  setNumCapabilities =<< getNumProcessors
       setupLogging
-      error "compile all Elm files"
       cargs <- cmdArgs flags
       httpServe (setPort (port cargs) defaultConfig) $
           ifTop (serveFile "public/Home.html")
@@ -63,8 +62,9 @@ directoryConfig :: MonadSnap m => DirectoryConfig m
 directoryConfig =
     fancyDirectoryConfig
     { indexGenerator = defaultIndexGenerator defaultMimeTypes indexStyle
-    , mimeTypes = Map.insert ".elm" "text/plain" $
-                  Map.insert ".ico" "image/x-icon" $ defaultMimeTypes
+    , mimeTypes =
+        Map.insert ".elm" "text/plain" $
+        Map.insert ".ico" "image/x-icon" $ defaultMimeTypes
     }
 
 
