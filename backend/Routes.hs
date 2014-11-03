@@ -90,7 +90,7 @@ documentationPath =
 
 register :: Snap ()
 register =
-  do  name <- getParameter "library" N.fromString
+  do  name <- getParameter "name" N.fromString
       version <- getParameter "version" V.fromString
 
       verifyVersion name version
@@ -172,16 +172,16 @@ writePartError part =
 
 versions :: Snap ()
 versions =
-  do  name <- getParameter "library" N.fromString
+  do  name <- getParameter "name" N.fromString
       versions <- liftIO (PackageSummary.readVersionsOf name)
       writeLBS (Binary.encode versions)
 
 
 -- FETCH DOCUMENTATION
 
-metadata :: Snap ()
-metadata =
-  do  name <- getParameter "library" N.fromString
+documentation :: Snap ()
+documentation =
+  do  name <- getParameter "name" N.fromString
       version <- getParameter "version" V.fromString
 
       let directory = packageRoot name version

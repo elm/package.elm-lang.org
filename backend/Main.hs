@@ -40,8 +40,8 @@ main =
           <|> route [ ("catalog"  , Route.catalog)
                     , ("versions" , Route.versions)
                     , ("register" , Route.register)
-                    , ("metadata" , Route.metadata)
-                    , ("resources", serveDirectoryWith directoryConfig "resources")
+                    , ("documentation" , Route.documentation)
+                    , ("assets", serveDirectoryWith directoryConfig "assets")
                     ]
           <|> serveDirectoryWith directoryConfig "public"
           <|> do modifyResponse $ setResponseStatus 404 "Not found"
