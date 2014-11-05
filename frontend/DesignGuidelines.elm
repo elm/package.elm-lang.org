@@ -1,4 +1,4 @@
-import Website.Skeleton (home)
+import Skeleton (home)
 
 port title : String
 port title = "Library Design Guidelines"

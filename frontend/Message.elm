@@ -1,7 +1,7 @@
+module Message (report) where
 
-module Website.Message (report) where
-
-import Website.ColorScheme as C
+import ColorScheme as C
+import Constants
 import Window
 
 accents = [C.accent0, C.accent1, C.accent2, C.accent3, C.accent4]
@@ -14,7 +14,7 @@ topBar k n =
         accentCycle = concatMap (\_ -> accents) [ 0 .. k // 5 ]
     in  flow right <| zipWith (\c w -> color c <| spacer w 5) accentCycle ws
 
-scene msg (w,h) = layers [ tiledImage w h "/resources/texture.png"
+scene msg (w,h) = layers [ tiledImage w h <| Constants.asset "texture.png"
                          , container w h middle (box <| width 300 msg)
                          ]
 

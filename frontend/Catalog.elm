@@ -5,8 +5,8 @@ import Http
 import Json
 import JavaScript.Experimental as JSE
 import Text
-import Website.ColorScheme as C
-import Website.Skeleton (skeleton)
+import ColorScheme as C
+import Skeleton (skeleton)
 import Window
 
 jsonResponse = Http.sendGet (constant "/libraries.json")
