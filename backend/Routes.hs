@@ -9,6 +9,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
+import qualified Text.Read as Read
 import Snap.Core
 import Snap.Util.FileServe
 import Snap.Util.FileUploads
@@ -21,7 +22,7 @@ import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Version as V
 import qualified GitHub
 import qualified NativeWhitelist
-import qualified PackageSummary
+import qualified PackageSummary as PkgSummary
 
 
 catalog :: Snap ()
@@ -71,14 +72,14 @@ redirectIfLatest request =
 
 -- DIRECTORIES
 
-allPackages :: FilePath
-allPackages =
+packageDirectory :: FilePath
+packageDirectory =
     "packages"
 
 
 packageRoot :: N.Name -> V.Version -> FilePath
 packageRoot name version =
-    allPackages </> N.toFilePath name </> V.toString version
+    packageDirectory </> N.toFilePath name </> V.toString version
 
 
 documentationPath :: FilePath
@@ -99,13 +100,14 @@ register =
       liftIO (createDirectoryIfMissing True directory)
       uploadFiles directory
       description <- Desc.read (directory </> Path.description)
+      -- TODO: add a flag for this, move above uploadFiles
       verifyWhitelist (Desc.name description)
-      liftIO (PackageSummary.add description)
+      liftIO (PkgSummary.add description)
 
 
 verifyVersion :: N.Name -> V.Version -> Snap ()
 verifyVersion name version =
-  do  maybeVersions <- liftIO (PackageSummary.readVersionsOf name)
+  do  maybeVersions <- liftIO (PkgSummary.readVersionsOf name)
       case maybeVersions of
         Just localVersions
           | version `elem` localVersions ->
@@ -193,8 +195,32 @@ writePartError part =
 versions :: Snap ()
 versions =
   do  name <- getParameter "name" N.fromString
-      versions <- liftIO (PackageSummary.readVersionsOf name)
+      versions <- liftIO (PkgSummary.readVersionsOf name)
       writeLBS (Binary.encode versions)
+
+
+-- UPDATE REMOTE PACKAGE CACHES
+
+allPackages :: Snap ()
+allPackages =
+  do  maybeValue <- getParam "since"
+      let maybeString = fmap BSC.unpack maybeValue
+      needsUpdate <-
+          case Read.readMaybe =<< maybeString of
+            Nothing -> return True
+            Just remoteTime ->
+              do  localTime <- liftIO (getModificationTime PkgSummary.allPackages)
+                  return (remoteTime < localTime)
+
+      response <-
+          case needsUpdate of
+            False -> return Nothing
+            True ->
+              do  summaries <- liftIO PkgSummary.readAllSummaries
+                  return $ Just $ flip map summaries $ \summary ->
+                      (PkgSummary.name summary, PkgSummary.versions summary)
+
+      writeLBS $ Binary.encode (response :: Maybe [(N.Name, [V.Version])])
 
 
 -- FETCH DOCUMENTATION
@@ -209,6 +235,21 @@ documentation =
 
       case exists of
         True -> serveFile (directory </> documentationPath)
+        False -> httpError 404 "That library and version is not registered."
+
+
+-- FETCH DESCRIPTION
+
+description :: Snap ()
+description =
+  do  name <- getParameter "name" N.fromString
+      version <- getParameter "version" V.fromString
+
+      let directory = packageRoot name version
+      exists <- liftIO $ doesDirectoryExist directory
+
+      case exists of
+        True -> serveFile (directory </> Path.description)
         False -> httpError 404 "That library and version is not registered."
 
 

@@ -39,7 +39,9 @@ main =
           <|> route [ ("catalog"  , Route.catalog)
                     , ("versions" , Route.versions)
                     , ("register" , Route.register)
-                    , ("documentation" , Route.documentation)
+                    , ("description", Route.description)
+                    , ("documentation", Route.documentation)
+                    , ("all-packages", Route.allPackages)
                     , ("assets", serveDirectoryWith directoryConfig "assets")
                     ]
           <|> serveDirectoryWith directoryConfig "public"
