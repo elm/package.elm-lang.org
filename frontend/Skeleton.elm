@@ -1,9 +1,10 @@
-module Website.Skeleton (skeleton,home) where
+module Skeleton (skeleton,home) where
 
+import ColorScheme as C
+import Constants
 import Graphics.Input as Input
 import Graphics.Input.Field as F
 import Text
-import Website.ColorScheme as C
 import Window
 
 headerHeight = 80
@@ -43,7 +44,7 @@ internalSkeleton ghostText links bodyFunc term info (outer,h) =
     [ topBar outer
     , flow right
       [ container leftGutter headerHeight middle <| link "http://elm-lang.org" <|
-        container 50 50 middle <| image 50 50 "/resources/elm_logo_grey.svg"
+        container 50 50 middle <| image 50 50 <| Constants.asset "elm_logo_grey.svg"
       , container (inner - searchWidth - 20) headerHeight midLeft <|
         leftAligned <| Text.height 30 <| concat <| intersperse (toText " / ") <| (Text.link "/" <| toText "~") ::
         zipWith (<|) (repeat (length links) (uncurry Text.link) ++ [snd]) (("/catalog", toText "Catalog") :: links)
@@ -80,7 +81,8 @@ clicks = Input.input ()
 
 logoButton : Element
 logoButton =
-    let box c = color c <| container (tileSize) (tileSize) middle <| image 80 80 "/resources/elm_logo_grey.svg"
+    let box c = color c <| container (tileSize) (tileSize) middle <| image 80 80
+                        <| Constants.asset "elm_logo_grey.svg"
     in  Input.customButton clicks.handle () (box (rgb 57 59 58)) (box C.accent1) (box C.accent1)
 
 browseButton : Element
@@ -94,7 +96,7 @@ tileSize = 84
 homeHeaderHeight = 3 * (tileSize // 2)
 homeHeader outer inner =
     color (rgb 60 60 60) <| layers
-    [ tiledImage outer homeHeaderHeight "/resources/tile.png"
+    [ tiledImage outer homeHeaderHeight (Constants.asset "tile.png")
     , flow right [ container homeHeaderHeight homeHeaderHeight middle <|
                    link "http://elm-lang.org" logoButton
                  , container (inner - 142) homeHeaderHeight midLeft title
@@ -123,5 +125,5 @@ footerWords =
           toText words1 ++ Text.link href (toText words2) ++ toText words3
   in
      Text.color (rgb 145 145 145) <|
-       wordLink "written in Elm and " "https://github.com/elm-lang/elm-get/tree/master/website/content/src" "open source" "" ++
+       wordLink "written in Elm and " "https://github.com/elm-lang/package.elm-lang.org" "open source" "" ++
        wordLink " / " "https://github.com/evancz" "Evan Czaplicki" " &copy;2013-14"

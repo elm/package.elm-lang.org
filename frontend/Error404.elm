@@ -1,5 +1,4 @@
-
-import Website.Message (report)
+import Message (report)
 
 main = report [markdown|
 <h1><div>Poem 404

@@ -1,2 +1,4 @@
 cabal.sandbox.config
 dist
+frontend/build
+frontend/cache
