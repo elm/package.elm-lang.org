@@ -90,7 +90,7 @@ compileElmFiles =
 publicModules :: [Module.Name]
 publicModules =
     map Module.Name
-    [ ["Packages"]
+    [ ["Page","Packages"]
     ]
 
 

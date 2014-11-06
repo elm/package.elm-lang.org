@@ -1,4 +1,4 @@
-module TopBar where
+module Component.TopBar where
 
 import Basics (..)
 import Color
