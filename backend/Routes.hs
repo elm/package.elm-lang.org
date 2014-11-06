@@ -29,10 +29,8 @@ import qualified ServeFile
 
 packages :: Snap ()
 packages =
-    route
-      [ ("", pass)
-      , (":user/:name", package)
-      ]
+    ifTop (ServeFile.moduleDocs (Module.Name ["Page","Packages"]))
+    <|> route [ (":user/:name", package) ]
 
 package :: Snap ()
 package =
@@ -55,7 +53,7 @@ servePackageInfo name =
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
 
-      ifTop (ServeFile.moduleDocs (Module.Name ["Page","Packages"]))
+      ifTop (ServeFile.moduleDocs (Module.Name ["Page","PackageDocs"]))
         <|> serveModule pkgDir
 
 
