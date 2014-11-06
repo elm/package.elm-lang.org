@@ -44,8 +44,7 @@ main =
       cargs <- cmdArgs flags
       httpServe (setPort (port cargs) defaultConfig) $
           route
-            [ ("", pass)
-            , ("packages", Route.packages)
+            [ ("packages", Route.packages)
             , ("versions", Route.versions)
             , ("register", Route.register)
             , ("description", Route.description)
@@ -91,7 +90,7 @@ compileElmFiles =
 publicModules :: [Module.Name]
 publicModules =
     map Module.Name
-    [ ["Test"]
+    [ ["Packages"]
     ]
 
 

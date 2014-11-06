@@ -55,7 +55,7 @@ servePackageInfo name =
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
 
-      ifTop (ServeFile.moduleDocs (Module.Name ["Test"]))
+      ifTop (ServeFile.moduleDocs (Module.Name ["Packages"]))
         <|> serveModule pkgDir
 
 
@@ -66,7 +66,7 @@ serveModule pkgDir =
       case Module.dehyphenate potentialName of
         Nothing -> pass
         Just name ->
-            ServeFile.moduleDocs name
+            ServeFile.moduleDocs (Module.Name ["Packages"])
 
 
 redirectToLatest :: N.Name -> Snap ()
