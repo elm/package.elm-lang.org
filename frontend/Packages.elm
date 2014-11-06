@@ -1,4 +1,4 @@
-module Catalog where
+module Packages where
 
 import Basics (..)
 import Color
@@ -28,6 +28,6 @@ scene : (Int,Int) -> Element
 scene (windowWidth, windowHeight) =
   color C.background <|
   flow down
-  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Hover)
+  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
   , spacer windowWidth windowHeight
   ]
