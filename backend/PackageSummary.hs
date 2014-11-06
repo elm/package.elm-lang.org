@@ -96,7 +96,7 @@ config =
 instance Json.ToJSON Summary where
     toJSON (Summary name summary versions) =
         Json.object
-        ["name" .= name
+        [ "name" .= name
         , "summary" .= summary
         , "versions" .= versions
         ]
