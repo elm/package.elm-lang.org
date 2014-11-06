@@ -1,4 +1,8 @@
 cabal.sandbox.config
 dist
-frontend/build
-frontend/cache
+log
+cache
+elm_packages
+artifacts
+packages
+all-packages.json
