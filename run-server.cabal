@@ -40,11 +40,12 @@ Executable run-server
     aeson-pretty,
     base >=4.2 && <5,
     binary,
-    blaze-html,  
+    blaze-html,
+    blaze-markup,
     bytestring,
     cmdargs,
     containers,
-    Elm >= 0.12,
+    elm-compiler,
     elm-package >= 0.1,
     directory,
     filepath,
@@ -56,6 +57,7 @@ Executable run-server
     process,
     snap-core,
     snap-server,
+    text,
     unordered-containers,
     vector
 

@@ -16,6 +16,7 @@ import Snap.Util.FileUploads
 import System.Directory
 import System.FilePath
 
+import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
@@ -23,51 +24,64 @@ import qualified Elm.Package.Version as V
 import qualified GitHub
 import qualified NativeWhitelist
 import qualified PackageSummary as PkgSummary
+import qualified ServeFile
 
 
-catalog :: Snap ()
-catalog =
-    ifTop (serveFile "public/Catalog.html")
-    <|> route [ (":name/:version", serveLibrary) ]
+packages :: Snap ()
+packages =
+    route
+      [ ("", pass)
+      , (":user/:name", package)
+      ]
+
+package :: Snap ()
+package =
+  do  user <- getParameter "user" Just
+      name <- getParameter "name" Just
+      let pkg = N.Name user name
+
+      route
+        [ ("latest", redirectToLatest pkg)
+        , (":version", servePackageInfo pkg)
+        ]
 
 
-serveLibrary :: Snap ()
-serveLibrary =
+servePackageInfo :: N.Name -> Snap ()
+servePackageInfo name =
+  do  version <- getParameter "version" V.fromString
+
+      let pkgDir = packageDirectory </> N.toFilePath name </> V.toString version
+
+      exists <- liftIO $ doesDirectoryExist pkgDir
+      when (not exists) pass
+
+      ifTop (ServeFile.moduleDocs (Module.Name ["Test"]))
+        <|> serveModule pkgDir
+
+
+serveModule :: FilePath -> Snap ()
+serveModule pkgDir =
   do  request <- getRequest
-      redirectIfLatest request
-      let directory = "public" ++ BSC.unpack (rqContextPath request)
-      when (List.isInfixOf ".." directory) pass
-      exists <- liftIO $ doesDirectoryExist directory
-      when (not exists) pass
-      ifTop (serveFile (directory </> "index.html")) <|> serveModule request
+      let potentialName = BSC.unpack (rqPathInfo request)
+      case Module.dehyphenate potentialName of
+        Nothing -> pass
+        Just name ->
+            ServeFile.moduleDocs name
 
 
-serveModule :: Request -> Snap ()
-serveModule request =
-  do  let path = BSC.unpack $ BS.concat
-                 [ "public", rqContextPath request, rqPathInfo request, ".html" ]
-      when (List.isInfixOf ".." path) pass
-      exists <- liftIO $ doesFileExist path
-      when (not exists) pass
-      serveFile path
+redirectToLatest :: N.Name -> Snap ()
+redirectToLatest name =
+  do  rawVersions <- liftIO (getDirectoryContents (packageDirectory </> N.toFilePath name))
+      case Maybe.catMaybes (map V.fromString rawVersions) of
+        [] ->
+          httpStringError 404 $
+            "Could not find any versions of package " ++ N.toString name
 
-
-redirectIfLatest :: Request -> Snap ()
-redirectIfLatest request =
-    case (,) <$> rqParam "name" request <*> rqParam "version" request of
-      Just ([name], ["latest"]) ->
-          let namePath = "catalog" </> BSC.unpack name in
-          do rawVersions <- liftIO (getDirectoryContents ("public" </> namePath))
-             case Maybe.catMaybes (map V.fromString rawVersions) of
-               vs@(_:_) -> redirect path'
-                   where
-                     path' = BSC.concat [ "/", BSC.pack project, "/", rqPathInfo request ]
-                     project = namePath </> V.toString version
-                     version = last (List.sort vs)
-
-               _ -> return ()
-
-      _ -> return ()
+        versions ->
+          do  let latestVersion = last (List.sort versions)
+              let url = "/package/" ++ N.toFilePath name ++ "/" ++ V.toString latestVersion ++ "/"
+              request <- getRequest
+              redirect (BSC.append (BSC.pack url) (rqPathInfo request))
 
 
 -- DIRECTORIES
