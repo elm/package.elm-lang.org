@@ -64,7 +64,7 @@ serveModule pkgDir =
       case Module.dehyphenate potentialName of
         Nothing -> pass
         Just name ->
-            ServeFile.moduleDocs (Module.Name ["Page","Packages"])
+            ServeFile.moduleDocs (Module.Name ["Page","ModuleDocs"])
 
 
 redirectToLatest :: N.Name -> Snap ()

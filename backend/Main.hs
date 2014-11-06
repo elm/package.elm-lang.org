@@ -92,6 +92,7 @@ publicModules =
     map Module.Name
     [ ["Page","Packages"]
     , ["Page","PackageDocs"]
+    , ["Page","ModuleDocs"]
     ]
 
 
