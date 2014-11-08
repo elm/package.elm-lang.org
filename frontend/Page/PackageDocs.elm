@@ -23,12 +23,12 @@ port context : { user : String, name : String, version : String }
 
 port title : String
 port title =
-    context.user ++ "/" ++ context.name ++ " - " ++ context.version
+    context.user ++ "/" ++ context.name ++ " " ++ context.version
 
 
 descriptionUrl : String
 descriptionUrl =
-  "/description?name=" ++ context.user ++ "/" ++ context.name ++ "&version=" ++ context.version
+  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ context.version ++ "/elm_package.json"
 
 
 description : Signal.Signal Docs.PackageInfo
@@ -58,9 +58,22 @@ handleResult response =
     _ -> packageInfo []
 
 
+readmeUrl : String
+readmeUrl =
+  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ context.version ++ "/README.md"
+
+
 readme : Signal.Signal (Maybe String)
 readme =
-    Signal.constant Nothing
+    Http.sendGet (Signal.constant readmeUrl)
+      |> Signal.map extractReadme
+
+
+extractReadme : Http.Response String -> Maybe String
+extractReadme response =
+  case response of
+    Http.Success str -> Just str
+    _ -> Nothing
 
 
 main : Signal.Signal Element
