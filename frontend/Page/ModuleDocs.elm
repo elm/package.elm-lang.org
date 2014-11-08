@@ -23,12 +23,15 @@ port context : { user : String, name : String, version : String, moduleName : St
 
 port title : String
 port title =
-    context.user ++ "/" ++ context.name ++ " - " ++ context.moduleName ++ " - " ++ context.version
+    context.user ++ "/" ++ context.name ++ " " ++ context.moduleName ++ " " ++ context.version
 
 
 documentationUrl : String
 documentationUrl =
-  "/documentation?name=" ++ context.user ++ "/" ++ context.name ++ "&version=" ++ context.version
+  let name = String.map (\c -> if c == '.' then '-' else c) context.moduleName
+  in
+      "/packages/" ++ context.user ++ "/" ++ context.name ++ "/"
+      ++ context.version ++ "/docs/" ++ name ++ ".json"
 
 
 documentation : Signal.Signal Docs.Documentation
@@ -37,9 +40,9 @@ documentation =
       |> Signal.map handleResult
 
 
-docs : Docs.Documentation
-docs =
-  Docs.Documentation context.moduleName "" [] [] []
+dummyDocs : Docs.Documentation
+dummyDocs =
+  Docs.Documentation context.moduleName "Loading documentation..." [] [] []
 
 
 handleResult : Http.Response String -> Docs.Documentation
@@ -47,10 +50,13 @@ handleResult response =
   case response of
     Http.Success string ->
       case Json.fromString string of
-        Result.Ok (_) -> docs
-        _ -> docs
+        Result.Ok (Json.Object docs) ->
+          case Dict.get "comment" docs of
+            Just (Json.String comment) -> Docs.Documentation context.moduleName comment [] [] []
+            _ -> dummyDocs
+        _ -> dummyDocs
 
-    _ -> docs
+    _ -> dummyDocs
 
 
 main : Signal.Signal Element
