@@ -21,6 +21,7 @@ import qualified Elm.Compiler.Module as Module
 import qualified Elm.Utils as Utils
 import qualified Path
 import qualified Routes as Route
+import qualified ServeFile
 
 
 data Flags = Flags
@@ -43,7 +44,9 @@ main =
       compileElmFiles
       cargs <- cmdArgs flags
       httpServe (setPort (port cargs) defaultConfig) $
-          route
+          ifTop (ServeFile.filler (Module.Name ["Page","Home"]))
+          <|>
+            route
             [ ("packages", Route.packages)
             , ("versions", Route.versions)
             , ("register", Route.register)
@@ -55,8 +58,9 @@ main =
               , serveDirectoryWith directoryConfig Path.artifactDirectory
               )
             ]
-          <|> do modifyResponse $ setResponseStatus 404 "Not found"
-                 serveFile "public/Error404.html"
+          <|>
+            do  modifyResponse $ setResponseStatus 404 "Not found"
+                (ServeFile.filler (Module.Name ["Page","Error"]))
 
 
 setupLogging :: IO ()
@@ -93,6 +97,7 @@ publicModules =
     [ ["Page","Packages"]
     , ["Page","PackageDocs"]
     , ["Page","ModuleDocs"]
+    , ["Page","Home"]
     ]
 
 

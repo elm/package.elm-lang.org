@@ -19,7 +19,7 @@ view : Int -> String -> String -> Documentation -> Element
 view innerWidth user package docs =
     let bigWords =
           Text.toText (user ++ " / " ++ package ++ " / " ++ docs.name)
-            |> Text.height 40
+            |> Text.height 24
             |> Text.leftAligned
 
         header =
@@ -29,46 +29,8 @@ view innerWidth user package docs =
     [ header
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
-    , viewDocs innerWidth documentation docs.comment
+    , viewDocs innerWidth Dict.empty docs.comment
     ]
-
-
-dummyDocs =
-    Documentation
-        "Basics"
-        comment
-        []
-        []
-        [ Value "identity" identityComment (Lambda (Var "a") (Var "a")) Maybe.Nothing ]
-
-
-comment = """
-basic functions for stuff
-
-@docs identity, always
-
-basic functions for stuff
-
-@docs identity, always
-"""
-
-documentation : Dict.Dict String String
-documentation =
-    Dict.fromList [("identity", identityComment), ("always", alwaysComment)]
-
-identityComment = """
-Function that returns the argument unaltered
-
-    identity 42 == 42
-"""
-
-alwaysComment = """
-Function that always returns the same value
-
-    always 42 "hats" == 42
-    always 42 123456 == 42
-    always 42 [3..8] == 42
-"""
 
 
 viewDocs : Int -> Dict.Dict String String -> String  -> Element
@@ -138,7 +100,7 @@ docsPattern =
 
 viewPair : Int -> Dict.Dict String String -> ([String], String) -> [Element]
 viewPair innerWidth documentation (vars, prose) =
-    List.map (viewVar innerWidth documentation) vars
+    List.concatMap (viewVar innerWidth documentation) vars
     ++ [viewProse innerWidth prose]
 
 
@@ -147,11 +109,18 @@ viewProse innerWidth prose =
     width innerWidth (Markdown.toElement prose)
 
 
-viewVar : Int -> Dict.Dict String String -> String -> Element
+viewVar : Int -> Dict.Dict String String -> String -> [Element]
 viewVar innerWidth documentation var =
     case Dict.get var documentation of
-      Maybe.Just str -> viewProse innerWidth str
       Maybe.Nothing -> Debug.crash "everything should be in the dictionary"
+      Maybe.Just str ->
+        [ color C.lightGrey (spacer innerWidth 1)
+        , container innerWidth 30 midLeft (Text.leftAligned (Text.monospace (Text.bold (Text.toText var) ++ Text.toText " : a -> b -> a")))
+        , flow right
+          [ spacer 40 10
+          , viewProse (innerWidth - 40) str
+          ]
+        ]
 
 
 -- MODEL OF DOCUMENTATION

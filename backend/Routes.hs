@@ -29,7 +29,7 @@ import qualified ServeFile
 
 packages :: Snap ()
 packages =
-    ifTop (ServeFile.moduleDocs (Module.Name ["Page","Packages"]))
+    ifTop (ServeFile.filler (Module.Name ["Page","Packages"]))
     <|> route [ (":user/:name", package) ]
 
 package :: Snap ()
@@ -53,18 +53,18 @@ servePackageInfo name =
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
 
-      ifTop (ServeFile.moduleDocs (Module.Name ["Page","PackageDocs"]))
-        <|> serveModule pkgDir
+      ifTop (ServeFile.packageDocs name version)
+        <|> serveModule name version
 
 
-serveModule :: FilePath -> Snap ()
-serveModule pkgDir =
+serveModule :: N.Name -> V.Version -> Snap ()
+serveModule name version =
   do  request <- getRequest
       let potentialName = BSC.unpack (rqPathInfo request)
       case Module.dehyphenate potentialName of
         Nothing -> pass
-        Just name ->
-            ServeFile.moduleDocs (Module.Name ["Page","ModuleDocs"])
+        Just moduleName ->
+            ServeFile.moduleDocs name version moduleName
 
 
 redirectToLatest :: N.Name -> Snap ()

@@ -1,4 +1,4 @@
-module Page.PackageDocs where
+module Page.Home where
 
 import Basics (..)
 import Color
@@ -10,12 +10,12 @@ import String
 import Window
 
 import Component.TopBar as TopBar
-import Component.PackageDocs as Docs
+import Component.Packages as Packages
 
 
 main : Signal.Signal Element
 main =
-    Signal.map2 scene Window.dimensions (Signal.constant Docs.dummyModel)
+    Signal.map2 scene Window.dimensions (Signal.constant [Packages.Package "elm-lang/core" "core libraries" ["1.0.0"]])
 
 
 search : Signal.Channel TopBar.Update
@@ -23,13 +23,13 @@ search =
     Signal.channel TopBar.NoOp
 
 
-scene : (Int,Int) -> Docs.Model -> Element
+scene : (Int,Int) -> [Packages.Package] -> Element
 scene (windowWidth, windowHeight) packages =
-  let packageDocs =
-        Docs.view 980 packages
+  let packageListing =
+        Packages.view 980 packages
   in
   color C.background <|
   flow down
   [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
-  , container windowWidth (max windowHeight (heightOf packageDocs)) midTop packageDocs
+  , container windowWidth (max windowHeight (heightOf packageListing)) midTop packageListing
   ]

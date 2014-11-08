@@ -9,16 +9,15 @@ import Text.Blaze.Html5.Attributes as A
 import qualified Text.Blaze.Html.Renderer.Utf8 as Blaze
 
 import qualified Elm.Compiler.Module as Module
+import qualified Elm.Package.Name as N
+import qualified Elm.Package.Version as V
 import qualified Path
 
 
-moduleDocs :: Module.Name -> Snap ()
-moduleDocs name =
-    writeBuilder (Blaze.renderHtmlBuilder (moduleDocsHtml name))
-
-
-moduleDocsHtml :: Module.Name -> Html
-moduleDocsHtml name =
+filler :: Module.Name -> Snap ()
+filler name =
+    writeBuilder $
+    Blaze.renderHtmlBuilder $
     docTypeHtml $ do 
       H.head $ do
         meta ! charset "UTF-8"
@@ -26,9 +25,46 @@ moduleDocsHtml name =
         H.style $ preEscapedToMarkup standardStyle
         script ! src (toValue ("/" ++ Path.artifact name)) $ ""
 
-      body $ do
-        script $
-            preEscapedToMarkup ("Elm.fullscreen(Elm." ++ Module.nameToString name ++ ")")
+      body $
+        script $ preEscapedToMarkup $
+          "Elm.fullscreen(Elm." ++ Module.nameToString name ++ ")"
+
+      analytics
+
+
+packageDocs :: N.Name -> V.Version -> Snap ()
+packageDocs (N.Name user name) version =
+    writeBuilder $
+    Blaze.renderHtmlBuilder $
+    docTypeHtml $ do 
+      H.head $ do
+        meta ! charset "UTF-8"
+        H.title (toHtml ("Elm Package Documentation" :: Text.Text))
+        H.style $ preEscapedToMarkup standardStyle
+        script ! src (toValue ("/artifacts/Page-PackageDocs.js" :: Text.Text)) $ ""
+
+      body $ script $ preEscapedToMarkup $
+          "\nvar context = { user: '" ++ user ++ "', name: '" ++ name ++ "', version: '" ++ V.toString version ++ "' }\n" ++
+          "var page = Elm.fullscreen(Elm.Page.PackageDocs, { context: context });\n"
+
+      analytics
+
+
+moduleDocs :: N.Name -> V.Version -> Module.Name -> Snap ()
+moduleDocs (N.Name user name) version moduleName =
+    writeBuilder $
+    Blaze.renderHtmlBuilder $
+    docTypeHtml $ do 
+      H.head $ do
+        meta ! charset "UTF-8"
+        H.title (toHtml ("Elm Package Documentation" :: Text.Text))
+        H.style $ preEscapedToMarkup standardStyle
+        script ! src (toValue ("/artifacts/Page-ModuleDocs.js" :: Text.Text)) $ ""
+
+      body $ script $ preEscapedToMarkup $
+          "\nvar context = { user: '" ++ user ++ "', name: '" ++ name ++ "', " ++
+          "version: '" ++ V.toString version ++ "', moduleName: '" ++ Module.nameToString moduleName ++ "' }\n" ++
+          "var page = Elm.fullscreen(Elm.Page.ModuleDocs, { context: context });\n"
 
       analytics
 
@@ -42,12 +78,12 @@ standardStyle =
     \a:active {text-decoration: none}\n\
     \a:hover { text-decoration: underline; color: rgb(234,21,122); }\n\
     \h1,h2,h3,h4 { font-weight:normal; font-family: futura, 'century gothic', 'twentieth century', calibri, verdana, helvetica, arial; }\n\
-    \p, li { font-size: 14px !important;\n\
-    \        line-height: 1.5em !important; }\n\
-    \pre { background-color: white;\n\
-    \      padding: 10px;\n\
-    \      border: 1px solid rgb(216, 221, 225);\n\
-    \      border-radius: 4px;\n\
+    \p, li {\n\
+    \  font-size: 14px !important;\n\
+    \  line-height: 1.5em !important;\n\
+    \}\n\
+    \pre {\n\
+    \  margin-left: 30px;\n\
     \}\n\
     \code > span.kw { color: #268BD2; }\n\
     \code > span.dt { color: #268BD2; }\n\

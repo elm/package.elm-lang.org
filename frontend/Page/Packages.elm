@@ -25,11 +25,11 @@ search =
 
 scene : (Int,Int) -> [Packages.Package] -> Element
 scene (windowWidth, windowHeight) packages =
-  let packageListing =
-        Packages.view 980 packages
-  in
   color C.background <|
   flow down
   [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
-  , container windowWidth (max windowHeight (heightOf packageListing)) midTop packageListing
+  , flow right
+    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
+    , Packages.view 980 packages
+    ]
   ]

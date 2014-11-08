@@ -21,7 +21,7 @@ view : Int -> [Package] -> Element
 view innerWidth packages =
     let bigWords =
           Text.toText "Packages"
-            |> Text.height 40
+            |> Text.height 30
             |> Text.leftAligned
 
         header =
