@@ -4,8 +4,10 @@ module Routes where
 
 import Control.Applicative
 import Control.Monad.Error
+import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
-import qualified Data.ByteString.Char8 as BSC
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
@@ -17,6 +19,7 @@ import System.Directory
 import System.FilePath
 
 import qualified Elm.Compiler.Module as Module
+import qualified Elm.Docs as Docs
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
@@ -62,7 +65,7 @@ servePackageInfo name =
 serveModule :: N.Name -> V.Version -> Snap ()
 serveModule name version =
   do  request <- getRequest
-      let potentialName = BSC.unpack (rqPathInfo request)
+      let potentialName = BS.unpack (rqPathInfo request)
       case Module.dehyphenate potentialName of
         Nothing -> pass
         Just moduleName ->
@@ -81,7 +84,7 @@ redirectToLatest name =
           do  let latestVersion = last (List.sort versions)
               let url = "/packages/" ++ N.toUrl name ++ "/" ++ V.toString latestVersion ++ "/"
               request <- getRequest
-              redirect (BSC.append (BSC.pack url) (rqPathInfo request))
+              redirect (BS.append (BS.pack url) (rqPathInfo request))
 
 
 -- DIRECTORIES
@@ -114,9 +117,19 @@ register =
       liftIO (createDirectoryIfMissing True directory)
       uploadFiles directory
       description <- Desc.read (directory </> Path.description)
-      -- TODO: add a flag for this, move above uploadFiles
-      verifyWhitelist (Desc.name description)
-      liftIO (PkgSummary.add description)
+
+      result <-
+          liftIO $ runErrorT $ do
+            verifyWhitelist (Desc.name description)
+            splitDocs directory
+
+      case result of
+        Right () ->
+          liftIO (PkgSummary.add description)
+
+        Left err ->
+          do  liftIO (removeDirectoryRecursive directory)
+              httpStringError 400 err
 
 
 verifyVersion :: N.Name -> V.Version -> Snap ()
@@ -138,17 +151,17 @@ verifyVersion name version =
               ("The tag " ++ V.toString version ++ " has not been pushed to GitHub.")
 
 
-verifyWhitelist :: N.Name -> Snap ()
+verifyWhitelist :: N.Name -> ErrorT String IO ()
 verifyWhitelist name =
   do  whitelist <- liftIO NativeWhitelist.read
       case True of -- name `elem` whitelist of
         True -> return ()
-        False -> httpStringError 400 (whitelistError name)
+        False -> throwError (whitelistError name)
 
 
 whitelistError :: N.Name -> String
 whitelistError name =
-    "You are trying to publish a project that has native-modules. For now,\n\
+    "You are trying to publish a project that has native modules. For now,\n\
     \any modules that use Native code must go through a formal review process to\n\
     \make sure the exposed API is pure and the Native code is absolutely\n\
     \necessary. Please open an issue with the title:\n\n"
@@ -168,7 +181,7 @@ uploadFiles directory =
           else disallow
 
 
-filesForUpload :: Map.Map BSC.ByteString FilePath
+filesForUpload :: Map.Map BS.ByteString FilePath
 filesForUpload =
   Map.fromList
   [ ("documentation", documentationPath)
@@ -188,9 +201,9 @@ handleParts _dir [] =
 handleParts dir ((info, eitherPath) : parts) =
   case (eitherPath, Map.lookup (partFieldName info) filesForUpload) of
     (Right tempPath, Just targetPath) ->
-      do  liftIO $
-            do  contents <- BSC.readFile tempPath
-                BSC.writeFile (dir </> targetPath) contents
+      do  liftIO $ do
+              contents <- BS.readFile tempPath
+              BS.writeFile (dir </> targetPath) contents
           handleParts dir parts
 
     _ ->
@@ -209,6 +222,21 @@ writePartError part =
           writeText (policyViolationExceptionReason exception)
 
 
+splitDocs :: FilePath -> ErrorT String IO ()
+splitDocs directory =
+  do  json <- liftIO (LBS.readFile (directory </> documentationPath))
+      case Json.decode json of
+        Nothing -> throwError "The uploaded documentation is invalid."
+        Just docs ->
+          liftIO $
+            forM_ docs $ \doc ->
+              do  let name = Module.hyphenate (Docs.moduleName doc)
+                  let docPath = directory </> "docs" </> name <.> "json"
+                  createDirectoryIfMissing True (directory </> "docs")
+                  LBS.writeFile docPath (Json.encode doc)
+
+
+
 -- FETCH ALL AVAILABLE VERSIONS
 
 versions :: Snap ()
@@ -223,7 +251,7 @@ versions =
 allPackages :: Snap ()
 allPackages =
   do  maybeValue <- getParam "since"
-      let maybeString = fmap BSC.unpack maybeValue
+      let maybeString = fmap BS.unpack maybeValue
       needsUpdate <-
           case Read.readMaybe =<< maybeString of
             Nothing -> return True
@@ -267,22 +295,22 @@ fetch filePath =
 
 -- HELPERS
 
-getParameter :: BSC.ByteString -> (String -> Maybe a) -> Snap a
+getParameter :: BS.ByteString -> (String -> Maybe a) -> Snap a
 getParameter param fromString =
   do  maybeValue <- getParam param
-      let maybeString = fmap BSC.unpack maybeValue
+      let maybeString = fmap BS.unpack maybeValue
       case fromString =<< maybeString of
         Just value -> return value
         Nothing ->
-            httpError 400 $ BSC.concat [ "problem with parameter '", param, "'" ]
+            httpError 400 $ BS.concat [ "problem with parameter '", param, "'" ]
 
 
 httpStringError :: Int -> String -> Snap a
 httpStringError code msg =
-    httpError code (BSC.pack msg)
+    httpError code (BS.pack msg)
 
 
-httpError :: Int -> BSC.ByteString -> Snap a
+httpError :: Int -> BS.ByteString -> Snap a
 httpError code msg = do
   modifyResponse $ setResponseStatus code msg
   finishWith =<< getResponse
