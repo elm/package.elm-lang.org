@@ -54,7 +54,6 @@ servePackageInfo name =
   do  version <- getParameter "version" V.fromString
 
       let pkgDir = packageRoot name version
-
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
 
@@ -66,6 +65,11 @@ serveModule :: N.Name -> V.Version -> Snap ()
 serveModule name version =
   do  request <- getRequest
       let potentialName = BS.unpack (rqPathInfo request)
+
+      let docsDir = packageRoot name version </> "docs"
+      exists <- liftIO $ doesFileExist (docsDir </> potentialName <.> "json")
+      when (not exists) pass
+
       case Module.dehyphenate potentialName of
         Nothing -> pass
         Just moduleName ->
