@@ -5,9 +5,9 @@ module Routes where
 import Control.Applicative
 import Control.Monad.Error
 import qualified Data.Binary as Binary
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.List as List
+import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Text.Read as Read
 import Snap.Core
@@ -31,6 +31,8 @@ packages :: Snap ()
 packages =
     ifTop (ServeFile.filler (Module.Name ["Page","Packages"]))
     <|> route [ (":user/:name", package) ]
+    <|> serveDirectory "packages"
+
 
 package :: Snap ()
 package =
@@ -48,7 +50,7 @@ servePackageInfo :: N.Name -> Snap ()
 servePackageInfo name =
   do  version <- getParameter "version" V.fromString
 
-      let pkgDir = packageDirectory </> N.toFilePath name </> V.toString version
+      let pkgDir = packageRoot name version
 
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
@@ -77,7 +79,7 @@ redirectToLatest name =
 
         versions ->
           do  let latestVersion = last (List.sort versions)
-              let url = "/package/" ++ N.toFilePath name ++ "/" ++ V.toString latestVersion ++ "/"
+              let url = "/packages/" ++ N.toUrl name ++ "/" ++ V.toString latestVersion ++ "/"
               request <- getRequest
               redirect (BSC.append (BSC.pack url) (rqPathInfo request))
 
@@ -161,35 +163,40 @@ uploadFiles directory =
     handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handleParts directory)
   where
     perPartPolicy info =
-        if okayPart "documentation" info || okayPart "description" info
+      if Map.member (partFieldName info) filesForUpload
           then allowWithMaximumSize $ 2^(19::Int)
           else disallow
 
 
-okayPart :: BSC.ByteString -> PartInfo -> Bool
-okayPart field part =
-    partFieldName part == field
-    && partContentType part == "application/json"
+filesForUpload :: Map.Map BSC.ByteString FilePath
+filesForUpload =
+  Map.fromList
+  [ ("documentation", documentationPath)
+  , ("description", Path.description)
+  , ("readme", "README.md")
+  ]
 
 
-handleParts :: FilePath -> [(PartInfo, Either PolicyViolationException FilePath)] -> Snap ()
-handleParts dir parts =
-    case parts of
-      [(info1, Right temp1), (info2, Right temp2)]
-        | okayPart "documentation" info1 && okayPart "description" info2 ->
-            liftIO $
-            do  BS.readFile temp1 >>= BS.writeFile (dir </> documentationPath)
-                BS.readFile temp2 >>= BS.writeFile (dir </> Path.description)
+handleParts
+    :: FilePath
+    -> [(PartInfo, Either PolicyViolationException FilePath)]
+    -> Snap ()
 
-        | okayPart "documentation" info2 && okayPart "description" info1 ->
-            liftIO $
-            do  BS.readFile temp2 >>= BS.writeFile (dir </> documentationPath)
-                BS.readFile temp1 >>= BS.writeFile (dir </> Path.description)
+handleParts _dir [] =
+  return ()
 
-      _ ->
-        do  mapM (writePartError . snd) parts
-            httpStringError 404 $
-                "Files " ++ documentationPath ++ " and " ++ Path.description ++ " were not uploaded."
+handleParts dir ((info, eitherPath) : parts) =
+  case (eitherPath, Map.lookup (partFieldName info) filesForUpload) of
+    (Right tempPath, Just targetPath) ->
+      do  liftIO $
+            do  contents <- BSC.readFile tempPath
+                BSC.writeFile (dir </> targetPath) contents
+          handleParts dir parts
+
+    _ ->
+      do  mapM (writePartError . snd) parts
+          httpStringError 404 $
+              "Files " ++ documentationPath ++ " and " ++ Path.description ++ " were not uploaded."
 
 
 writePartError :: Either PolicyViolationException FilePath -> Snap ()
@@ -235,33 +242,26 @@ allPackages =
       writeLBS $ Binary.encode (response :: Maybe [(N.Name, [V.Version])])
 
 
--- FETCH DOCUMENTATION
+-- FETCH RESOURCES
 
 documentation :: Snap ()
 documentation =
-  do  name <- getParameter "name" N.fromString
-      version <- getParameter "version" V.fromString
-
-      let directory = packageRoot name version
-      exists <- liftIO $ doesDirectoryExist directory
-
-      case exists of
-        True -> serveFile (directory </> documentationPath)
-        False -> httpError 404 "That library and version is not registered."
-
-
--- FETCH DESCRIPTION
+  fetch documentationPath
 
 description :: Snap ()
 description =
+  fetch Path.description
+
+fetch :: FilePath -> Snap ()
+fetch filePath =
   do  name <- getParameter "name" N.fromString
       version <- getParameter "version" V.fromString
 
-      let directory = packageRoot name version
-      exists <- liftIO $ doesDirectoryExist directory
+      let target = packageRoot name version </> filePath
+      exists <- liftIO $ doesFileExist target
 
       case exists of
-        True -> serveFile (directory </> Path.description)
+        True -> serveFile target
         False -> httpError 404 "That library and version is not registered."
 
 
