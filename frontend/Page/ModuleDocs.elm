@@ -3,8 +3,9 @@ module Page.ModuleDocs where
 import Basics (..)
 import Color
 import ColorScheme as C
+import Debug
 import Dict
-import Json
+import JavaScript as JS
 import Graphics.Element (..)
 import Http
 import List
@@ -49,12 +50,9 @@ handleResult : Http.Response String -> Docs.Documentation
 handleResult response =
   case response of
     Http.Success string ->
-      case Json.fromString string of
-        Result.Ok (Json.Object docs) ->
-          case Dict.get "comment" docs of
-            Just (Json.String comment) -> Docs.Documentation context.moduleName comment [] [] []
-            _ -> dummyDocs
-        _ -> dummyDocs
+      case Result.andThen (JS.fromString string) (JS.get Docs.documentation) of
+        Result.Ok docs -> docs
+        Result.Err msg -> { dummyDocs | comment <- Debug.log "error" msg }
 
     _ -> dummyDocs
 
