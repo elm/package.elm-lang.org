@@ -107,16 +107,10 @@ value =
 
 assocPrec : Get (Maybe (String, Int))
 assocPrec =
-  object2 maybeTuple
-    (maybe ("associativity" := string))
-    (maybe ("precedence" := int))
-
-
-maybeTuple : Maybe a -> Maybe b -> Maybe (a,b)
-maybeTuple ma mb =
-  case (ma, mb) of
-    (Just a, Just b) -> Just (a,b)
-    _ -> Nothing
+  maybe <|
+    object2 (,)
+      ("associativity" := string)
+      ("precedence" := int)
 
 
 type Type
