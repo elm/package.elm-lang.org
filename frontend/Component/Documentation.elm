@@ -177,7 +177,7 @@ viewEntry innerWidth (annotation, maybeAssocPrec, comment) =
         widthOf rawAssocPrec + 20
 
       assocPrec =
-        container assocPrecWidth 30 middle rawAssocPrec
+        container assocPrecWidth (min annotationHeight 24) middle rawAssocPrec
 
       annotationText =
         Text.leftAligned (Text.monospace annotation)
@@ -189,7 +189,7 @@ viewEntry innerWidth (annotation, maybeAssocPrec, comment) =
         innerWidth - annotationPadding - assocPrecWidth
 
       annotationHeight =
-        heightOf annotationText + 12
+        heightOf annotationText + 8
 
       commentElement =
         if String.isEmpty comment
