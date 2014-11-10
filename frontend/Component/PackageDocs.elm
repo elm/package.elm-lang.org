@@ -5,7 +5,7 @@ import Color
 import ColorScheme as C
 import Graphics.Element (..)
 import List
-import List ((::), (++))
+import List ((::))
 import Maybe (..)
 import String
 import Text
@@ -22,7 +22,7 @@ type alias PackageInfo =
 view : Int -> PackageInfo -> Maybe String -> Element
 view innerWidth pkg maybeReadme =
     let title =
-          Text.toText (pkg.user ++ " / " ++ pkg.name)
+          Text.fromString (pkg.user ++ " / " ++ pkg.name)
             |> Text.height 24
             |> Text.leftAligned
 
@@ -30,7 +30,7 @@ view innerWidth pkg maybeReadme =
           "/packages/" ++ pkg.user ++ "/" ++ pkg.name
 
         metadata =
-          Text.toText (pkg.version ++ " - ") ++ Text.link href (Text.toText "see other versions")
+          Text.fromString (pkg.version ++ " - ") ++ Text.link href (Text.fromString "see other versions")
             |> Text.leftAligned
 
         header =
@@ -62,7 +62,7 @@ viewModule innerWidth model name =
         "/packages/" ++ model.user ++ "/" ++ model.name ++ "/" ++ model.version
         ++ "/" ++ String.map (\c -> if c == '.' then '-' else c) name
   in
-      Text.toText name
+      Text.fromString name
         |> Text.link url
         |> Text.leftAligned
         |> container innerWidth 24 midLeft

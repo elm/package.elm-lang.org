@@ -2,25 +2,25 @@ module Component.ModuleDocs where
 
 import Basics (..)
 import Char
-import ColorScheme as C
 import Dict
 import Debug
 import Graphics.Element (..)
-import JavaScript (..)
-import JavaScript as JS
 import List
-import List ((::), (++))
+import List ((::))
 import Markdown
 import Maybe
 import Regex
 import String
 import Text
 
+import ColorScheme as C
+import Component.Documentation as D
 
-view : Int -> String -> String -> Documentation -> Element
+
+view : Int -> String -> String -> D.Documentation -> Element
 view innerWidth user package docs =
     let bigWords =
-          Text.toText (user ++ " / " ++ package ++ " / " ++ docs.name)
+          Text.fromString (user ++ " / " ++ package ++ " / " ++ docs.name)
             |> Text.height 24
             |> Text.leftAligned
 
@@ -31,11 +31,11 @@ view innerWidth user package docs =
     [ header
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
-    , viewDocs innerWidth Dict.empty docs.comment
+    , viewDocs innerWidth (D.toDocDict docs) docs.comment
     ]
 
 
-viewDocs : Int -> Dict.Dict String String -> String  -> Element
+viewDocs : Int -> Dict.Dict String Element -> String  -> Element
 viewDocs innerWidth documentation comment =
   let (prose :: chunks) =
         String.split "\n@docs " comment
@@ -100,7 +100,7 @@ docsPattern =
     Regex.regex "(.*)\n@docs\\s+([a-zA-Z0-9_']+(?:,\\s*[a-zA-Z0-9_']+)*)"
 
 
-viewPair : Int -> Dict.Dict String String -> ([String], String) -> [Element]
+viewPair : Int -> Dict.Dict String Element -> ([String], String) -> [Element]
 viewPair innerWidth documentation (vars, prose) =
     List.concatMap (viewVar innerWidth documentation) vars
     ++ [viewProse innerWidth prose]
@@ -111,128 +111,27 @@ viewProse innerWidth prose =
     width innerWidth (Markdown.toElement prose)
 
 
-viewVar : Int -> Dict.Dict String String -> String -> [Element]
+viewVar : Int -> Dict.Dict String Element -> String -> [Element]
 viewVar innerWidth documentation var =
     case Dict.get var documentation of
-      Maybe.Nothing -> [] -- Debug.crash "everything should be in the dictionary"
-      Maybe.Just str ->
+      Maybe.Nothing ->
+        let msg =
+              Text.concat
+              [ Text.fromString "There is some problem with the docs for '"
+              , Text.monospace (Text.fromString var)
+              , Text.fromString "', please inform the package author."
+              ]
+        in
+            [ width innerWidth (Text.leftAligned msg) ]
+
+      Maybe.Just element ->
+        [ element ]
+        {--
         [ color C.lightGrey (spacer innerWidth 1)
-        , container innerWidth 30 midLeft (Text.leftAligned (Text.monospace (Text.bold (Text.toText var) ++ Text.toText " : a -> b -> a")))
+        , container innerWidth 30 midLeft (Text.leftAligned (Text.monospace (Text.bold (Text.fromString var) ++ Text.fromString " : a -> b -> a")))
         , flow right
           [ spacer 40 10
           , viewProse (innerWidth - 40) str
           ]
         ]
-
-
--- MODEL OF DOCUMENTATION
-
-type alias Documentation =
-    { name : String
-    , comment : String
-    , aliases : [Alias]
-    , unions : [Union]
-    , values : [Value]
-    }
-
-
-documentation : Get Documentation
-documentation =
-    object5 Documentation
-      ("name" := string)
-      ("comment" := string)
-      ("aliases" := list alias)
-      ("types" := list union)
-      ("values" := list value)
-
-
-type alias Alias =
-    { name : String
-    , comment : String
-    , args : [String]
-    , tipe : Type
-    }
-
-
-alias : Get Alias
-alias =
-    object4 Alias
-      ("name" := string)
-      ("comment" := string)
-      ("args" := list string)
-      ("type" := tipe)
-
-
-type alias Union =
-    { name : String
-    , comment : String
-    , args : [String]
-    , cases : [(String, [Type])]
-    }
-
-
-union : Get Union
-union =
-    object4 Union
-      ("name" := string)
-      ("comment" := string)
-      ("args" := list string)
-      ("cases" := list (tuple2 (,) string (list tipe)))
-
-
-type alias Value =
-    { name : String
-    , comment : String
-    , tipe : Type
-    , assocPrec : Maybe.Maybe (String,Int)
-    }
-
-
-value : Get Value
-value =
-    object4 Value
-      ("name" := string)
-      ("comment" := string)
-      ("type" := tipe)
-      (maybe ("assoc-prec" := tuple2 (,) string int))
-
-
-type Type
-    = Lambda Type Type
-    | Var String
-    | Type String
-    | App Type [Type]
-    | Record [(String, Type)] (Maybe.Maybe Type)
-
-
-tipe : Get Type
-tipe =
-    ("tag" := string) `andThen` specificType
-
-
-specificType : String -> Get Type
-specificType tag =
-    case tag of
-      "lambda" ->
-          object2 Lambda
-            ("in" := tipe)
-            ("out" := tipe)
-
-      "var" ->
-          object1 Var ("name" := string)
-
-      "type" ->
-          object1 Type ("name" := string)
-
-      "app" ->
-          object2 App
-            ("func" := tipe)
-            ("args" := list tipe)
-
-      "record" ->
-          object2 Record
-            ("fields" := list (tuple2 (,) string tipe))
-            ("extension" := maybe tipe)
-
---      _ ->
---          error <| "unrecognized tag '" ++ tag ++ "' when getting a Type"
+        --}

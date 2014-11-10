@@ -9,7 +9,6 @@ import JavaScript as JS
 import Graphics.Element (..)
 import Http
 import List
-import List ((++))
 import Maybe (..)
 import Result
 import Signal
@@ -18,6 +17,7 @@ import Window
 
 import Component.TopBar as TopBar
 import Component.ModuleDocs as Docs
+import Component.Documentation as D
 
 
 port context : { user : String, name : String, version : String, moduleName : String }
@@ -35,22 +35,22 @@ documentationUrl =
       ++ context.version ++ "/docs/" ++ name ++ ".json"
 
 
-documentation : Signal.Signal Docs.Documentation
+documentation : Signal.Signal D.Documentation
 documentation =
     Http.sendGet (Signal.constant documentationUrl)
       |> Signal.map handleResult
 
 
-dummyDocs : Docs.Documentation
+dummyDocs : D.Documentation
 dummyDocs =
-  Docs.Documentation context.moduleName "Loading documentation..." [] [] []
+  D.Documentation context.moduleName "Loading documentation..." [] [] []
 
 
-handleResult : Http.Response String -> Docs.Documentation
+handleResult : Http.Response String -> D.Documentation
 handleResult response =
   case response of
     Http.Success string ->
-      case Result.andThen (JS.fromString string) (JS.get Docs.documentation) of
+      case Result.andThen (JS.fromString string) (JS.get D.documentation) of
         Result.Ok docs -> docs
         Result.Err msg ->
             { dummyDocs |
@@ -70,7 +70,7 @@ search =
     Signal.channel TopBar.NoOp
 
 
-view : (Int,Int) -> Docs.Documentation -> Element
+view : (Int,Int) -> D.Documentation -> Element
 view (windowWidth, windowHeight) docs =
   color C.background <|
   flow down

@@ -5,7 +5,7 @@ import Color
 import ColorScheme as C
 import Graphics.Element (..)
 import List
-import List ((::), (++))
+import List ((::))
 import String
 import Text
 
@@ -20,7 +20,7 @@ type alias Package =
 view : Int -> [Package] -> Element
 view innerWidth packages =
     let bigWords =
-          Text.toText "Packages"
+          Text.fromString "Packages"
             |> Text.height 30
             |> Text.leftAligned
 
@@ -33,12 +33,12 @@ view innerWidth packages =
 viewPackage : Int -> Package -> Element
 viewPackage innerWidth package =
   let pkgLink =
-        Text.toText package.name
+        Text.fromString package.name
           |> Text.link ("/packages/" ++ package.name ++ "/" ++ List.head package.versions)
           |> Text.leftAligned
 
       summary =
-        Text.toText package.summary
+        Text.fromString package.summary
           |> Text.leftAligned
   in
       flow down

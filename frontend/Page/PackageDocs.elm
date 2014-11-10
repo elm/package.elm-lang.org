@@ -8,7 +8,6 @@ import Json
 import Graphics.Element (..)
 import Http
 import List
-import List ((++))
 import Maybe (..)
 import Result
 import Signal
