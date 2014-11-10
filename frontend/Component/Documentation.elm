@@ -1,6 +1,7 @@
 module Component.Documentation where
 
 import Basics (..)
+import Char
 import Debug
 import Dict
 import Graphics.Element (..)
@@ -181,12 +182,27 @@ viewValue : Value -> Element
 viewValue value =
   let annotation =
         Text.concat
-        [ Text.bold (Text.fromString value.name)
+        [ Text.bold (viewVar value.name)
         , colon
         , viewType value.tipe
         ]
   in
       Text.leftAligned (Text.monospace annotation)
+
+
+viewVar : String -> Text.Text
+viewVar str =
+  let txt = Text.fromString str
+  in
+      case String.uncons str of
+        Nothing -> txt
+        Just (c, _) ->
+          if isVarChar c then txt else parens txt
+
+
+isVarChar : Char -> Bool
+isVarChar c =
+    Char.isLower c || Char.isUpper c || Char.isDigit c || c == '_' || c == '\''
 
 
 

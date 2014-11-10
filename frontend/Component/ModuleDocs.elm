@@ -1,7 +1,6 @@
 module Component.ModuleDocs where
 
 import Basics (..)
-import Char
 import Dict
 import Debug
 import Graphics.Element (..)
@@ -42,57 +41,58 @@ viewDocs innerWidth documentation comment =
 
       varProsePairs : [([String], String)]
       varProsePairs =
-        List.map (extractVars [] Space) chunks
+        List.map extractVars chunks
   in
       flow down <|
         viewProse innerWidth prose
         :: List.concatMap (viewPair innerWidth documentation) varProsePairs
 
 
-type ExtractState = Variable String | Comma | Space
+extractVars : String -> ([String], String)
+extractVars rawChunk =
+  let chunk = String.trimLeft rawChunk
+  in
+      case String.uncons chunk of
+        Maybe.Nothing ->
+          ([], "")
 
-extractVars : [String] -> ExtractState -> String -> ([String], String)
-extractVars vars state chunk =
+        Maybe.Just (c, subchunk) ->
+          if  | D.isVarChar c ->
+                  let (var, rest) = takeWhile D.isVarChar chunk
+                      (vars, nextChunk) = extractCommaThenVars rest
+                  in
+                      (var :: vars, nextChunk)
+
+              | otherwise ->
+                  let (op, rest) = takeWhile ((/=) ')') subchunk
+                      (vars, nextChunk) = extractCommaThenVars (String.dropLeft 1 rest)
+                  in
+                      (op :: vars, nextChunk)
+
+
+extractCommaThenVars : String -> ([String], String)
+extractCommaThenVars rawChunk =
+  let chunk = String.trimLeft rawChunk
+  in
+      case String.uncons chunk of
+        Maybe.Just (',', subchunk) ->
+          extractVars subchunk
+
+        _ -> ([], chunk)
+
+
+takeWhile : (Char -> Bool) -> String -> (String, String)
+takeWhile pred chunk =
   case String.uncons chunk of
-    Maybe.Nothing ->
-      case state of
-        Variable x ->
-          (List.reverse (String.reverse x :: vars), "")
-        _ ->
-          (List.reverse vars, "")
-
+    Maybe.Nothing -> ("", "")
     Maybe.Just (c, rest) ->
-      case state of
-        Variable x ->
-          if  | isVarChar c ->
-                  extractVars vars (Variable (String.cons c x)) rest
-              | String.any ((==) c) " \n\t\r" ->
-                  extractVars (String.reverse x :: vars) Comma rest
-              | c == ',' ->
-                  extractVars (String.reverse x :: vars) Space rest
-              | otherwise ->
-                  (List.reverse (String.reverse x :: vars), chunk)
+      if  | pred c ->
+              let (result, chunk') = takeWhile pred rest
+              in
+                  (String.cons c result, chunk')
 
-        Comma ->
-          if  | String.any ((==) c) " \n\t\r" ->
-                  extractVars vars Comma rest
-              | c == ',' ->
-                  extractVars vars Space rest
-              | otherwise ->
-                  (List.reverse vars, chunk)
-
-        Space ->
-          if  | isVarChar c ->
-                  extractVars vars (Variable (String.cons c "")) rest
-              | String.any ((==) c) " \n\t\r" ->
-                  extractVars vars Space rest
-              | otherwise ->
-                  (List.reverse vars, chunk)
-
-
-isVarChar : Char -> Bool
-isVarChar c =
-    Char.isLower c || Char.isUpper c || Char.isDigit c || c == '_' || c == '\''
+          | otherwise ->
+              ("", chunk)
 
 
 docsPattern : Regex.Regex
