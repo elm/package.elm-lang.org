@@ -34,7 +34,7 @@ view innerWidth user package docs =
     ]
 
 
-viewDocs : Int -> Dict.Dict String Element -> String  -> Element
+viewDocs : Int -> D.DocDict -> String  -> Element
 viewDocs innerWidth documentation comment =
   let (prose :: chunks) =
         String.split "\n@docs " comment
@@ -100,9 +100,9 @@ docsPattern =
     Regex.regex "(.*)\n@docs\\s+([a-zA-Z0-9_']+(?:,\\s*[a-zA-Z0-9_']+)*)"
 
 
-viewPair : Int -> Dict.Dict String Element -> ([String], String) -> [Element]
+viewPair : Int -> D.DocDict -> ([String], String) -> [Element]
 viewPair innerWidth documentation (vars, prose) =
-    List.concatMap (viewVar innerWidth documentation) vars
+    List.map (viewVar innerWidth documentation) vars
     ++ [viewProse innerWidth prose]
 
 
@@ -111,7 +111,7 @@ viewProse innerWidth prose =
     width innerWidth (Markdown.toElement prose)
 
 
-viewVar : Int -> Dict.Dict String Element -> String -> [Element]
+viewVar : Int -> D.DocDict -> String -> Element
 viewVar innerWidth documentation var =
     case Dict.get var documentation of
       Maybe.Nothing ->
@@ -122,16 +122,7 @@ viewVar innerWidth documentation var =
               , Text.fromString "', please inform the package author."
               ]
         in
-            [ width innerWidth (Text.leftAligned msg) ]
+            width innerWidth (Text.leftAligned msg)
 
-      Maybe.Just element ->
-        [ element ]
-        {--
-        [ color C.lightGrey (spacer innerWidth 1)
-        , container innerWidth 30 midLeft (Text.leftAligned (Text.monospace (Text.bold (Text.fromString var) ++ Text.fromString " : a -> b -> a")))
-        , flow right
-          [ spacer 40 10
-          , viewProse (innerWidth - 40) str
-          ]
-        ]
-        --}
+      Maybe.Just entry ->
+        D.viewEntry innerWidth entry

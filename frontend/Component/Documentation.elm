@@ -2,6 +2,7 @@ module Component.Documentation where
 
 import Basics (..)
 import Char
+import Color
 import Debug
 import Dict
 import Graphics.Element (..)
@@ -9,6 +10,7 @@ import JavaScript (..)
 import JavaScript as JS
 import List
 import List ((::))
+import Markdown
 import Maybe (Maybe(Just,Nothing))
 import Result (Result(Ok,Err))
 import String
@@ -17,10 +19,14 @@ import Text
 import ColorScheme as C
 
 
-toDocDict : Documentation -> Dict.Dict String Element
+type alias DocDict =
+    Dict.Dict String (Text.Text, String)
+
+
+toDocDict : Documentation -> DocDict
 toDocDict docs =
   let toPairs view entries =
-          List.map (\entry -> (entry.name, view entry)) entries
+          List.map (\entry -> (entry.name, (view entry, entry.comment))) entries
   in
       Dict.fromList <|
         toPairs viewAlias docs.aliases
@@ -143,33 +149,64 @@ specificType tag =
 
 -- VIEW
 
-viewAlias : Alias -> Element
-viewAlias alias =
-  let annotation = Text.concat [ p1, p2, p3, p4, p5 ]
-      
-      p1 = blueString "type alias "
-      p2 = Text.bold (Text.fromString alias.name)
-      p3 = spacePrefix (List.map Text.fromString alias.args)
-      p4 = equals
-      p5 = viewType alias.tipe
+viewEntry : Int -> (Text.Text, String) -> Element
+viewEntry innerWidth (annotation, comment) =
+  let annotationText =
+        Text.leftAligned (Text.monospace annotation)
+          |> width annotationWidth
+
+      annotationWidth =
+        innerWidth - 10
+
+      annotationHeight =
+        heightOf annotationText + 12
+
+      commentElement =
+        if String.isEmpty comment
+            then empty
+            else
+                flow right
+                [ spacer 40 1
+                , width (innerWidth - 40) (Markdown.toElement comment)
+                ]
+
+      annotationBar =
+        color C.lightGrey <|
+        flow right
+        [ spacer (innerWidth - annotationWidth) annotationHeight
+        , container annotationWidth annotationHeight midLeft annotationText
+        ]
   in
-      Text.leftAligned (Text.monospace annotation)
+      flow down
+      [ color C.mediumGrey (spacer innerWidth 1)
+      , annotationBar
+      , commentElement
+      , spacer innerWidth 20
+      ]
 
 
-viewUnion : Union -> Element
+viewAlias : Alias -> Text.Text
+viewAlias alias =
+    Text.concat
+    [ blueString "type alias "
+    , Text.bold (Text.fromString alias.name)
+    , spacePrefix (List.map Text.fromString alias.args)
+    , equals
+    , viewType alias.tipe
+    ]
+
+
+viewUnion : Union -> Text.Text
 viewUnion union =
   let seperators =
         "=" :: List.repeat (List.length union.cases - 1) "|"
-                
-      annotation =
-        Text.concat
-        [ blueString "type "
-        , Text.bold (Text.fromString union.name)
-        , spacePrefix (List.map Text.fromString union.args)
-        , Text.concat (List.map2 viewCase seperators union.cases)
-        ]
   in
-      Text.leftAligned (Text.monospace annotation)
+      Text.concat
+      [ blueString "type "
+      , Text.bold (Text.fromString union.name)
+      , spacePrefix (List.map Text.fromString union.args)
+      , Text.concat (List.map2 viewCase seperators union.cases)
+      ]
 
 
 viewCase : String -> (String, [Type]) -> Text.Text
@@ -178,16 +215,13 @@ viewCase sep (tag, args) =
   ++ spacePrefix (Text.fromString tag :: List.map (viewTypeHelp ADT) args)
 
 
-viewValue : Value -> Element
+viewValue : Value -> Text.Text
 viewValue value =
-  let annotation =
-        Text.concat
-        [ Text.bold (viewVar value.name)
-        , colon
-        , viewType value.tipe
-        ]
-  in
-      Text.leftAligned (Text.monospace annotation)
+    Text.concat
+    [ Text.bold (viewVar value.name)
+    , colon
+    , viewType value.tipe
+    ]
 
 
 viewVar : String -> Text.Text
