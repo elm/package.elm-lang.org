@@ -52,7 +52,10 @@ handleResult response =
     Http.Success string ->
       case Result.andThen (JS.fromString string) (JS.get Docs.documentation) of
         Result.Ok docs -> docs
-        Result.Err msg -> { dummyDocs | comment <- Debug.log "error" msg }
+        Result.Err msg ->
+            { dummyDocs |
+                comment <- "There was an error loading these docs! They may be corrupted."
+            }
 
     _ -> dummyDocs
 
