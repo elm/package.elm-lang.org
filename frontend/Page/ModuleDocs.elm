@@ -5,7 +5,7 @@ import Color
 import ColorScheme as C
 import Debug
 import Dict
-import JavaScript as JS
+import Json.Decode as Json
 import Graphics.Element (..)
 import Http
 import List
@@ -50,7 +50,7 @@ handleResult : Http.Response String -> D.Documentation
 handleResult response =
   case response of
     Http.Success string ->
-      case Result.andThen (JS.fromString string) (JS.get D.documentation) of
+      case Json.decode D.documentation string of
         Result.Ok docs -> docs
         Result.Err msg ->
             { dummyDocs |

@@ -3,7 +3,6 @@ module Page.Home where
 import Basics (..)
 import Color
 import ColorScheme as C
-import Json
 import Graphics.Element (..)
 import Signal
 import String

@@ -4,7 +4,8 @@ import Basics (..)
 import Color
 import ColorScheme as C
 import Dict
-import Json
+import Json.Decode (..)
+import Json.Decode as Json
 import Graphics.Element (..)
 import Http
 import List
@@ -44,15 +45,11 @@ packageInfo modules =
 handleResult : Http.Response String -> Docs.PackageInfo
 handleResult response =
   case response of
-    Http.Success string ->
-      case Json.fromString string of
-        Result.Ok (Json.Object dict) ->
-          case Dict.get "exposed-modules" dict of
-            Just (Json.Array modules) ->
-                packageInfo (List.map (\(Json.String s) -> s) modules)
-            _ -> packageInfo []
-
-        _ -> packageInfo []
+    Http.Success msg ->
+      case Json.decode ("exposed-modules" := list string) msg of
+        Result.Err _ -> packageInfo []
+        Result.Ok modules ->
+            packageInfo modules
 
     _ -> packageInfo []
 

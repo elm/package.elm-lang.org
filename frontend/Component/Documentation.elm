@@ -6,8 +6,7 @@ import Color
 import Debug
 import Dict
 import Graphics.Element (..)
-import JavaScript (..)
-import JavaScript as JS
+import Json.Decode (..)
 import List
 import List ((::))
 import Markdown
@@ -45,7 +44,7 @@ type alias Documentation =
     }
 
 
-documentation : Get Documentation
+documentation : Decoder Documentation
 documentation =
     object5 Documentation
       ("name" := string)
@@ -63,7 +62,7 @@ type alias Alias =
     }
 
 
-alias : Get Alias
+alias : Decoder Alias
 alias =
     object4 Alias
       ("name" := string)
@@ -80,7 +79,7 @@ type alias Union =
     }
 
 
-union : Get Union
+union : Decoder Union
 union =
     object4 Union
       ("name" := string)
@@ -97,7 +96,7 @@ type alias Value =
     }
 
 
-value : Get Value
+value : Decoder Value
 value =
     object4 Value
       ("name" := string)
@@ -105,7 +104,7 @@ value =
       ("type" := tipe)
       assocPrec
 
-assocPrec : Get (Maybe (String, Int))
+assocPrec : Decoder (Maybe (String, Int))
 assocPrec =
   maybe <|
     object2 (,)
@@ -121,12 +120,12 @@ type Type
     | Record [(String, Type)] (Maybe Type)
 
 
-tipe : Get Type
+tipe : Decoder Type
 tipe =
     ("tag" := string) `andThen` specificType
 
 
-specificType : String -> Get Type
+specificType : String -> Decoder Type
 specificType tag =
     case tag of
       "lambda" ->
