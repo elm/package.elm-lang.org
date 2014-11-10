@@ -20,18 +20,18 @@ import ColorScheme as C
 
 
 type alias DocDict =
-    Dict.Dict String (Text.Text, String)
+    Dict.Dict String (Text.Text, Maybe (String, Int), String)
 
 
 toDocDict : Documentation -> DocDict
 toDocDict docs =
-  let toPairs view entries =
-          List.map (\entry -> (entry.name, (view entry, entry.comment))) entries
+  let toPairs view getAssocPrec entries =
+          List.map (\entry -> (entry.name, (view entry, getAssocPrec entry, entry.comment))) entries
   in
       Dict.fromList <|
-        toPairs viewAlias docs.aliases
-        ++ toPairs viewUnion docs.unions
-        ++ toPairs viewValue docs.values
+        toPairs viewAlias (always Nothing) docs.aliases
+        ++ toPairs viewUnion (always Nothing) docs.unions
+        ++ toPairs viewValue .assocPrec docs.values
 
 
 -- MODEL
@@ -103,7 +103,20 @@ value =
       ("name" := string)
       ("comment" := string)
       ("type" := tipe)
-      (maybe ("assoc-prec" := tuple2 (,) string int))
+      assocPrec
+
+assocPrec : Get (Maybe (String, Int))
+assocPrec =
+  object2 maybeTuple
+    (maybe ("associativity" := string))
+    (maybe ("precedence" := int))
+
+
+maybeTuple : Maybe a -> Maybe b -> Maybe (a,b)
+maybeTuple ma mb =
+  case (ma, mb) of
+    (Just a, Just b) -> Just (a,b)
+    _ -> Nothing
 
 
 type Type
@@ -149,14 +162,31 @@ specificType tag =
 
 -- VIEW
 
-viewEntry : Int -> (Text.Text, String) -> Element
-viewEntry innerWidth (annotation, comment) =
-  let annotationText =
+viewEntry : Int -> (Text.Text, Maybe (String, Int), String) -> Element
+viewEntry innerWidth (annotation, maybeAssocPrec, comment) =
+  let rawAssocPrec =
+        case maybeAssocPrec of
+          Nothing -> empty
+          Just (assoc, prec) ->
+            assoc ++ "-associative / precedence " ++ String.toString prec
+              |> Text.fromString
+              |> Text.height 12
+              |> Text.rightAligned
+
+      assocPrecWidth =
+        widthOf rawAssocPrec + 20
+
+      assocPrec =
+        container assocPrecWidth 30 middle rawAssocPrec
+
+      annotationText =
         Text.leftAligned (Text.monospace annotation)
           |> width annotationWidth
 
+      annotationPadding = 10
+
       annotationWidth =
-        innerWidth - 10
+        innerWidth - annotationPadding - assocPrecWidth
 
       annotationHeight =
         heightOf annotationText + 12
@@ -173,8 +203,9 @@ viewEntry innerWidth (annotation, comment) =
       annotationBar =
         color C.lightGrey <|
         flow right
-        [ spacer (innerWidth - annotationWidth) annotationHeight
+        [ spacer annotationPadding annotationHeight
         , container annotationWidth annotationHeight midLeft annotationText
+        , assocPrec
         ]
   in
       flow down
