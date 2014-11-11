@@ -1,6 +1,5 @@
 module Component.Documentation where
 
-import Basics (..)
 import Char
 import Color
 import Debug
@@ -10,8 +9,6 @@ import Json.Decode (..)
 import List
 import List ((::))
 import Markdown
-import Maybe (Maybe(Just,Nothing))
-import Result (Result(Ok,Err))
 import String
 import Text
 

@@ -1,16 +1,12 @@
 module Page.ModuleDocs where
 
-import Basics (..)
 import Color
 import ColorScheme as C
-import Debug
 import Dict
 import Json.Decode as Json
 import Graphics.Element (..)
 import Http
 import List
-import Maybe (..)
-import Result
 import Signal
 import String
 import Window
@@ -35,7 +31,7 @@ documentationUrl =
       ++ context.version ++ "/docs/" ++ name ++ ".json"
 
 
-documentation : Signal.Signal D.Documentation
+documentation : Signal D.Documentation
 documentation =
     Http.sendGet (Signal.constant documentationUrl)
       |> Signal.map handleResult
@@ -51,8 +47,8 @@ handleResult response =
   case response of
     Http.Success string ->
       case Json.decode D.documentation string of
-        Result.Ok docs -> docs
-        Result.Err msg ->
+        Ok docs -> docs
+        Err msg ->
             { dummyDocs |
                 comment <- "There was an error loading these docs! They may be corrupted."
             }
@@ -60,7 +56,7 @@ handleResult response =
     _ -> dummyDocs
 
 
-main : Signal.Signal Element
+main : Signal Element
 main =
     Signal.map2 view Window.dimensions documentation
 

@@ -1,13 +1,10 @@
 module Component.ModuleDocs where
 
-import Basics (..)
 import Dict
-import Debug
 import Graphics.Element (..)
 import List
 import List ((::))
 import Markdown
-import Maybe
 import Regex
 import String
 import Text
@@ -53,10 +50,10 @@ extractVars rawChunk =
   let chunk = String.trimLeft rawChunk
   in
       case String.uncons chunk of
-        Maybe.Nothing ->
+        Nothing ->
           ([], "")
 
-        Maybe.Just (c, subchunk) ->
+        Just (c, subchunk) ->
           if  | D.isVarChar c ->
                   let (var, rest) = takeWhile D.isVarChar chunk
                       (vars, nextChunk) = extractCommaThenVars rest
@@ -75,7 +72,7 @@ extractCommaThenVars rawChunk =
   let chunk = String.trimLeft rawChunk
   in
       case String.uncons chunk of
-        Maybe.Just (',', subchunk) ->
+        Just (',', subchunk) ->
           extractVars subchunk
 
         _ -> ([], chunk)
@@ -84,8 +81,8 @@ extractCommaThenVars rawChunk =
 takeWhile : (Char -> Bool) -> String -> (String, String)
 takeWhile pred chunk =
   case String.uncons chunk of
-    Maybe.Nothing -> ("", "")
-    Maybe.Just (c, rest) ->
+    Nothing -> ("", "")
+    Just (c, rest) ->
       if  | pred c ->
               let (result, chunk') = takeWhile pred rest
               in
@@ -114,7 +111,7 @@ viewProse innerWidth prose =
 viewVar : Int -> D.DocDict -> String -> Element
 viewVar innerWidth documentation var =
     case Dict.get var documentation of
-      Maybe.Nothing ->
+      Nothing ->
         let msg =
               Text.concat
               [ Text.fromString "There is some problem with the docs for '"
@@ -124,5 +121,5 @@ viewVar innerWidth documentation var =
         in
             width innerWidth (Text.leftAligned msg)
 
-      Maybe.Just entry ->
+      Just entry ->
         D.viewEntry innerWidth entry

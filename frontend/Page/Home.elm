@@ -1,6 +1,5 @@
 module Page.Home where
 
-import Basics (..)
 import Color
 import ColorScheme as C
 import Graphics.Element (..)

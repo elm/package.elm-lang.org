@@ -1,12 +1,10 @@
 module Component.PackageDocs where
 
-import Basics (..)
 import Color
 import ColorScheme as C
 import Graphics.Element (..)
 import List
 import List ((::))
-import Maybe (..)
 import String
 import Text
 import Markdown

@@ -9,8 +9,6 @@ import Json.Decode as Json
 import Graphics.Element (..)
 import Http
 import List
-import Maybe (..)
-import Result
 import Signal
 import String
 import Window
@@ -31,7 +29,7 @@ descriptionUrl =
   "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ context.version ++ "/elm_package.json"
 
 
-description : Signal.Signal Docs.PackageInfo
+description : Signal Docs.PackageInfo
 description =
     Http.sendGet (Signal.constant descriptionUrl)
       |> Signal.map handleResult
@@ -47,8 +45,8 @@ handleResult response =
   case response of
     Http.Success msg ->
       case Json.decode ("exposed-modules" := list string) msg of
-        Result.Err _ -> packageInfo []
-        Result.Ok modules ->
+        Err _ -> packageInfo []
+        Ok modules ->
             packageInfo modules
 
     _ -> packageInfo []
@@ -59,7 +57,7 @@ readmeUrl =
   "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ context.version ++ "/README.md"
 
 
-readme : Signal.Signal (Maybe String)
+readme : Signal (Maybe String)
 readme =
     Http.sendGet (Signal.constant readmeUrl)
       |> Signal.map extractReadme
@@ -72,7 +70,7 @@ extractReadme response =
     _ -> Nothing
 
 
-main : Signal.Signal Element
+main : Signal Element
 main =
     Signal.map3 view Window.dimensions description readme
 

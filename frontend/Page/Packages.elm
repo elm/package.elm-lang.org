@@ -1,6 +1,5 @@
 module Page.Packages where
 
-import Basics (..)
 import Color
 import ColorScheme as C
 import Graphics.Element (..)
@@ -12,7 +11,7 @@ import Component.TopBar as TopBar
 import Component.Packages as Packages
 
 
-main : Signal.Signal Element
+main : Signal Element
 main =
     Signal.map2 scene Window.dimensions (Signal.constant [Packages.Package "elm-lang/core" "core libraries" ["1.0.0"]])
 
