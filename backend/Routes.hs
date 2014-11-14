@@ -263,15 +263,9 @@ allPackages =
               do  localTime <- liftIO (getModificationTime PkgSummary.allPackages)
                   return (remoteTime < localTime)
 
-      response <-
-          case needsUpdate of
-            False -> return Nothing
-            True ->
-              do  summaries <- liftIO PkgSummary.readAllSummaries
-                  return $ Just $ flip map summaries $ \summary ->
-                      (PkgSummary.name summary, PkgSummary.versions summary)
-
-      writeLBS $ Binary.encode (response :: Maybe [(N.Name, [V.Version])])
+      case needsUpdate of
+        False -> writeLBS "null"
+        True -> serveFile PkgSummary.allPackages
 
 
 -- FETCH RESOURCES
