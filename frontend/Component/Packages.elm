@@ -3,6 +3,7 @@ module Component.Packages where
 import Color
 import ColorScheme as C
 import Graphics.Element (..)
+import Json.Decode (..)
 import List
 import List ((::))
 import String
@@ -14,6 +15,13 @@ type alias Package =
     , summary : String
     , versions : [String]
     }
+
+package : Decoder Package
+package =
+    object3 Package
+      ("name" := string)
+      ("summary" := string)
+      ("versions" := list string)
 
 
 view : Int -> [Package] -> Element

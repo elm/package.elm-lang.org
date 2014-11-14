@@ -3,6 +3,8 @@ module Page.Packages where
 import Color
 import ColorScheme as C
 import Graphics.Element (..)
+import Http
+import Json.Decode as Json
 import Signal
 import String
 import Window
@@ -11,9 +13,14 @@ import Component.TopBar as TopBar
 import Component.Packages as Packages
 
 
+port title : String
+port title =
+    "Elm Packages"
+
+
 main : Signal Element
 main =
-    Signal.map2 scene Window.dimensions (Signal.constant [Packages.Package "elm-lang/core" "core libraries" ["1.0.0"]])
+    Signal.map2 view Window.dimensions packages
 
 
 search : Signal.Channel TopBar.Update
@@ -21,8 +28,8 @@ search =
     Signal.channel TopBar.NoOp
 
 
-scene : (Int,Int) -> [Packages.Package] -> Element
-scene (windowWidth, windowHeight) packages =
+view : (Int,Int) -> [Packages.Package] -> Element
+view (windowWidth, windowHeight) packages =
   color C.background <|
   flow down
   [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
@@ -31,3 +38,25 @@ scene (windowWidth, windowHeight) packages =
     , Packages.view 980 packages
     ]
   ]
+
+
+allPackagesUrl : String
+allPackagesUrl =
+    "/all-packages"
+
+
+packages : Signal [Packages.Package]
+packages =
+    Http.sendGet (Signal.constant allPackagesUrl)
+      |> Signal.map handleResult
+
+
+handleResult : Http.Response String -> [Packages.Package]
+handleResult response =
+  case response of
+    Http.Success msg ->
+      case Json.decode (Json.list Packages.package) msg of
+        Ok packages -> packages
+        Err _ -> []
+
+    _ -> []
