@@ -158,7 +158,7 @@ viewEntry innerWidth (annotation, maybeAssocPrec, comment) =
         case maybeAssocPrec of
           Nothing -> empty
           Just (assoc, prec) ->
-            assoc ++ "-associative / precedence " ++ String.toString prec
+            assoc ++ "-associative / precedence " ++ toString prec
               |> Text.fromString
               |> Text.height 12
               |> Text.rightAligned
