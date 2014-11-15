@@ -44,7 +44,7 @@ main =
       compileElmFiles
       cargs <- cmdArgs flags
       httpServe (setPort (port cargs) defaultConfig) $
-          ifTop (ServeFile.filler (Module.Name ["Page","Home"]))
+          ifTop (ServeFile.filler (Module.Name ["Page","Packages"]))
           <|>
             route
             [ ("packages", Route.packages)
