@@ -4,6 +4,7 @@ import Color
 import ColorScheme as C
 import Graphics.Element (..)
 import Signal
+import Text
 
 
 type SearchScope
@@ -33,7 +34,7 @@ innerWidth = 980
 
 logoSize = 28
 
-searchBarWidth = 400
+searchBarWidth = 100
 
 
 view : Int -> Signal.Channel Update -> Model -> Element
@@ -48,7 +49,7 @@ view outerWidth channel model =
   [ bar leftPadding empty
   , bar topBarHeight
       (link "/" (image logoSize logoSize "/assets/elm_logo.svg"))
-  , bar searchBarWidth (searchBox model)
+  , bar searchBarWidth (link "/packages" (Text.plainText "Packages"))
   , bar (innerWidth - topBarHeight - searchBarWidth + rightPadding) empty
   ]
 
@@ -59,21 +60,4 @@ bar fillerWidth elem =
   [ color C.lightGrey (container fillerWidth topBarHeight middle elem)
   , color C.mediumGrey (spacer fillerWidth 1)
   ]
-
-
-searchBox : Model -> Element
-searchBox model =
-  let boxColor =
-        case model.status of
-          Normal -> C.background
-          Hover -> Color.white
-          Focus -> Color.white
-  in
-    color C.mediumGrey <|
-    container searchBarWidth (logoSize + 4) middle <|
-    color boxColor <|
-    container (searchBarWidth - 2) (logoSize + 2) midLeft <|
-      case model.searchScope of
-        Package pkg -> spacer 30 30
-        Global -> spacer 30 30
 
