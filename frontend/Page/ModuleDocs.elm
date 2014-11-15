@@ -73,6 +73,6 @@ view (windowWidth, windowHeight) docs =
   [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , Docs.view 980 "elm-lang" "core" docs
+    , Docs.view 980 context.user context.name docs
     ]
   ]
