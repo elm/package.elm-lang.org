@@ -124,7 +124,7 @@ register =
 
       result <-
           liftIO $ runErrorT $ do
-            verifyWhitelist (Desc.name description)
+            verifyWhitelist (Desc.natives description) (Desc.name description)
             splitDocs directory
 
       case result of
@@ -155,12 +155,15 @@ verifyVersion name version =
               ("The tag " ++ V.toString version ++ " has not been pushed to GitHub.")
 
 
-verifyWhitelist :: N.Name -> ErrorT String IO ()
-verifyWhitelist name =
-  do  whitelist <- liftIO NativeWhitelist.read
-      case True of -- name `elem` whitelist of
-        True -> return ()
-        False -> throwError (whitelistError name)
+verifyWhitelist :: Bool -> N.Name -> ErrorT String IO ()
+verifyWhitelist allowNatives name =
+  case allowNatives of
+    False -> return ()
+    True ->
+      do  whitelist <- liftIO NativeWhitelist.read
+          case name `elem` whitelist of
+            True -> return ()
+            False -> throwError (whitelistError name)
 
 
 whitelistError :: N.Name -> String
@@ -170,7 +173,8 @@ whitelistError name =
     \make sure the exposed API is pure and the Native code is absolutely\n\
     \necessary. Please open an issue with the title:\n\n"
     ++ "    \"Native review for " ++ N.toString name ++ "\"\n\n"
-    ++ "to begin the review process at <https://github.com/elm-lang/elm-get/issues>"
+    ++ "to begin the review process at the following address.\n"
+    ++ "<https://github.com/elm-lang/package.elm-lang.org/issues>"
 
 
 -- UPLOADING FILES
