@@ -46,7 +46,7 @@ handleResult : Http.Response String -> D.Documentation
 handleResult response =
   case response of
     Http.Success string ->
-      case Json.decode D.documentation string of
+      case Json.decodeString D.documentation string of
         Ok docs -> docs
         Err msg ->
             { dummyDocs |

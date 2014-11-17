@@ -55,7 +55,7 @@ handleResult : Http.Response String -> [Packages.Package]
 handleResult response =
   case response of
     Http.Success msg ->
-      case Json.decode (Json.list Packages.package) msg of
+      case Json.decodeString (Json.list Packages.package) msg of
         Ok packages -> packages
         Err _ -> []
 

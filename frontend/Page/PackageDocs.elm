@@ -44,7 +44,7 @@ handleResult : Http.Response String -> Docs.PackageInfo
 handleResult response =
   case response of
     Http.Success msg ->
-      case Json.decode ("exposed-modules" := list string) msg of
+      case Json.decodeString ("exposed-modules" := list string) msg of
         Err _ -> packageInfo []
         Ok modules ->
             packageInfo modules
