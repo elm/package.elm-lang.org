@@ -2,7 +2,6 @@ module Component.Documentation where
 
 import Char
 import Color
-import Debug
 import Dict
 import Graphics.Element (..)
 import Json.Decode (..)
