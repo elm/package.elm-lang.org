@@ -1,4 +1,5 @@
 [
+    "elm-lang/core",
     "johnpmayer/elm-webgl",
     "johnpmayer/elm-linear-algebra",
     "michaelbjames/elm-benchmark"
