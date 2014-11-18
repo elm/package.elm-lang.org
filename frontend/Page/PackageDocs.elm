@@ -26,7 +26,7 @@ port title =
 
 descriptionUrl : String
 descriptionUrl =
-  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ context.version ++ "/elm_package.json"
+  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ context.version ++ "/elm-package.json"
 
 
 description : Signal Docs.PackageInfo
