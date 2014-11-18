@@ -21,7 +21,7 @@ search =
     Signal.channel TopBar.NoOp
 
 
-scene : (Int,Int) -> [Packages.Package] -> Element
+scene : (Int,Int) -> List Packages.Package -> Element
 scene (windowWidth, windowHeight) packages =
   let packageListing =
         Packages.view 980 packages

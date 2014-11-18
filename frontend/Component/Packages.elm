@@ -13,7 +13,7 @@ import Text
 type alias Package =
     { name : String
     , summary : String
-    , versions : [String]
+    , versions : List String
     }
 
 package : Decoder Package
@@ -24,7 +24,7 @@ package =
       ("versions" := list string)
 
 
-view : Int -> [Package] -> Element
+view : Int -> List Package -> Element
 view innerWidth packages =
     let bigWords =
           Text.fromString "Packages"

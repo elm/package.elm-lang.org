@@ -34,9 +34,9 @@ toDocDict docs =
 type alias Documentation =
     { name : String
     , comment : String
-    , aliases : [Alias]
-    , unions : [Union]
-    , values : [Value]
+    , aliases : List Alias
+    , unions : List Union
+    , values : List Value
     }
 
 
@@ -53,7 +53,7 @@ documentation =
 type alias Alias =
     { name : String
     , comment : String
-    , args : [String]
+    , args : List String
     , tipe : Type
     }
 
@@ -70,8 +70,8 @@ alias =
 type alias Union =
     { name : String
     , comment : String
-    , args : [String]
-    , cases : [(String, [Type])]
+    , args : List String
+    , cases : List (String, List Type)
     }
 
 
@@ -112,8 +112,8 @@ type Type
     = Lambda Type Type
     | Var String
     | Type String
-    | App Type [Type]
-    | Record [(String, Type)] (Maybe Type)
+    | App Type (List Type)
+    | Record (List (String, Type)) (Maybe Type)
 
 
 tipe : Decoder Type
@@ -229,7 +229,7 @@ viewUnion union =
       ]
 
 
-viewCase : String -> (String, [Type]) -> Text.Text
+viewCase : String -> (String, List Type) -> Text.Text
 viewCase sep (tag, args) =
   Text.fromString "\n    " ++ blueString sep
   ++ spacePrefix (Text.fromString tag :: List.map (viewTypeHelp ADT) args)
@@ -330,7 +330,7 @@ parens txt =
   sandwich "(" ")" txt
 
 
-spacePrefix : [Text.Text] -> Text.Text
+spacePrefix : List Text.Text -> Text.Text
 spacePrefix txts =
   Text.concat (List.map (\txt -> space ++ txt) txts)
 

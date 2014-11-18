@@ -36,7 +36,7 @@ viewDocs innerWidth documentation comment =
   let (prose :: chunks) =
         String.split "\n@docs " comment
 
-      varProsePairs : [([String], String)]
+      varProsePairs : List (List String, String)
       varProsePairs =
         List.map extractVars chunks
   in
@@ -45,7 +45,7 @@ viewDocs innerWidth documentation comment =
         :: List.concatMap (viewPair innerWidth documentation) varProsePairs
 
 
-extractVars : String -> ([String], String)
+extractVars : String -> (List String, String)
 extractVars rawChunk =
   let chunk = String.trimLeft rawChunk
   in
@@ -67,7 +67,7 @@ extractVars rawChunk =
                       (op :: vars, nextChunk)
 
 
-extractCommaThenVars : String -> ([String], String)
+extractCommaThenVars : String -> (List String, String)
 extractCommaThenVars rawChunk =
   let chunk = String.trimLeft rawChunk
   in
@@ -97,7 +97,7 @@ docsPattern =
     Regex.regex "(.*)\n@docs\\s+([a-zA-Z0-9_']+(?:,\\s*[a-zA-Z0-9_']+)*)"
 
 
-viewPair : Int -> D.DocDict -> ([String], String) -> [Element]
+viewPair : Int -> D.DocDict -> (List String, String) -> List Element
 viewPair innerWidth documentation (vars, prose) =
     List.map (viewVar innerWidth documentation) vars
     ++ [viewProse innerWidth prose]

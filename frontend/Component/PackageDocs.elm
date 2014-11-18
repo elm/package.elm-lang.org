@@ -13,7 +13,7 @@ type alias PackageInfo =
     { user : String
     , name : String
     , version : String
-    , modules : [String]
+    , modules : List String
     }
 
 

@@ -28,7 +28,7 @@ search =
     Signal.channel TopBar.NoOp
 
 
-view : (Int,Int) -> [Packages.Package] -> Element
+view : (Int,Int) -> List Packages.Package -> Element
 view (windowWidth, windowHeight) packages =
   color C.background <|
   flow down
@@ -45,13 +45,13 @@ allPackagesUrl =
     "/all-packages"
 
 
-packages : Signal [Packages.Package]
+packages : Signal (List Packages.Package)
 packages =
     Http.sendGet (Signal.constant allPackagesUrl)
       |> Signal.map handleResult
 
 
-handleResult : Http.Response String -> [Packages.Package]
+handleResult : Http.Response String -> List Packages.Package
 handleResult response =
   case response of
     Http.Success msg ->

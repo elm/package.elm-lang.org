@@ -35,7 +35,7 @@ description =
       |> Signal.map handleResult
 
 
-packageInfo : [String] -> Docs.PackageInfo
+packageInfo : List String -> Docs.PackageInfo
 packageInfo modules =
   Docs.PackageInfo context.user context.name context.version modules
 
