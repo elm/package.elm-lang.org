@@ -26,6 +26,7 @@ import qualified ServeFile
 
 data Flags = Flags
     { port :: Int
+    , bootstrap :: Bool
     }
     deriving (Data,Typeable,Show,Eq)
 
@@ -33,6 +34,7 @@ data Flags = Flags
 flags :: Flags
 flags = Flags
     { port = 8000 &= help "set the port of the server"
+    , bootstrap = False &= help "do not build the UI, because that needs to pull dependencies from the server we are trying to start"
     }
 
 
@@ -41,8 +43,11 @@ main :: IO ()
 main =
   do  setNumCapabilities =<< getNumProcessors
       setupLogging
-      compileElmFiles
       cargs <- cmdArgs flags
+
+      when (not (bootstrap cargs))
+          compileElmFiles
+
       httpServe (setPort (port cargs) defaultConfig) $
           ifTop (ServeFile.filler (Module.Name ["Page","Packages"]))
           <|>
