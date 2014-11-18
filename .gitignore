@@ -1,8 +1,7 @@
 cabal.sandbox.config
 dist
 log
-cache
-elm_packages
+elm-stuff
 artifacts
 packages
 all-packages.json
