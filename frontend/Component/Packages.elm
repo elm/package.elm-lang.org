@@ -51,7 +51,7 @@ viewPackage innerWidth package =
       flow down
       [ color C.lightGrey (spacer innerWidth 1)
       , flow right
-        [ container 200 36 midLeft pkgLink
-        , container (innerWidth - 200) 36 midLeft summary
+        [ container 260 36 midLeft pkgLink
+        , container (innerWidth - 260) 36 midLeft summary
         ]
       ]
