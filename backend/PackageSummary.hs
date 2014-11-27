@@ -45,8 +45,8 @@ insert summary summaries =
 
       currentSummary : rest ->
           case compare (name summary) (name currentSummary) of
-            LT -> currentSummary : insert summary rest
-            GT -> summary : summaries
+            GT -> currentSummary : insert summary rest
+            LT -> summary : summaries
             EQ ->
                 let vs = versions summary ++ versions currentSummary
                 in
