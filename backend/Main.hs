@@ -103,6 +103,7 @@ publicModules =
     , ["Page","PackageDocs"]
     , ["Page","ModuleDocs"]
     , ["Page","Home"]
+    , ["Page","Error"]
     ]
 
 
