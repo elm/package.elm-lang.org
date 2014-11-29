@@ -43,10 +43,12 @@ package =
       name <- getParameter "name" Just
       let pkg = N.Name user name
 
-      route
-        [ ("latest", redirectToLatest pkg)
-        , (":version", servePackageInfo pkg)
-        ]
+      ifTop (ServeFile.versions pkg)
+        <|> route
+            [ ("latest", redirectToLatest pkg)
+            , (":version", servePackageInfo pkg)
+            ]
+
 
 
 servePackageInfo :: N.Name -> Snap ()

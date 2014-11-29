@@ -100,6 +100,7 @@ publicModules :: [Module.Name]
 publicModules =
     map Module.Name
     [ ["Page","Packages"]
+    , ["Page","Versions"]
     , ["Page","PackageDocs"]
     , ["Page","ModuleDocs"]
     , ["Page","Home"]
