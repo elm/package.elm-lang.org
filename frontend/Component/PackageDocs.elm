@@ -8,6 +8,8 @@ import List ((::))
 import String
 import Text
 import Markdown
+import Component.Header as Header
+
 
 type alias PackageInfo =
     { user : String
@@ -19,26 +21,8 @@ type alias PackageInfo =
 
 view : Int -> PackageInfo -> Maybe String -> Element
 view innerWidth pkg maybeReadme =
-    let title =
-          Text.fromString (pkg.user ++ " / " ++ pkg.name)
-            |> Text.height 24
-            |> Text.leftAligned
-
-        href =
-          "/packages/" ++ pkg.user ++ "/" ++ pkg.name
-
-        metadata =
-          Text.fromString (pkg.version ++ " - ") ++ Text.link href (Text.fromString "see other versions")
-            |> Text.leftAligned
-
-        header =
-          flow right
-          [ container (innerWidth // 2) 100 midLeft title
-          , container (innerWidth - innerWidth // 2) 100 midRight metadata
-          ]
-    in
     flow down
-    [ header
+    [ Header.view innerWidth pkg.user pkg.name pkg.version Nothing
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
     , flow right

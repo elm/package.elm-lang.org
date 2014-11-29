@@ -11,20 +11,13 @@ import Text
 
 import ColorScheme as C
 import Component.Documentation as D
+import Component.Header as Header
 
 
-view : Int -> String -> String -> D.Documentation -> Element
-view innerWidth user package docs =
-    let bigWords =
-          Text.fromString (user ++ " / " ++ package ++ " / " ++ docs.name)
-            |> Text.height 24
-            |> Text.leftAligned
-
-        header =
-          container innerWidth 100 midLeft bigWords
-    in
+view : Int -> String -> String -> String -> D.Documentation -> Element
+view innerWidth user package version docs =
     flow down
-    [ header
+    [ Header.view innerWidth user package version (Just docs.name)
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
     , viewDocs innerWidth (D.toDocDict docs) docs.comment
