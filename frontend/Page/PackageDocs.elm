@@ -9,6 +9,7 @@ import Json.Decode as Json
 import Graphics.Element (..)
 import Http
 import List
+import LocalChannel as LC
 import Signal
 import String
 import Window
@@ -17,16 +18,21 @@ import Component.TopBar as TopBar
 import Component.PackageDocs as Docs
 
 
-port context : { user : String, name : String, version : String }
+port context : { user : String, name : String, version : String, versionList : List String }
 
 port title : String
 port title =
     context.user ++ "/" ++ context.name ++ " " ++ context.version
 
 
+packageUrl : String -> String
+packageUrl version =
+  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ version
+
+
 descriptionUrl : String
 descriptionUrl =
-  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ context.version ++ "/elm-package.json"
+  packageUrl context.version ++ "/elm-package.json"
 
 
 description : Signal Docs.PackageInfo
@@ -37,7 +43,7 @@ description =
 
 packageInfo : List String -> Docs.PackageInfo
 packageInfo modules =
-  Docs.PackageInfo context.user context.name context.version modules
+  Docs.PackageInfo context.user context.name context.version context.versionList modules
 
 
 handleResult : Http.Response String -> Docs.PackageInfo
@@ -54,7 +60,7 @@ handleResult response =
 
 readmeUrl : String
 readmeUrl =
-  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ context.version ++ "/README.md"
+  packageUrl context.version ++ "/README.md"
 
 
 readme : Signal (Maybe String)
@@ -80,6 +86,17 @@ search =
     Signal.channel TopBar.NoOp
 
 
+versionChan : Signal.Channel String
+versionChan =
+    Signal.channel ""
+
+
+port redirect : Signal String
+port redirect =
+  Signal.keepIf ((/=) "") "" (Signal.subscribe versionChan)
+    |> Signal.map packageUrl
+
+
 view : (Int,Int) -> Docs.PackageInfo -> Maybe String -> Element
 view (windowWidth, windowHeight) packages readme =
   color C.background <|
@@ -87,6 +104,6 @@ view (windowWidth, windowHeight) packages readme =
   [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , Docs.view 980 packages readme
+    , Docs.view (LC.create identity versionChan) 980 packages readme
     ]
   ]

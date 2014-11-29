@@ -5,9 +5,11 @@ import ColorScheme as C
 import Graphics.Element (..)
 import List
 import List ((::))
+import LocalChannel as LC
 import String
 import Text
 import Markdown
+
 import Component.Header as Header
 
 
@@ -15,14 +17,15 @@ type alias PackageInfo =
     { user : String
     , name : String
     , version : String
+    , versionList : List String
     , modules : List String
     }
 
 
-view : Int -> PackageInfo -> Maybe String -> Element
-view innerWidth pkg maybeReadme =
+view : LC.LocalChannel String -> Int -> PackageInfo -> Maybe String -> Element
+view versionChan innerWidth pkg maybeReadme =
     flow down
-    [ Header.view innerWidth pkg.user pkg.name pkg.version Nothing
+    [ Header.view versionChan innerWidth pkg.user pkg.name pkg.version pkg.versionList Nothing
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
     , flow right

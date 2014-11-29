@@ -2,6 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module ServeFile where
 
+import Control.Monad.Trans (liftIO)
+import qualified Data.List as List
 import qualified Data.Text.Lazy as Text
 import Snap.Core (Snap, writeBuilder)
 import Text.Blaze.Html5 as H
@@ -11,6 +13,7 @@ import qualified Text.Blaze.Html.Renderer.Utf8 as Blaze
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package.Name as N
 import qualified Elm.Package.Version as V
+import qualified PackageSummary as PkgSummary
 import qualified Path
 
 
@@ -33,21 +36,25 @@ filler name =
 
 
 packageDocs :: N.Name -> V.Version -> Snap ()
-packageDocs (N.Name user name) version =
-    writeBuilder $
-    Blaze.renderHtmlBuilder $
-    docTypeHtml $ do 
-      H.head $ do
-        meta ! charset "UTF-8"
-        H.title (toHtml ("Elm Package Documentation" :: Text.Text))
-        H.style $ preEscapedToMarkup standardStyle
-        script ! src (toValue ("/artifacts/Page-PackageDocs.js" :: Text.Text)) $ ""
+packageDocs pkg@(N.Name user name) version =
+  do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
 
-      body $ script $ preEscapedToMarkup $
-          "\nvar context = { user: '" ++ user ++ "', name: '" ++ name ++ "', version: '" ++ V.toString version ++ "' }\n" ++
-          "var page = Elm.fullscreen(Elm.Page.PackageDocs, { context: context });\n"
+      writeBuilder $
+        Blaze.renderHtmlBuilder $
+        docTypeHtml $ do 
+          H.head $ do
+            meta ! charset "UTF-8"
+            H.title (toHtml ("Elm Package Documentation" :: Text.Text))
+            H.style $ preEscapedToMarkup standardStyle
+            script ! src (toValue ("/artifacts/Page-PackageDocs.js" :: Text.Text)) $ ""
 
-      analytics
+          body $ script $ preEscapedToMarkup $
+              "\nvar context = { user: '" ++ user ++ "', name: '" ++ name ++
+              "', version: '" ++ V.toString version ++ "', versionList: " ++
+              show (maybe [] (List.map V.toString) maybeVersions) ++ " }\n" ++
+              "var page = Elm.fullscreen(Elm.Page.PackageDocs, { context: context });\n"
+
+          analytics
 
 
 moduleDocs :: N.Name -> V.Version -> Module.Name -> Snap ()
