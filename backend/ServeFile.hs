@@ -38,6 +38,8 @@ filler name =
 packageDocs :: N.Name -> V.Version -> Snap ()
 packageDocs pkg@(N.Name user name) version =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
+      let versionList =
+            maybe [] (List.map V.toString) maybeVersions
 
       writeBuilder $
         Blaze.renderHtmlBuilder $
@@ -49,31 +51,48 @@ packageDocs pkg@(N.Name user name) version =
             script ! src (toValue ("/artifacts/Page-PackageDocs.js" :: Text.Text)) $ ""
 
           body $ script $ preEscapedToMarkup $
-              "\nvar context = { user: '" ++ user ++ "', name: '" ++ name ++
-              "', version: '" ++ V.toString version ++ "', versionList: " ++
-              show (maybe [] (List.map V.toString) maybeVersions) ++ " }\n" ++
-              "var page = Elm.fullscreen(Elm.Page.PackageDocs, { context: context });\n"
+              context
+                [ ("user", show user)
+                , ("name", show name)
+                , ("version", show (V.toString version))
+                , ("versionList", show versionList)
+                ]
+              ++ "var page = Elm.fullscreen(Elm.Page.PackageDocs, { context: context });\n"
 
           analytics
 
 
 moduleDocs :: N.Name -> V.Version -> Module.Name -> Snap ()
-moduleDocs (N.Name user name) version moduleName =
-    writeBuilder $
-    Blaze.renderHtmlBuilder $
-    docTypeHtml $ do 
-      H.head $ do
-        meta ! charset "UTF-8"
-        H.title (toHtml ("Elm Package Documentation" :: Text.Text))
-        H.style $ preEscapedToMarkup standardStyle
-        script ! src (toValue ("/artifacts/Page-ModuleDocs.js" :: Text.Text)) $ ""
+moduleDocs pkg@(N.Name user name) version moduleName =
+  do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
+      let versionList =
+            maybe [] (List.map V.toString) maybeVersions
 
-      body $ script $ preEscapedToMarkup $
-          "\nvar context = { user: '" ++ user ++ "', name: '" ++ name ++ "', " ++
-          "version: '" ++ V.toString version ++ "', moduleName: '" ++ Module.nameToString moduleName ++ "' }\n" ++
-          "var page = Elm.fullscreen(Elm.Page.ModuleDocs, { context: context });\n"
+      writeBuilder $
+        Blaze.renderHtmlBuilder $
+        docTypeHtml $ do 
+          H.head $ do
+            meta ! charset "UTF-8"
+            H.title (toHtml ("Elm Package Documentation" :: Text.Text))
+            H.style $ preEscapedToMarkup standardStyle
+            script ! src (toValue ("/artifacts/Page-ModuleDocs.js" :: Text.Text)) $ ""
 
-      analytics
+          body $ script $ preEscapedToMarkup $
+              context
+                [ ("user", show user)
+                , ("name", show name)
+                , ("version", show (V.toString version))
+                , ("versionList", show versionList)
+                , ("moduleName", show (Module.nameToString moduleName))
+                ]
+              ++ "var page = Elm.fullscreen(Elm.Page.ModuleDocs, { context: context });\n"
+
+          analytics
+
+
+context :: [(String, String)] -> String
+context pairs =
+  "\nvar context = { " ++ List.intercalate ", " (List.map (\(k,v) -> k ++ ": " ++ v) pairs) ++ " };\n"
 
 
 standardStyle :: Text.Text

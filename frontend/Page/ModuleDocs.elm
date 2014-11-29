@@ -7,6 +7,7 @@ import Json.Decode as Json
 import Graphics.Element (..)
 import Http
 import List
+import LocalChannel as LC
 import Signal
 import String
 import Window
@@ -16,19 +17,28 @@ import Component.ModuleDocs as Docs
 import Component.Documentation as D
 
 
-port context : { user : String, name : String, version : String, moduleName : String }
+port context : { user : String, name : String, version : String, versionList : List String, moduleName : String }
 
 port title : String
 port title =
     context.user ++ "/" ++ context.name ++ " " ++ context.version ++ " " ++ context.moduleName
 
 
+packageUrl : String -> String
+packageUrl version =
+  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ version
+
+
+moduleNameToUrl : String -> String
+moduleNameToUrl name =
+  String.map (\c -> if c == '.' then '-' else c) name
+
+
 documentationUrl : String
 documentationUrl =
-  let name = String.map (\c -> if c == '.' then '-' else c) context.moduleName
+  let name = moduleNameToUrl context.moduleName
   in
-      "/packages/" ++ context.user ++ "/" ++ context.name ++ "/"
-      ++ context.version ++ "/docs/" ++ name ++ ".json"
+      packageUrl context.version ++ "/docs/" ++ name ++ ".json"
 
 
 documentation : Signal D.Documentation
@@ -66,6 +76,17 @@ search =
     Signal.channel TopBar.NoOp
 
 
+versionChan : Signal.Channel String
+versionChan =
+    Signal.channel ""
+
+
+port redirect : Signal String
+port redirect =
+  Signal.keepIf ((/=) "") "" (Signal.subscribe versionChan)
+    |> Signal.map (\v -> packageUrl v ++ "/" ++ moduleNameToUrl context.moduleName)
+
+
 view : (Int,Int) -> D.Documentation -> Element
 view (windowWidth, windowHeight) docs =
   color C.background <|
@@ -73,6 +94,6 @@ view (windowWidth, windowHeight) docs =
   [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , Docs.view 980 context.user context.name context.version docs
+    , Docs.view (LC.create identity versionChan) 980 context.user context.name context.version context.versionList docs
     ]
   ]

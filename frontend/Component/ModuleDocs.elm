@@ -4,6 +4,7 @@ import Dict
 import Graphics.Element (..)
 import List
 import List ((::))
+import LocalChannel as LC
 import Markdown
 import Regex
 import String
@@ -14,10 +15,10 @@ import Component.Documentation as D
 import Component.Header as Header
 
 
-view : Int -> String -> String -> String -> D.Documentation -> Element
-view innerWidth user package version docs =
+view : LC.LocalChannel String -> Int -> String -> String -> String -> List String-> D.Documentation -> Element
+view versionChan innerWidth user package version versionList docs =
     flow down
-    [ Header.view innerWidth user package version (Just docs.name)
+    [ Header.view versionChan innerWidth user package version versionList (Just docs.name)
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
     , viewDocs innerWidth (D.toDocDict docs) docs.comment
