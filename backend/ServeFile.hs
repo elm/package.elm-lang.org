@@ -32,24 +32,6 @@ filler name =
       analytics
 
 
-versions :: N.Name -> Snap ()
-versions (N.Name user name) =
-    writeBuilder $
-    Blaze.renderHtmlBuilder $
-    docTypeHtml $ do 
-      H.head $ do
-        meta ! charset "UTF-8"
-        H.title (toHtml ("Elm Package Documentation" :: Text.Text))
-        H.style $ preEscapedToMarkup standardStyle
-        script ! src (toValue ("/artifacts/Page-Versions.js" :: Text.Text)) $ ""
-
-      body $ script $ preEscapedToMarkup $
-          "\nvar context = { user: '" ++ user ++ "', name: '" ++ name ++ "' }\n" ++
-          "var page = Elm.fullscreen(Elm.Page.Versions, { context: context });\n"
-
-      analytics
-
-
 packageDocs :: N.Name -> V.Version -> Snap ()
 packageDocs (N.Name user name) version =
     writeBuilder $
