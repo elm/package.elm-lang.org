@@ -14,10 +14,15 @@ view : LC.LocalChannel String -> Int -> String -> String -> String -> List Strin
 view versionChan innerWidth user package version versions maybeModule =
   let
     userLink =
-      Text.link ("/packages/" ++ user) (Text.fromString user)
+      Text.fromString user
 
     packageLink =
-      Text.link ("/packages/" ++ user ++ "/" ++ package ++ "/" ++ version) (Text.fromString package)
+      case maybeModule of
+        Nothing -> Text.fromString package
+        Just _ ->
+          Text.link
+            ("/packages/" ++ user ++ "/" ++ package ++ "/" ++ version)
+            (Text.fromString package)
 
     userPackageText =
       userLink ++ Text.fromString " / " ++ packageLink
