@@ -30,8 +30,9 @@ Elm.Native.Markdown.make = function(localRuntime) {
         smartLists: true,
         smartypants: false,
         langPrefix: '',
-        highlight: function (code) {
-          var result = hljs.highlightAuto(code);
+        highlight: function (code, lang) {
+          lang = lang || 'haskell';
+          var result = hljs.highlight(lang, code, true);
           return result.value;
         }
     });
