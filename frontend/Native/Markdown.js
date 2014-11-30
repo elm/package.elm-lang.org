@@ -28,7 +28,12 @@ Elm.Native.Markdown.make = function(localRuntime) {
         pedantic: false,
         sanitize: true,
         smartLists: true,
-        smartypants: false
+        smartypants: false,
+        langPrefix: '',
+        highlight: function (code) {
+          var result = hljs.highlightAuto(code);
+          return result.value;
+        }
     });
 
     function toHtml(rawMarkdown) {

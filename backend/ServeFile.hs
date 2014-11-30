@@ -46,9 +46,12 @@ packageDocs pkg@(N.Name user name) version =
         docTypeHtml $ do 
           H.head $ do
             meta ! charset "UTF-8"
-            H.title (toHtml ("Elm Package Documentation" :: Text.Text))
+            H.title "Elm Package Documentation"
             H.style $ preEscapedToMarkup standardStyle
-            script ! src (toValue ("/artifacts/Page-PackageDocs.js" :: Text.Text)) $ ""
+            script ! src "/artifacts/Page-PackageDocs.js" $ ""
+
+            link ! rel "stylesheet" ! href "/assets/highlight/styles/github.css"
+            script ! src "/assets/highlight/highlight.pack.js" $ ""
 
           body $ script $ preEscapedToMarkup $
               context
@@ -73,9 +76,12 @@ moduleDocs pkg@(N.Name user name) version moduleName =
         docTypeHtml $ do 
           H.head $ do
             meta ! charset "UTF-8"
-            H.title (toHtml ("Elm Package Documentation" :: Text.Text))
+            H.title "Elm Package Documentation"
             H.style $ preEscapedToMarkup standardStyle
-            script ! src (toValue ("/artifacts/Page-ModuleDocs.js" :: Text.Text)) $ ""
+            script ! src "/artifacts/Page-ModuleDocs.js" $ ""
+
+            link ! rel "stylesheet" ! href "/assets/highlight/styles/github.css"
+            script ! src "/assets/highlight/highlight.pack.js" $ ""
 
           body $ script $ preEscapedToMarkup $
               context
@@ -109,19 +115,14 @@ standardStyle =
     \  line-height: 1.5em !important;\n\
     \}\n\
     \pre {\n\
-    \  margin-left: 30px;\n\
-    \}\n\
-    \code > span.kw { color: #268BD2; }\n\
-    \code > span.dt { color: #268BD2; }\n\
-    \code > span.dv, code > span.bn, code > span.fl { color: #D33682; }\n\
-    \code > span.ch { color: #DC322F; }\n\
-    \code > span.st { color: #2AA198; }\n\
-    \code > span.co { color: #93A1A1; }\n\
-    \code > span.ot { color: #A57800; }\n\
-    \code > span.al { color: #CB4B16; font-weight: bold; }\n\
-    \code > span.fu { color: #268BD2; }\n\
-    \code > span.re { }\n\
-    \code > span.er { color: #D30102; font-weight: bold; }"
+    \  margin: 0;\n\
+    \  padding: 10px;\n\
+    \  background-color: rgb(254,254,254);\n\
+    \  border-style: solid;\n\
+    \  border-width: 1px;\n\
+    \  border-color: rgb(245,245,245);\n\
+    \  border-radius: 6px;\n\
+    \}\n"
 
 
 -- | Add analytics to a page.
