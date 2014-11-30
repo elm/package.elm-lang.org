@@ -5,7 +5,7 @@ import Color (rgb)
 
 greyBlue = rgb 90 99 120
 
-blue   = rgb 96 181 204
+blue   = rgb 17 132 206
 yellow = rgb 240 173 0
 pink   = rgb 234 21 122
 green  = rgb 127 209 59

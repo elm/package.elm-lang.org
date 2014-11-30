@@ -47,14 +47,14 @@ view outerWidth channel model =
   in
   flow right
   [ bar leftPadding empty
-  , bar topBarHeight
+  , bar logoSize
       (link "/" (image logoSize logoSize "/assets/elm_logo.svg"))
-  , link "/packages" (bar searchBarWidth (Text.leftAligned (Text.color C.yellow (Text.fromString "Packages"))))
+  , link "/packages" (bar searchBarWidth (Text.leftAligned (Text.color (Color.rgb 5 80 129) (Text.fromString "Packages"))))
   , bar (innerWidth - topBarHeight - searchBarWidth + rightPadding) empty
   ]
 
 
 bar : Int -> Element -> Element
 bar fillerWidth elem =
-  color (Color.rgb 17 132 206) (container fillerWidth topBarHeight middle elem)
+  color C.blue (container fillerWidth topBarHeight middle elem)
 
