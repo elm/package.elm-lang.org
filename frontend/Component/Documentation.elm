@@ -151,8 +151,8 @@ specificType tag =
 
 -- VIEW
 
-viewEntry : Int -> (Text.Text, Maybe (String, Int), String) -> Element
-viewEntry innerWidth (annotation, maybeAssocPrec, comment) =
+viewEntry : Int -> String -> (Text.Text, Maybe (String, Int), String) -> Element
+viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
   let rawAssocPrec =
         case maybeAssocPrec of
           Nothing -> empty
@@ -190,7 +190,6 @@ viewEntry innerWidth (annotation, maybeAssocPrec, comment) =
                 ]
 
       annotationBar =
-        color C.lightGrey <|
         flow right
         [ spacer annotationPadding annotationHeight
         , container annotationWidth annotationHeight midLeft annotationText
@@ -198,18 +197,18 @@ viewEntry innerWidth (annotation, maybeAssocPrec, comment) =
         ]
   in
       flow down
-      [ color C.mediumGrey (spacer innerWidth 1)
+      [ tag name (color C.mediumGrey (spacer innerWidth 1))
       , annotationBar
       , commentElement
-      , spacer innerWidth 20
+      , spacer innerWidth 50
       ]
 
 
 viewAlias : Alias -> Text.Text
 viewAlias alias =
     Text.concat
-    [ blueString "type alias "
-    , Text.bold (Text.fromString alias.name)
+    [ accentString "type alias "
+    , Text.link ("#" ++ alias.name) (Text.bold (Text.fromString alias.name))
     , spacePrefix (List.map Text.fromString alias.args)
     , equals
     , viewType alias.tipe
@@ -222,8 +221,8 @@ viewUnion union =
         "=" :: List.repeat (List.length union.cases - 1) "|"
   in
       Text.concat
-      [ blueString "type "
-      , Text.bold (Text.fromString union.name)
+      [ accentString "type "
+      , Text.link ("#" ++ union.name) (Text.bold (Text.fromString union.name))
       , spacePrefix (List.map Text.fromString union.args)
       , Text.concat (List.map2 viewCase seperators union.cases)
       ]
@@ -231,14 +230,14 @@ viewUnion union =
 
 viewCase : String -> (String, List Type) -> Text.Text
 viewCase sep (tag, args) =
-  Text.fromString "\n    " ++ blueString sep
+  Text.fromString "\n    " ++ accentString sep
   ++ spacePrefix (Text.fromString tag :: List.map (viewTypeHelp ADT) args)
 
 
 viewValue : Value -> Text.Text
 viewValue value =
     Text.concat
-    [ Text.bold (viewVar value.name)
+    [ Text.link ("#" ++ value.name) (Text.bold (viewVar value.name))
     , colon
     , viewType value.tipe
     ]
@@ -342,27 +341,27 @@ space =
 
 equals : Text.Text
 equals =
-  pad (blueString "=")
+  pad (accentString "=")
 
 
 bar : Text.Text
 bar =
-  pad (blueString "|")
+  pad (accentString "|")
 
 
 arrow : Text.Text
 arrow =
-  pad (blueString "->")
+  pad (accentString "->")
 
 
 colon : Text.Text
 colon =
-  pad (blueString ":")
+  pad (accentString ":")
 
 
-blueString : String -> Text.Text
-blueString str =
-  Text.color (C.blue) (Text.fromString str)
+accentString : String -> Text.Text
+accentString str =
+  Text.color (C.green) (Text.fromString str)
 
 
 pad : Text.Text -> Text.Text

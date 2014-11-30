@@ -116,4 +116,4 @@ viewVar innerWidth documentation var =
             width innerWidth (Text.leftAligned msg)
 
       Just entry ->
-        D.viewEntry innerWidth entry
+        D.viewEntry innerWidth var entry
