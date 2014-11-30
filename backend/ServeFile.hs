@@ -50,7 +50,7 @@ packageDocs pkg@(N.Name user name) version =
             H.style $ preEscapedToMarkup standardStyle
             script ! src "/artifacts/Page-PackageDocs.js" $ ""
 
-            link ! rel "stylesheet" ! href "/assets/highlight/styles/github.css"
+            link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
 
           body $ script $ preEscapedToMarkup $
@@ -80,7 +80,7 @@ moduleDocs pkg@(N.Name user name) version moduleName =
             H.style $ preEscapedToMarkup standardStyle
             script ! src "/artifacts/Page-ModuleDocs.js" $ ""
 
-            link ! rel "stylesheet" ! href "/assets/highlight/styles/github.css"
+            link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
 
           body $ script $ preEscapedToMarkup $
