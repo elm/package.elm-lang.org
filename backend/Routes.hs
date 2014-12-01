@@ -314,5 +314,6 @@ httpStringError code msg =
 
 httpError :: Int -> BS.ByteString -> Snap a
 httpError code msg = do
-  modifyResponse $ setResponseStatus code msg
+  modifyResponse $ setResponseCode code
+  writeBS msg
   finishWith =<< getResponse
