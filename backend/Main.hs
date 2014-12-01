@@ -87,6 +87,7 @@ compileElmFiles =
             forM publicModules $ \name ->
                 Utils.run "elm-make"
                     [ "frontend" </> Module.nameToPath name <.> "elm"
+                    , "--yes"
                     , "--output=" ++ Path.artifact name
                     ]
       case result of
