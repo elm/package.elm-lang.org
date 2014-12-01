@@ -1,5 +1,6 @@
 [
     "elm-lang/core",
+    "evancz/elm-markdown",
     "evancz/virtual-dom",
     "johnpmayer/elm-webgl",
     "johnpmayer/elm-linear-algebra",
