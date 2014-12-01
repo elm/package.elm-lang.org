@@ -25,7 +25,7 @@ view (w,h) =
 
 
 error404 : Element
-error404 = width 300 [markdown|
+error404 = width 300 <| Markdown.toElement """
 
 <h1><div>Poem 404
 <div style="font-size:0.5em;font-weight:normal">Page Not Found</div></div>
@@ -39,4 +39,4 @@ And that has made all the difference.
 
 <p style="text-align:right;font-style:italic;">Robert Frost</p>
 
-|]
+"""
