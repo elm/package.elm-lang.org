@@ -50,7 +50,7 @@ view outerWidth channel model =
   , bar logoSize
       (link "/" (image logoSize logoSize "/assets/elm_logo.svg"))
   , link "/packages" (bar searchBarWidth (Text.leftAligned (Text.color (Color.rgb 5 80 129) (Text.fromString "Packages"))))
-  , bar (innerWidth - topBarHeight - searchBarWidth + rightPadding) empty
+  , bar (innerWidth - logoSize - searchBarWidth + rightPadding) empty
   ]
 
 
