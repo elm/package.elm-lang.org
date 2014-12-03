@@ -151,6 +151,13 @@ specificType tag =
 
 -- VIEW
 
+options : Markdown.Options
+options =
+  let defaults = Markdown.defaultOptions
+  in
+      { defaults | sanitize <- True }
+
+
 viewEntry : Int -> String -> (Text.Text, Maybe (String, Int), String) -> Element
 viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
   let rawAssocPrec =
@@ -186,7 +193,7 @@ viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
             else
                 flow right
                 [ spacer 40 1
-                , width (innerWidth - 40) (Markdown.toElement comment)
+                , width (innerWidth - 40) (Markdown.toElementWith options comment)
                 ]
 
       annotationBar =

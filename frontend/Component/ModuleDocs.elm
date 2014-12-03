@@ -99,7 +99,7 @@ viewPair innerWidth documentation (vars, prose) =
 
 viewProse : Int -> String -> Element
 viewProse innerWidth prose =
-    width innerWidth (Markdown.toElement prose)
+    width innerWidth (Markdown.toElementWith D.options prose)
 
 
 viewVar : Int -> D.DocDict -> String -> Element

@@ -37,8 +37,15 @@ view versionChan innerWidth pkg maybeReadme =
     , case maybeReadme of
         Nothing -> empty
         Just readme ->
-          width innerWidth (Markdown.toElement readme)
+          width innerWidth (Markdown.toElementWith options readme)
     ]
+
+
+options : Markdown.Options
+options =
+  let defaults = Markdown.defaultOptions
+  in
+      { defaults | sanitize <- True }
 
 
 viewModule : Int -> PackageInfo -> String -> Element
