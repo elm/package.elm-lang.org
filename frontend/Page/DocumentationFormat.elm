@@ -1,33 +1,42 @@
-import Skeleton (home)
+module Page.DocumentationFormat where
+
+import Graphics.Element (..)
+import Markdown
+import Signal
+import Window
+
+import ColorScheme as C
+import Component.TopBar as TopBar
+
 
 port title : String
 port title = "Documentation Format"
 
-main = home scene
 
-scene w =
-    width (min w 800) words
+main : Signal Element
+main =
+    Signal.map view Window.dimensions
 
-words = [markdown|
-<style>
-pre {
-  background-color: white;
-  padding: 10px;
-  border: 1px solid rgb(216, 221, 225);
-  border-radius: 4px;
-}
-code > span.kw { color: #268BD2; }
-code > span.dt { color: #268BD2; }
-code > span.dv, code > span.bn, code > span.fl { color: #D33682; }
-code > span.ch { color: #DC322F; }
-code > span.st { color: #2AA198; }
-code > span.co { color: #93A1A1; }
-code > span.ot { color: #A57800; }
-code > span.al { color: #CB4B16; font-weight: bold; }
-code > span.fu { color: #268BD2; }
-code > span.re { }
-code > span.er { color: #D30102; font-weight: bold; }
-</style>
+
+search : Signal.Channel TopBar.Update
+search =
+    Signal.channel TopBar.NoOp
+
+
+view : (Int,Int) -> Element
+view (windowWidth, windowHeight) =
+  color C.background <|
+  flow down
+  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  , flow right
+    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
+    , width 600 content
+    ]
+  ]
+
+
+content : Element
+content = Markdown.toElement """
 
 # Documentation Format
 
@@ -36,8 +45,8 @@ be easy for readers to glance through a file and find the information they
 need. Modules that are missing documentation cannot be uploaded to the catalog.
 
 All documentation can use the same markdown as in Elm. You can check out
-the [Maybe](https://github.com/elm-lang/Elm/blob/master/libraries/Maybe.elm)
-and [Either](https://github.com/elm-lang/Elm/blob/master/libraries/Either.elm)
+the [Maybe](https://github.com/elm-lang/core/blob/master/src/Maybe.elm)
+and [Result](https://github.com/elm-lang/core/blob/master/src/Result.elm)
 documentation for complete examples.
 
 ## Documenting a value
@@ -51,7 +60,7 @@ something.
 
     fromList ['a','b','c'] == "abc"
 -}
-fromList : [Char] -> String
+fromList : List Char -> String
 fromList = ...
 ```
 
@@ -72,7 +81,7 @@ to argue about style.
 
 ## Documenting a module
 
-Here is the module documentation for [the `Maybe` library](/catalog/elm-lang-Elm/latest/Maybe):
+Here is the module documentation for [the `Maybe` library](/packages/elm-lang/core/latest/Maybe):
 
 ```haskell
 module Maybe (Maybe(..), maybe, isJust, isNothing, map) where
@@ -111,4 +120,4 @@ documentation](/catalog/elm-lang-Elm/latest/Maybe) for a module. Notice that:
 Again, the goal is to have consistency, so readers can glance through easily
 and writers do not need to argue about style.
 
-|]
+"""

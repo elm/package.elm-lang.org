@@ -59,6 +59,8 @@ main =
             , ("documentation", Route.documentation)
             , ("all-packages", Route.allPackages)
             , ("assets", serveDirectoryWith directoryConfig "assets")
+            , ("help/design-guidelines", ifTop $ ServeFile.filler (Module.Name ["Page","DesignGuidelines"]))
+            , ("help/documentation-format", ifTop $ ServeFile.filler (Module.Name ["Page","DocumentationFormat"]))
             , ( BS.pack Path.artifactDirectory
               , serveDirectoryWith directoryConfig Path.artifactDirectory
               )
@@ -100,7 +102,9 @@ compileElmFiles =
 publicModules :: [Module.Name]
 publicModules =
     map Module.Name
-    [ ["Page","Packages"]
+    [ ["Page","DesignGuidelines"]
+    , ["Page","DocumentationFormat"]
+    , ["Page","Packages"]
     , ["Page","PackageDocs"]
     , ["Page","ModuleDocs"]
     , ["Page","Home"]

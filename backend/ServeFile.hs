@@ -28,6 +28,9 @@ filler name =
         H.style $ preEscapedToMarkup standardStyle
         script ! src (toValue ("/" ++ Path.artifact name)) $ ""
 
+        link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
+        script ! src "/assets/highlight/highlight.pack.js" $ ""
+
       body $
         script $ preEscapedToMarkup $
           "Elm.fullscreen(Elm." ++ Module.nameToString name ++ ")"
@@ -103,7 +106,7 @@ context pairs =
 
 standardStyle :: Text.Text
 standardStyle = 
-    "html,head,body { padding:0; margin:0; }\n\
+    "html, head, body { padding:0; margin:0; }\n\
     \body { font-family: 'Lucida Grande','Trebuchet MS','Bitstream Vera Sans',Verdana,Helvetica,sans-serif; }\n\
     \a {\n\
     \  color: #1184CE;\n\

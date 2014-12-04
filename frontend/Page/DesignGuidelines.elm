@@ -1,42 +1,49 @@
-import Skeleton (home)
+module Page.DesignGuidelines where
+
+import Graphics.Element (..)
+import Markdown
+import Signal
+import Window
+
+import ColorScheme as C
+import Component.TopBar as TopBar
+
 
 port title : String
-port title = "Library Design Guidelines"
+port title = "Design Guidelines"
 
-main = home scene
 
-scene w =
-    width (min w 800) words
+main : Signal Element
+main =
+    Signal.map view Window.dimensions
 
-words = [markdown|
-<style>
-li { padding: 2px; }
-pre {
-  background-color: white;
-  padding: 10px;
-  border: 1px solid rgb(216, 221, 225);
-  border-radius: 4px;
-}
-code > span.kw { color: #268BD2; }
-code > span.dt { color: #268BD2; }
-code > span.dv, code > span.bn, code > span.fl { color: #D33682; }
-code > span.ch { color: #DC322F; }
-code > span.st { color: #2AA198; }
-code > span.co { color: #93A1A1; }
-code > span.ot { color: #A57800; }
-code > span.al { color: #CB4B16; font-weight: bold; }
-code > span.fu { color: #268BD2; }
-code > span.re { }
-code > span.er { color: #D30102; font-weight: bold; }
-</style>
 
-# Library Design Guidelines
+search : Signal.Channel TopBar.Update
+search =
+    Signal.channel TopBar.NoOp
 
-These guidelines are meant to promote consistency and quality across all
-Elm libraries. It is a collection of best practices that will help you
-write better libraries and your users write better code with your library.
-Here is the overview, but it is important to read through and see why
-these recommendations matter.
+
+view : (Int,Int) -> Element
+view (windowWidth, windowHeight) =
+  color C.background <|
+  flow down
+  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  , flow right
+    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
+    , width 600 content
+    ]
+  ]
+
+
+content : Element
+content = Markdown.toElement """
+
+# Design Guidelines
+
+These guidelines are meant to promote consistency and quality across all Elm
+packages. It is a collection of best practices that will help you write better
+APIs and your users write better code. Here is the overview, but it is
+important to read through and see why these recommendations matter.
 
   * [Design for a concrete use case](#design-for-a-concrete-use-case)
   * [Avoid gratuitous abstraction](#avoid-gratuitous-abstraction)
@@ -100,7 +107,10 @@ a library so give them some structure!
 Function composition works better when the data structure is the last argument:
 
 ```haskell
-getCombinedHeight = foldl (+) 0 . map .height
+getCombinedHeight people =
+    people
+      |> map .height
+      |> foldl (+) 0
 ```
 
 Folding also works better when the data structure is the last argument.
@@ -109,12 +119,17 @@ data structure is the last argument:
 
 ```haskell
 -- Good API
-lookup : String -> Dict String a -> Maybe a
-selectedPeople = foldr lookup people ["Steve","Tom","Sally"]
+remove : String -> Dict String a -> Dict String a
+
+filteredPeople =
+    foldr remove people ["Steve","Tom","Sally"]
+
 
 -- Bad API
-lookup : Dict String a -> String -> Maybe a
-selectedPeople = foldr (flip lookup) people ["Steve","Tom","Sally"]
+without : Dict String a -> String -> Dict String a
+
+filteredPeople =
+    foldr (flip without) people ["Steve","Tom","Sally"]
 ```
 
 The order of arguments in fold is specifically intended to make this very
@@ -127,7 +142,7 @@ these values.
 
 ## Naming
 
-#### Use human readable names
+### Use human readable names
 
 Abbreviations are generally a silly idea for an API. Having an API
 that is clear is more important than saving three or four characters
@@ -138,7 +153,7 @@ They are impossible to Google for. They encourage users to not use
 module prefixes, making it impossible to figure out what module they
 came from. This makes them even harder to find. More on this later.
 
-#### Module names should not reappear in function names
+### Module names should not reappear in function names
 
 A function called `State.runState` is redundant and silly. More importantly,
 it encourages people to use `import open State` which does not scale well.
@@ -152,7 +167,7 @@ With a name like `State.run` the user is encouraged to disambiguate functions
 with namespacing, leading to a codebase that will be clearer to people reading
 the project for the first time.
 
-#### Avoid infix operators
+### Avoid infix operators
 
 They should never take the place of a well-named human readable
 function. In a large code base that is maintained by many people,
@@ -179,4 +194,4 @@ infix operator. Add them in a separate module. When someone sees an infix operat
 they are unfamiliar with, they can scan the imports for a `Whatever.Infix` module
 and limit the scope of their annoying search for your dumb operator.
 
-|]
+"""
