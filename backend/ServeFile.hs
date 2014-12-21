@@ -138,7 +138,7 @@ analytics =
     script ! type_ "text/javascript" $
          "var _gaq = _gaq || [];\n\
          \_gaq.push(['_setAccount', 'UA-25827182-1']);\n\
-         \_gaq.push(['_setDomainName', 'package.elm-lang.org']);\n\
+         \_gaq.push(['_setDomainName', elm-lang.org']);\n\
          \_gaq.push(['_trackPageview']);\n\
          \(function() {\n\
          \  var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;\n\
