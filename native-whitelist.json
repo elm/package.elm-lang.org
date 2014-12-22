@@ -4,5 +4,6 @@
     "evancz/virtual-dom",
     "johnpmayer/elm-webgl",
     "johnpmayer/elm-linear-algebra",
+    "maxsnew/lazy",
     "michaelbjames/elm-benchmark"
 ]
