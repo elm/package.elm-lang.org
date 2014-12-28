@@ -47,7 +47,6 @@ important to read through and see why these recommendations matter.
 
   * [Design for a concrete use case](#design-for-a-concrete-use-case)
   * [Avoid gratuitous abstraction](#avoid-gratuitous-abstraction)
-  * [Use semantic versioning](#use-semantic-versioning)
   * [Write helpful documentation with examples](#write-helpful-documentation-with-examples)
   * [The data structure is always the last argument](#the-data-structure-is-always-the-last-argument)
   * [Do not expose ADTs or record constructors](#do-not-expose-ADTs-or-record-constructors)
@@ -83,13 +82,10 @@ Abstraction is a tool, not a design goal. Unless abstraction is
 making someones life easier, it is not a good idea. If you cannot
 *demonstrate* why your abstraction is helpful, it is a problem with your API.
 
-## Use semantic versioning
-
-Read [this](http://semver.org/) and follow the rules. It makes everyone's life better.
-
 ## Write helpful documentation with examples
 
-[This document](/Documentation.html) describes how documentation works in Elm.
+[This document](/help/documentation-format) describes how documentation works
+in Elm.
 
 Providing examples of common uses is extremely helpful. Do it! The standard
 libraries all make a point to have examples that show how one *should* be using
