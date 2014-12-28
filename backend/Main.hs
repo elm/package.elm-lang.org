@@ -49,7 +49,7 @@ main =
           compileElmFiles
 
       httpServe (setPort (port cargs) defaultConfig) $
-          ifTop (ServeFile.filler (Module.Name ["Page","Packages"]))
+          ifTop (ServeFile.filler (Module.Name ["Page","Home"]))
           <|>
             route
             [ ("packages", Route.packages)
@@ -104,11 +104,11 @@ publicModules =
     map Module.Name
     [ ["Page","DesignGuidelines"]
     , ["Page","DocumentationFormat"]
-    , ["Page","Packages"]
-    , ["Page","PackageDocs"]
-    , ["Page","ModuleDocs"]
-    , ["Page","Home"]
     , ["Page","Error"]
+    , ["Page","Home"]
+    , ["Page","ModuleDocs"]
+    , ["Page","PackageDocs"]
+    , ["Page","Packages"]
     ]
 
 
