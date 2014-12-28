@@ -30,11 +30,12 @@ view innerWidth packages =
           Text.fromString "Packages"
             |> Text.height 30
             |> Text.leftAligned
-
-        header =
-          container innerWidth 100 midLeft bigWords
     in
-    flow down (header :: List.map (viewPackage innerWidth) packages)
+      flow down
+      [ container innerWidth 100 midLeft bigWords
+      , flow down (List.map (viewPackage innerWidth) packages)
+      , spacer innerWidth 100
+      ]
 
 
 viewPackage : Int -> Package -> Element
@@ -54,5 +55,4 @@ viewPackage innerWidth package =
         [ container 300 36 midLeft pkgLink
         , container (innerWidth - 300) 36 midLeft summary
         ]
-      , spacer innerWidth 100
       ]
