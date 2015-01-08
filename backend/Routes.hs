@@ -174,7 +174,9 @@ whitelistError name =
     \necessary. Please open an issue with the title:\n\n"
     ++ "    \"Native review for " ++ N.toString name ++ "\"\n\n"
     ++ "to begin the review process at the following address.\n"
-    ++ "<https://github.com/elm-lang/package.elm-lang.org/issues>"
+    ++ "<https://github.com/elm-lang/package.elm-lang.org/issues>\n\n"
+    ++ "The issue should link to the relevant repository and provide sufficient\n"
+    ++ "context for evaluation."
 
 
 -- UPLOADING FILES
