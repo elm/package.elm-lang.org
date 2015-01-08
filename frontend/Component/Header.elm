@@ -33,12 +33,24 @@ view versionChan innerWidth user package version versions maybeModule =
         Just name -> userPackageText ++ (Text.fromString (" / " ++ name))
 
     bigWords =
-       headerText
+      headerText
         |> Text.height 24
         |> Text.leftAligned
+
+    githubLink =
+      "https://github.com/" ++ user ++ "/" ++ package ++ "/tree/" ++ version
+
+    viewSource =
+      Text.fromString "View Source"
+        |> Text.link githubLink
+        |> Text.height 12
+        |> Text.centered
   in
     flow right
     [ container (innerWidth - 100) 100 midLeft bigWords
     , container 100 100 middle <|
-        Html.toElement 100 30 (dropdown versionChan version versions)
+        flow down
+          [ Html.toElement 100 30 (dropdown versionChan version versions)
+          , width 100 viewSource
+          ]
     ]
