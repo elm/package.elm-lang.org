@@ -10,7 +10,7 @@ import Markdown
 
 view : LC.LocalChannel String -> Int -> String -> Element
 view fieldChan width fieldContent =
-  toElement width 180 <|
+  toElement width 150 <|
   div []
     [ input
         [ placeholder "Package Search"
@@ -28,7 +28,7 @@ description = Markdown.toHtml """
 
 <span style="font-size: 12px; color: rgb(216, 221, 225);">
 Search through all the functions and operators in this package.
-Try searching for operators like `|>` or values like `map`.
+Try searching for `|>` or `map`.
 </span>
 
 """
