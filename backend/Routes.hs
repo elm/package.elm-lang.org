@@ -32,7 +32,7 @@ import qualified ServeFile
 
 packages :: Snap ()
 packages =
-    ifTop (ServeFile.filler (Module.Name ["Page","Packages"]))
+    ifTop (ServeFile.filler (Module.Name ["Page","PackageList"]))
     <|> route [ (":user/:name", package) ]
     <|> serveDirectory "packages"
 

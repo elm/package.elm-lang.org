@@ -108,7 +108,7 @@ publicModules =
     , ["Page","Home"]
     , ["Page","ModuleDocs"]
     , ["Page","PackageDocs"]
-    , ["Page","Packages"]
+    , ["Page","PackageList"]
     ]
 
 

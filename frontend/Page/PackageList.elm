@@ -1,4 +1,4 @@
-module Page.Packages where
+module Page.PackageList where
 
 import Color
 import ColorScheme as C
@@ -10,7 +10,7 @@ import String
 import Window
 
 import Component.TopBar as TopBar
-import Component.Packages as Packages
+import Component.PackageList as PackageList
 
 
 port title : String
@@ -23,14 +23,14 @@ main =
     Signal.map2 view Window.dimensions packages
 
 
-view : (Int,Int) -> List Packages.Package -> Element
+view : (Int,Int) -> List PackageList.Package -> Element
 view (windowWidth, windowHeight) packages =
   color C.background <|
   flow down
   [ TopBar.view windowWidth
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , Packages.view 980 packages
+    , PackageList.view 980 packages
     ]
   ]
 
@@ -40,17 +40,17 @@ allPackagesUrl =
     "/all-packages"
 
 
-packages : Signal (List Packages.Package)
+packages : Signal (List PackageList.Package)
 packages =
     Http.sendGet (Signal.constant allPackagesUrl)
       |> Signal.map handleResult
 
 
-handleResult : Http.Response String -> List Packages.Package
+handleResult : Http.Response String -> List PackageList.Package
 handleResult response =
   case response of
     Http.Success msg ->
-      case Json.decodeString (Json.list Packages.package) msg of
+      case Json.decodeString (Json.list PackageList.package) msg of
         Ok packages -> packages
         Err _ -> []
 
