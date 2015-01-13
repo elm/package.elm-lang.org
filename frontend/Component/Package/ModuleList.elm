@@ -39,7 +39,7 @@ view w searchTerm model =
 
 viewModule : Int -> String -> SearchStatus -> (String, List String) -> Element
 viewModule width rootUrl searchStatus (moduleName, values) =
-    let url = rootUrl ++ String.map (\c -> if c == '.' then '-' else c) moduleName
+    let url = rootUrl ++ "/" ++ String.map (\c -> if c == '.' then '-' else c) moduleName
         viewValue name =
             link width (url ++ "#" ++ name) (Text.monospace (Text.fromString ("  " ++ name)))
 
