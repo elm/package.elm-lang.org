@@ -4,40 +4,34 @@ import Color
 import ColorScheme as C
 import Graphics.Element (..)
 import List
-import List ((::))
 import LocalChannel as LC
 import String
 import Text
 import Markdown
 
 import Component.Header as Header
+import Component.Package.ModuleList as ModuleList
+import Component.Package.Search as Search
 
 
-type alias PackageInfo =
-    { user : String
-    , name : String
-    , version : String
-    , versionList : List String
-    , modules : List String
-    }
 
-
-view : LC.LocalChannel String -> Int -> PackageInfo -> Maybe String -> Element
-view versionChan innerWidth pkg maybeReadme =
+view : LC.LocalChannel String -> LC.LocalChannel String -> Int -> ModuleList.Model -> String -> Maybe String -> Element
+view versionChan searchChan w pkg searchTerm maybeReadme =
     flow down
-    [ Header.view versionChan innerWidth pkg.user pkg.name pkg.version pkg.versionList Nothing
-    , color C.lightGrey (spacer innerWidth 1)
-    , spacer innerWidth 12
+    [ Header.view versionChan w pkg.user pkg.name pkg.version pkg.versionList Nothing
+    , color C.lightGrey (spacer w 1)
+    , spacer w 12
     , flow right
       [ spacer 30 5
-      , flow down (List.map (viewModule (innerWidth - 60) pkg) pkg.modules)
+      , ModuleList.view (w - 30 - 200 - 30) searchTerm pkg
+      , Search.view searchChan 200 searchTerm
       ]
-    , spacer innerWidth 12
-    , color C.lightGrey (spacer innerWidth 1)
+    , spacer w 12
+    , color C.lightGrey (spacer w 1)
     , case maybeReadme of
         Nothing -> empty
         Just readme ->
-          width innerWidth (Markdown.toElementWith options readme)
+          width w (Markdown.toElementWith options readme)
     ]
 
 
@@ -46,15 +40,3 @@ options =
   let defaults = Markdown.defaultOptions
   in
       { defaults | sanitize <- True }
-
-
-viewModule : Int -> PackageInfo -> String -> Element
-viewModule innerWidth model name =
-  let url =
-        "/packages/" ++ model.user ++ "/" ++ model.name ++ "/" ++ model.version
-        ++ "/" ++ String.map (\c -> if c == '.' then '-' else c) name
-  in
-      Text.fromString name
-        |> Text.link url
-        |> Text.leftAligned
-        |> container innerWidth 24 midLeft

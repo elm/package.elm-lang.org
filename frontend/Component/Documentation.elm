@@ -50,6 +50,18 @@ documentation =
       ("values" := list value)
 
 
+valueList : Decoder (String, List String)
+valueList =
+    let nameList = list ("name" := string)
+        allNames =
+          object3 (\x y z -> x ++ y ++ z)
+            ("aliases" := nameList)
+            ("types" := nameList)
+            ("values" := nameList)
+    in
+        object2 (,) ("name" := string) allNames
+
+
 type alias Alias =
     { name : String
     , comment : String

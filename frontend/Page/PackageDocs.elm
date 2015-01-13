@@ -4,7 +4,6 @@ import Basics (..)
 import Color
 import ColorScheme as C
 import Dict
-import Json.Decode (..)
 import Json.Decode as Json
 import Graphics.Element (..)
 import Http
@@ -15,7 +14,9 @@ import String
 import Window
 
 import Component.TopBar as TopBar
-import Component.PackageDocs as Docs
+import Component.PackageDocs as Package
+import Component.Package.ModuleList as ModuleList
+import Component.Documentation as Doc
 
 
 port context : { user : String, name : String, version : String, versionList : List String }
@@ -30,27 +31,27 @@ packageUrl version =
   "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ version
 
 
-descriptionUrl : String
-descriptionUrl =
-  packageUrl context.version ++ "/elm-package.json"
+documentationUrl : String
+documentationUrl =
+  packageUrl context.version ++ "/documentation.json"
 
 
-description : Signal Docs.PackageInfo
-description =
-    Http.sendGet (Signal.constant descriptionUrl)
+moduleList : Signal ModuleList.Model
+moduleList =
+    Http.sendGet (Signal.constant documentationUrl)
       |> Signal.map handleResult
 
 
-packageInfo : List String -> Docs.PackageInfo
+packageInfo : List (String, List String) -> ModuleList.Model
 packageInfo modules =
-  Docs.PackageInfo context.user context.name context.version context.versionList modules
+  ModuleList.Model context.user context.name context.version context.versionList modules
 
 
-handleResult : Http.Response String -> Docs.PackageInfo
+handleResult : Http.Response String -> ModuleList.Model
 handleResult response =
   case response of
     Http.Success msg ->
-      case Json.decodeString ("exposed-modules" := list string) msg of
+      case Json.decodeString (Json.list Doc.valueList) msg of
         Err _ -> packageInfo []
         Ok modules ->
             packageInfo modules
@@ -78,12 +79,12 @@ extractReadme response =
 
 main : Signal Element
 main =
-    Signal.map3 view Window.dimensions description readme
+    Signal.map4 view Window.dimensions moduleList (Signal.subscribe searchChan) readme
 
 
-search : Signal.Channel TopBar.Update
-search =
-    Signal.channel TopBar.NoOp
+searchChan : Signal.Channel String
+searchChan =
+    Signal.channel ""
 
 
 versionChan : Signal.Channel String
@@ -97,13 +98,19 @@ port redirect =
     |> Signal.map packageUrl
 
 
-view : (Int,Int) -> Docs.PackageInfo -> Maybe String -> Element
-view (windowWidth, windowHeight) packages readme =
+view : (Int,Int) -> ModuleList.Model -> String -> Maybe String -> Element
+view (windowWidth, windowHeight) moduleList searchTerm readme =
   color C.background <|
   flow down
-  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  [ TopBar.view windowWidth
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , Docs.view (LC.create identity versionChan) 980 packages readme
+    , Package.view
+        (LC.create identity versionChan)
+        (LC.create identity searchChan)
+        980
+        moduleList
+        searchTerm
+        readme
     ]
   ]
