@@ -2,6 +2,7 @@ module Component.Package.ModuleList (Model, view) where
 
 import Graphics.Element (..)
 import List
+import List ((::))
 import String
 import Text
 
