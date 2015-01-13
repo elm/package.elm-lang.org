@@ -57,7 +57,7 @@ servePackageInfo name =
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
 
-      ifTop (ServeFile.packageDocs name version)
+      ifTop (ServeFile.package name version)
         <|> serveModule name version
 
 

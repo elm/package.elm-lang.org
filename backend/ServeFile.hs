@@ -37,8 +37,8 @@ filler name =
 
 
 
-packageDocs :: N.Name -> V.Version -> Snap ()
-packageDocs pkg@(N.Name user name) version =
+package :: N.Name -> V.Version -> Snap ()
+package pkg@(N.Name user name) version =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
       let versionList =
             maybe [] (List.map V.toString) maybeVersions
@@ -53,7 +53,7 @@ packageDocs pkg@(N.Name user name) version =
             googleAnalytics
             link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
-            script ! src "/artifacts/Page-PackageDocs.js" $ ""
+            script ! src "/artifacts/Page-Package.js" $ ""
 
           body $ script $ preEscapedToMarkup $
               context
@@ -62,7 +62,7 @@ packageDocs pkg@(N.Name user name) version =
                 , ("version", show (V.toString version))
                 , ("versionList", show versionList)
                 ]
-              ++ "var page = Elm.fullscreen(Elm.Page.PackageDocs, { context: context });\n"
+              ++ "var page = Elm.fullscreen(Elm.Page.Package, { context: context });\n"
 
 
 moduleDocs :: N.Name -> V.Version -> Module.Name -> Snap ()

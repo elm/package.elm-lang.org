@@ -1,4 +1,4 @@
-module Page.PackageDocs where
+module Page.Package where
 
 import Basics (..)
 import Color
@@ -14,7 +14,7 @@ import String
 import Window
 
 import Component.TopBar as TopBar
-import Component.PackageDocs as Package
+import Component.Package as Package
 import Component.Package.ModuleList as ModuleList
 import Component.Documentation as Doc
 

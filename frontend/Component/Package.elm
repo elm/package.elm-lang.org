@@ -1,4 +1,4 @@
-module Component.PackageDocs where
+module Component.Package where
 
 import Color
 import ColorScheme as C
