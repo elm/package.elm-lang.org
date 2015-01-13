@@ -20,16 +20,11 @@ main =
     Signal.map view Window.dimensions
 
 
-search : Signal.Channel TopBar.Update
-search =
-    Signal.channel TopBar.NoOp
-
-
 view : (Int,Int) -> Element
 view (windowWidth, windowHeight) =
   color C.background <|
   flow down
-  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  [ TopBar.view windowWidth
   , color white <| container windowWidth 260 middle navigationBox
   , color C.mediumGrey (spacer windowWidth 1)
   , spacer windowWidth 20

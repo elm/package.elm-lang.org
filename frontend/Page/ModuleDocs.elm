@@ -71,11 +71,6 @@ main =
     Signal.map2 view Window.dimensions documentation
 
 
-search : Signal.Channel TopBar.Update
-search =
-    Signal.channel TopBar.NoOp
-
-
 versionChan : Signal.Channel String
 versionChan =
     Signal.channel ""
@@ -91,7 +86,7 @@ view : (Int,Int) -> D.Documentation -> Element
 view (windowWidth, windowHeight) docs =
   color C.background <|
   flow down
-  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  [ TopBar.view windowWidth
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
     , Docs.view (LC.create identity versionChan) 980 context.user context.name context.version context.versionList docs

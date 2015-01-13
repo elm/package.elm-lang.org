@@ -18,16 +18,11 @@ main =
     Signal.map view Window.dimensions
 
 
-search : Signal.Channel TopBar.Update
-search =
-    Signal.channel TopBar.NoOp
-
-
 view : (Int,Int) -> Element
 view (windowWidth, windowHeight) =
   color C.background <|
   flow down
-  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  [ TopBar.view windowWidth
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
     , width 600 content

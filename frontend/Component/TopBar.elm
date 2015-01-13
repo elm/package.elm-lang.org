@@ -7,27 +7,6 @@ import Signal
 import Text
 
 
-type SearchScope
-    = Package String
-    | Global
-
-
-type Status
-    = Normal
-    | Hover
-    | Focus
-
-
-type alias Model =
-    { searchScope : SearchScope
-    , query : String
-    , status : Status
-    }
-
-
-type Update = NoOp
-
-
 topBarHeight = 50
 
 innerWidth = 980
@@ -37,8 +16,8 @@ logoSize = 28
 searchBarWidth = 100
 
 
-view : Int -> Signal.Channel Update -> Model -> Element
-view outerWidth channel model =
+view : Int -> Element
+view outerWidth =
   let leftPadding =
         (outerWidth - innerWidth) // 2
 

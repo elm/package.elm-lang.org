@@ -23,16 +23,11 @@ main =
     Signal.map2 view Window.dimensions packages
 
 
-search : Signal.Channel TopBar.Update
-search =
-    Signal.channel TopBar.NoOp
-
-
 view : (Int,Int) -> List Packages.Package -> Element
 view (windowWidth, windowHeight) packages =
   color C.background <|
   flow down
-  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  [ TopBar.view windowWidth
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
     , Packages.view 980 packages
