@@ -73,7 +73,7 @@ serveModule name version =
       case Module.dehyphenate potentialName of
         Nothing -> pass
         Just moduleName ->
-            ServeFile.moduleDocs name version moduleName
+            ServeFile.module' name version moduleName
 
 
 redirectToLatest :: N.Name -> Snap ()

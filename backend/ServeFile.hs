@@ -65,8 +65,8 @@ package pkg@(N.Name user name) version =
               ++ "var page = Elm.fullscreen(Elm.Page.Package, { context: context });\n"
 
 
-moduleDocs :: N.Name -> V.Version -> Module.Name -> Snap ()
-moduleDocs pkg@(N.Name user name) version moduleName =
+module' :: N.Name -> V.Version -> Module.Name -> Snap ()
+module' pkg@(N.Name user name) version moduleName =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
       let versionList =
             maybe [] (List.map V.toString) maybeVersions
@@ -81,7 +81,7 @@ moduleDocs pkg@(N.Name user name) version moduleName =
             googleAnalytics
             link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
-            script ! src "/artifacts/Page-ModuleDocs.js" $ ""
+            script ! src "/artifacts/Page-Module.js" $ ""
 
           body $ script $ preEscapedToMarkup $
               context
@@ -91,7 +91,7 @@ moduleDocs pkg@(N.Name user name) version moduleName =
                 , ("versionList", show versionList)
                 , ("moduleName", show (Module.nameToString moduleName))
                 ]
-              ++ "var page = Elm.fullscreen(Elm.Page.ModuleDocs, { context: context });\n"
+              ++ "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n"
 
 
 context :: [(String, String)] -> String

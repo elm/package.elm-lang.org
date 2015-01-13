@@ -1,4 +1,4 @@
-module Page.ModuleDocs where
+module Page.Module where
 
 import Color
 import ColorScheme as C
@@ -13,7 +13,7 @@ import String
 import Window
 
 import Component.TopBar as TopBar
-import Component.ModuleDocs as Docs
+import Component.Module as Module
 import Component.Documentation as D
 
 
@@ -89,6 +89,6 @@ view (windowWidth, windowHeight) docs =
   [ TopBar.view windowWidth
   , flow right
     [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , Docs.view (LC.create identity versionChan) 980 context.user context.name context.version context.versionList docs
+    , Module.view (LC.create identity versionChan) 980 context.user context.name context.version context.versionList docs
     ]
   ]

@@ -1,4 +1,4 @@
-module Component.ModuleDocs where
+module Component.Module where
 
 import Dict
 import Graphics.Element (..)
