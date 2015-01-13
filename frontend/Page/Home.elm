@@ -1,5 +1,6 @@
 module Page.Home where
 
+import Color (..)
 import Graphics.Element (..)
 import Markdown
 import Signal
@@ -11,7 +12,7 @@ import Component.TopBar as TopBar
 
 
 port title : String
-port title = "Design Guidelines"
+port title = "Elm Package Catalog"
 
 
 main : Signal Element
@@ -29,45 +30,44 @@ view (windowWidth, windowHeight) =
   color C.background <|
   flow down
   [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  , color white <| container windowWidth 260 middle navigationBox
+  , color C.mediumGrey (spacer windowWidth 1)
+  , spacer windowWidth 20
   , flow right
-    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , content 980
+    [ spacer ((windowWidth - 600) // 2) (windowHeight - TopBar.topBarHeight)
+    , width 600 content
     ]
   ]
 
 
-content : Int -> Element
-content w =
+navigationBox : Element
+navigationBox =
   flow down
-  [ width 600 intro
-  , container 600 60 middle (bigLink "/packages" "Browse All Packages")
-  , container 600 60 middle (bigLink "/packages/elm-lang/core/latest" "Documentation of elm-lang/core")
-  , spacer 600 40
-  , width 600 docs
+  [ container 400 120 middle (image 360 120 "/assets/website-name.png")
+  , flow right
+    [ button "/packages" "All Packages"
+    , button "/packages/elm-lang/core/latest" "Core Libraries"
+    ]
   ]
 
 
-bigLink : String -> String -> Element
-bigLink url name =
-  Text.fromString name
-    |> Text.link url
-    |> Text.height 30
-    |> Text.leftAligned
+button : String -> String -> Element
+button href txt =
+  Text.leftAligned (Text.color white (Text.fromString txt))
+    |> container 158 38 middle
+    |> color C.blue
+    |> container 160 40 middle
+    |> color (rgb 5 80 129)
+    |> link href
+    |> container 200 80 middle
 
 
-intro : Element
-intro = Markdown.toElement """
+content : Element
+content = Markdown.toElement """
 
-# Elm Package Catalog
-
-This website hosts the documentation for all publish Elm packages.
-The [`elm-package`](https://github.com/elm-lang/elm-package) command line tool
-lets you install any of these packages and publish your own.
-
-"""
-
-docs : Element
-docs = Markdown.toElement """
+**Elm Package Catalog**  hosts the documentation for all published Elm
+packages. The [`elm-package`](https://github.com/elm-lang/elm-package) command
+line tool lets you install any of these packages and publish your own.
 
 # Basic Usage
 
