@@ -34,7 +34,7 @@ view (windowWidth, windowHeight) =
   , color C.mediumGrey (spacer windowWidth 1)
   , spacer windowWidth 20
   , flow right
-    [ spacer ((windowWidth - 980) // 2) 10
+    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight - 260 - 20 - 1)
     , width 450 left1
     , spacer 80 10
     , width 450 right1
