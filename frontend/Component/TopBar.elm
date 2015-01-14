@@ -9,7 +9,7 @@ import Text
 
 topBarHeight = 50
 
-innerWidth = 980
+targetWidth = 980
 
 logoSize = 28
 
@@ -18,7 +18,9 @@ searchBarWidth = 100
 
 view : Int -> Element
 view outerWidth =
-  let leftPadding =
+  let innerWidth = min outerWidth targetWidth
+
+      leftPadding =
         (outerWidth - innerWidth) // 2
 
       rightPadding =
