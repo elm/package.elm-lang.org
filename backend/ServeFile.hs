@@ -93,7 +93,11 @@ module' pkg@(N.Name user name) version moduleName =
                 ]
               ++
                 "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n\
-                \page.ports.docsLoaded.subscribe(function() { setTimeout(function() { window.location = window.location.hash; }, 0); });\n"
+                \page.ports.docsLoaded.subscribe(function() {\n\
+                \    if (window.location.hash) {\n\
+                \        setTimeout(function() { window.location = window.location.hash; }, 0);\n\
+                \    }\n\
+                \});\n"
 
 
 context :: [(String, String)] -> String
