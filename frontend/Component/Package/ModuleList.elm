@@ -42,9 +42,9 @@ viewModule : Int -> String -> SearchStatus -> (String, List String) -> Element
 viewModule width rootUrl searchStatus (moduleName, values) =
     let url = rootUrl ++ "/" ++ String.map (\c -> if c == '.' then '-' else c) moduleName
         viewValue name =
-            link width (url ++ "#" ++ name) (Text.monospace (Text.fromString ("  " ++ name)))
+            link width (url ++ "#" ++ name) "  " (Text.monospace (Text.fromString name))
 
-        name = link width url (Text.fromString moduleName)
+        name = link width url "" (Text.fromString moduleName)
     in
         case searchStatus of
           No -> name
@@ -52,10 +52,9 @@ viewModule width rootUrl searchStatus (moduleName, values) =
             flow down (name :: spacer width 6 :: List.map viewValue values ++ [spacer width 20])
 
 
-link : Int -> String -> Text.Text -> Element
-link width url txt =
-  txt
-    |> Text.link url
+link : Int -> String -> String -> Text.Text -> Element
+link width url padding txt =
+  Text.monospace (Text.fromString padding) ++ Text.link url txt
     |> Text.leftAligned
     |> container width 24 midLeft
 
