@@ -89,11 +89,13 @@ port docsLoaded =
 
 view : (Int,Int) -> D.Documentation -> Element
 view (windowWidth, windowHeight) docs =
-  color C.background <|
-  flow down
-  [ TopBar.view windowWidth
-  , flow right
-    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , Module.view (LC.create identity versionChan) 980 context.user context.name context.version context.versionList docs
+  let innerWidth = min 980 windowWidth
+  in
+    color C.background <|
+    flow down
+    [ TopBar.view windowWidth
+    , flow right
+      [ spacer ((windowWidth - innerWidth) // 2) (windowHeight - TopBar.topBarHeight)
+      , Module.view (LC.create identity versionChan) innerWidth context.user context.name context.version context.versionList docs
+      ]
     ]
-  ]

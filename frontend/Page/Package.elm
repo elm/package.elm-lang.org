@@ -100,17 +100,19 @@ port redirect =
 
 view : (Int,Int) -> ModuleList.Model -> String -> Maybe String -> Element
 view (windowWidth, windowHeight) moduleList searchTerm readme =
-  color C.background <|
-  flow down
-  [ TopBar.view windowWidth
-  , flow right
-    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , Package.view
-        (LC.create identity versionChan)
-        (LC.create identity searchChan)
-        980
-        moduleList
-        searchTerm
-        readme
+  let innerWidth = min 980 windowWidth
+  in
+    color C.background <|
+    flow down
+    [ TopBar.view windowWidth
+    , flow right
+      [ spacer ((windowWidth - innerWidth) // 2) (windowHeight - TopBar.topBarHeight)
+      , Package.view
+          (LC.create identity versionChan)
+          (LC.create identity searchChan)
+          innerWidth
+          moduleList
+          searchTerm
+          readme
+      ]
     ]
-  ]

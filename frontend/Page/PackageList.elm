@@ -25,14 +25,16 @@ main =
 
 view : (Int,Int) -> List PackageList.Package -> Element
 view (windowWidth, windowHeight) packages =
-  color C.background <|
-  flow down
-  [ TopBar.view windowWidth
-  , flow right
-    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , PackageList.view 980 packages
-    ]
-  ]
+  let innerWidth = min 980 windowWidth
+  in
+      color C.background <|
+      flow down
+      [ TopBar.view windowWidth
+      , flow right
+        [ spacer ((windowWidth - innerWidth) // 2) (windowHeight - TopBar.topBarHeight)
+        , PackageList.view innerWidth packages
+        ]
+      ]
 
 
 allPackagesUrl : String
