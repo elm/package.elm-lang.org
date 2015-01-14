@@ -91,7 +91,9 @@ module' pkg@(N.Name user name) version moduleName =
                 , ("versionList", show versionList)
                 , ("moduleName", show (Module.nameToString moduleName))
                 ]
-              ++ "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n"
+              ++
+                "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n\
+                \page.ports.docsLoaded.subscribe(function() { setTimeout(function() { window.location = window.location.hash; }, 0); });\n"
 
 
 context :: [(String, String)] -> String

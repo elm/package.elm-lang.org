@@ -82,6 +82,11 @@ port redirect =
     |> Signal.map (\v -> packageUrl v ++ "/" ++ moduleNameToUrl context.moduleName)
 
 
+port docsLoaded : Signal ()
+port docsLoaded =
+  Signal.map (always ()) documentation
+
+
 view : (Int,Int) -> D.Documentation -> Element
 view (windowWidth, windowHeight) docs =
   color C.background <|
