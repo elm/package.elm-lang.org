@@ -17,6 +17,14 @@ import qualified PackageSummary as PkgSummary
 import qualified Path
 
 
+favicon :: H.Html
+favicon =
+  H.link
+    ! A.rel "shortcut icon"
+    ! A.size "16x16, 32x32, 48x48, 64x64, 128x128, 256x256"
+    ! A.href "/favicon.ico"
+
+
 filler :: Module.Name -> Snap ()
 filler name =
     writeBuilder $
@@ -24,6 +32,7 @@ filler name =
     docTypeHtml $ do 
       H.head $ do
         meta ! charset "UTF-8"
+        favicon
         H.title (toHtml (Module.nameToString name))
         H.style $ preEscapedToMarkup standardStyle
         googleAnalytics
@@ -48,6 +57,7 @@ package pkg@(N.Name user name) version =
         docTypeHtml $ do 
           H.head $ do
             meta ! charset "UTF-8"
+            favicon
             H.title "Elm Package Documentation"
             H.style $ preEscapedToMarkup standardStyle
             googleAnalytics
@@ -76,6 +86,7 @@ module' pkg@(N.Name user name) version moduleName =
         docTypeHtml $ do 
           H.head $ do
             meta ! charset "UTF-8"
+            favicon
             H.title "Elm Package Documentation"
             H.style $ preEscapedToMarkup standardStyle
             googleAnalytics
