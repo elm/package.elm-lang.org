@@ -22,7 +22,7 @@ favicon =
   H.link
     ! A.rel "shortcut icon"
     ! A.size "16x16, 32x32, 48x48, 64x64, 128x128, 256x256"
-    ! A.href "/favicon.ico"
+    ! A.href "/assets/favicon.ico"
 
 
 filler :: Module.Name -> Snap ()
