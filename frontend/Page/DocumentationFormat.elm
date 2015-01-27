@@ -81,16 +81,18 @@ Here is the module documentation for [the `Maybe` library](/packages/elm-lang/co
 ```haskell
 module Maybe (Maybe(..), maybe, isJust, isNothing, map) where
 
-{-| Represents an optional value. Maybe it is there, maybe it is not.
+{-| This library fills a bunch of important niches in Elm. A `Maybe` can help
+you with optional arguments, error handling, and records with optional fields.
 
-# Type and Constructors
+# Definition
 @docs Maybe
 
-# Taking Maybes apart
-@docs maybe, isJust, isNothing
+# Common Helpers
+@docs map, withDefault, oneOf
 
-# Map
-@docs map
+# Chaining Maybes
+@docs andThen
+
 -}
 ```
 
