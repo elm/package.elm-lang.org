@@ -306,7 +306,7 @@ getParameter param fromString =
       case fromString =<< maybeString of
         Just value -> return value
         Nothing ->
-            httpError 400 $ BS.concat [ "problem with parameter '", param, "'" ]
+            httpError 400 $ BS.concat [ "parameter '", param, "' missing or incorrect (this can happen if you use elm-get, which is deprecated)" ]
 
 
 httpStringError :: Int -> String -> Snap a
