@@ -24,7 +24,7 @@ view versionChan searchChan w pkg searchTerm maybeReadme =
     , flow right
       [ spacer 30 5
       , ModuleList.view (w - 30 - 200 - 30) searchTerm pkg
-      , Search.view searchChan 200 searchTerm
+      , Search.view searchChan 200 pkg searchTerm
       ]
     , spacer w 12
     , color C.lightGrey (spacer w 1)

@@ -7,9 +7,10 @@ import Html.Events (..)
 import LocalChannel as LC
 import Markdown
 
+import Component.Package.ModuleList as ModuleList
 
-view : LC.LocalChannel String -> Int -> String -> Element
-view fieldChan width fieldContent =
+view : LC.LocalChannel String -> Int -> ModuleList.Model -> String -> Element
+view fieldChan width pkg fieldContent =
   toElement width 150 <|
   div []
     [ input
@@ -19,20 +20,20 @@ view fieldChan width fieldContent =
         , inputStyle
         ]
         []
-    , description
+    , description pkg
     ]
 
 
-description : Html
-description = Markdown.toHtml """
+description : ModuleList.Model -> Html
+description pkg = Markdown.toHtml <| """
 
 <span style="font-size: 12px; color: rgb(216, 221, 225);">
 Search through all the functions and operators in this package.
-Try searching for `|>` or `map`.
-</span>
-
 """
+    ++ if isCore pkg then " Try searching for `|>` or `map`." else "" ++ "</span>"
 
+isCore : ModuleList.Model -> Bool
+isCore pkg = pkg.user == "elm-lang" && pkg.name == "core"
 
 inputStyle =
   style
