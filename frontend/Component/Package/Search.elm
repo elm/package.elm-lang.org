@@ -30,10 +30,13 @@ description pkg = Markdown.toHtml <| """
 <span style="font-size: 12px; color: rgb(216, 221, 225);">
 Search through all the functions and operators in this package.
 """
-    ++ if isCore pkg then " Try searching for `|>` or `map`." else "" ++ "</span>"
+    ++ (if isCore pkg then " Try searching for `|>` or `map`." else "") ++ "</span>"
+
 
 isCore : ModuleList.Model -> Bool
-isCore pkg = pkg.user == "elm-lang" && pkg.name == "core"
+isCore pkg =
+    pkg.user == "elm-lang" && pkg.name == "core"
+
 
 inputStyle =
   style
