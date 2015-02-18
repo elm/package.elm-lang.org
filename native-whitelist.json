@@ -2,8 +2,10 @@
     "elm-lang/core",
     "evancz/elm-markdown",
     "evancz/virtual-dom",
+    "joefiorini/elm-mousetrap",
     "johnpmayer/elm-webgl",
     "johnpmayer/elm-linear-algebra",
+    "jwmerrill/elm-animation-frame",
     "maxsnew/lazy",
     "michaelbjames/elm-benchmark"
 ]

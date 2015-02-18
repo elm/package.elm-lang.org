@@ -46,7 +46,7 @@ documentation for complete examples.
 
 ## Documenting a value
 
-Here is an example from [the `String` library](/catalog/elm-lang-Elm/latest/String):
+Here is an example from [the `String` library](/packages/elm-lang/core/latest/String):
 
 ```haskell
 {-| Convert a list of characters into a String. Can be useful if you
@@ -81,21 +81,23 @@ Here is the module documentation for [the `Maybe` library](/packages/elm-lang/co
 ```haskell
 module Maybe (Maybe(..), maybe, isJust, isNothing, map) where
 
-{-| Represents an optional value. Maybe it is there, maybe it is not.
+{-| This library fills a bunch of important niches in Elm. A `Maybe` can help
+you with optional arguments, error handling, and records with optional fields.
 
-# Type and Constructors
+# Definition
 @docs Maybe
 
-# Taking Maybes apart
-@docs maybe, isJust, isNothing
+# Common Helpers
+@docs map, withDefault, oneOf
 
-# Map
-@docs map
+# Chaining Maybes
+@docs andThen
+
 -}
 ```
 
 This represents the text that actually gets displayed as [the
-documentation](/catalog/elm-lang-Elm/latest/Maybe) for a module. Notice that:
+documentation](/packages/elm-lang/core/latest/Maybe) for a module. Notice that:
 
   * The module documentation comes after the module declaration, but
     before the imports. This is so the first thing in the file is the
@@ -103,7 +105,7 @@ documentation](/catalog/elm-lang-Elm/latest/Maybe) for a module. Notice that:
   * The first line starts after a single space, and all subsequent lines
     start in the zeroth column.
   * The `@docs` keyword starts a list of values that are inlined in [the
-    resulting documentation](/catalog/elm-lang-Elm/latest/Maybe).
+    resulting documentation](/packages/elm-lang/core/latest/Maybe).
   * Functions are grouped into related units with titles
   * Although documentation for each function should be self-contained,
     things are ordered intelligently. Assume people will read through

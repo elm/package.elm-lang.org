@@ -4,12 +4,13 @@ import Graphics.Element (Element)
 import Html (..)
 import Html.Attributes (..)
 import Html.Events (..)
+import Html.Lazy (lazy)
 import LocalChannel as LC
 import Markdown
 
 
-view : LC.LocalChannel String -> Int -> String -> Element
-view fieldChan width fieldContent =
+view : LC.LocalChannel String -> Int -> Bool -> String -> Element
+view fieldChan width isCore fieldContent =
   toElement width 150 <|
   div []
     [ input
@@ -19,19 +20,22 @@ view fieldChan width fieldContent =
         , inputStyle
         ]
         []
-    , description
+    , lazy description isCore
     ]
 
 
-description : Html
-description = Markdown.toHtml """
-
-<span style="font-size: 12px; color: rgb(216, 221, 225);">
-Search through all the functions and operators in this package.
-Try searching for `|>` or `map`.
-</span>
-
-"""
+description : Bool -> Html
+description isCore =
+  let hint =
+        if isCore
+          then " Try searching for `|>` or `map`."
+          else ""
+  in
+      Markdown.toHtml <|
+        "<span style=\"font-size: 12px; color: rgb(216, 221, 225);\">"
+        ++ "Search through all the functions and operators in this package."
+        ++ hint
+        ++ "</span>"
 
 
 inputStyle =
