@@ -1,4 +1,4 @@
-module Component.Package.ModuleList (Model, view) where
+module Component.Package.ModuleList (Model, view, isCore) where
 
 import Graphics.Element (..)
 import List
@@ -21,6 +21,11 @@ type alias Model =
 toUrl : Model -> String
 toUrl model =
   "/packages/" ++ model.user ++ "/" ++ model.name ++ "/" ++ model.version
+
+
+isCore : Model -> Bool
+isCore model =
+  model.user == "elm-lang" && model.name == "core"
 
 
 type SearchStatus = Yes | No

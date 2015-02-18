@@ -4,13 +4,13 @@ import Graphics.Element (Element)
 import Html (..)
 import Html.Attributes (..)
 import Html.Events (..)
+import Html.Lazy (lazy)
 import LocalChannel as LC
 import Markdown
 
-import Component.Package.ModuleList as ModuleList
 
-view : LC.LocalChannel String -> Int -> ModuleList.Model -> String -> Element
-view fieldChan width pkg fieldContent =
+view : LC.LocalChannel String -> Int -> Bool -> String -> Element
+view fieldChan width isCore fieldContent =
   toElement width 150 <|
   div []
     [ input
@@ -20,22 +20,22 @@ view fieldChan width pkg fieldContent =
         , inputStyle
         ]
         []
-    , description pkg
+    , lazy description isCore
     ]
 
 
-description : ModuleList.Model -> Html
-description pkg = Markdown.toHtml <| """
-
-<span style="font-size: 12px; color: rgb(216, 221, 225);">
-Search through all the functions and operators in this package.
-"""
-    ++ (if isCore pkg then " Try searching for `|>` or `map`." else "") ++ "</span>"
-
-
-isCore : ModuleList.Model -> Bool
-isCore pkg =
-    pkg.user == "elm-lang" && pkg.name == "core"
+description : Bool -> Html
+description isCore =
+  let hint =
+        if isCore
+          then " Try searching for `|>` or `map`."
+          else ""
+  in
+      Markdown.toHtml <|
+        "<span style=\"font-size: 12px; color: rgb(216, 221, 225);\">"
+        ++ "Search through all the functions and operators in this package."
+        ++ hint
+        ++ "</span>"
 
 
 inputStyle =
