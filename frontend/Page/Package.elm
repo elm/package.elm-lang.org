@@ -70,10 +70,8 @@ readme =
 
 port getReadme : Task x ()
 port getReadme =
-  let
-    get = Http.get Json.string readmeUrl
-  in
-    Task.toMaybe get `andThen` Signal.send readme.address
+  Task.toMaybe (Http.getString readmeUrl)
+    `andThen` Signal.send readme.address
 
 
 main : Signal Element
