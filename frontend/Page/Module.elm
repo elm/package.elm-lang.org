@@ -4,12 +4,10 @@ import Color
 import ColorScheme as C
 import Dict
 import Json.Decode as Json
-import Graphics.Element (..)
+import Graphics.Element exposing (..)
 import Http
-import List
-import LocalChannel as LC
-import Signal
 import String
+import Task exposing (Task, andThen, onError, succeed)
 import Window
 
 import Component.TopBar as TopBar
@@ -41,50 +39,47 @@ documentationUrl =
       packageUrl context.version ++ "/docs/" ++ name ++ ".json"
 
 
-documentation : Signal D.Documentation
+port getDocs : Task x ()
+port getDocs =
+  let
+    get = Http.get D.documentation documentationUrl
+
+    recover _ =
+        succeed (dummyDocs "There was an error loading these docs! They may be corrupted.")
+  in
+    (get `onError` recover)
+        `andThen` Signal.send documentation.address
+
+
+documentation : Signal.Mailbox D.Documentation
 documentation =
-    Http.sendGet (Signal.constant documentationUrl)
-      |> Signal.map handleResult
+  Signal.mailbox (dummyDocs "Loading documentation...")
 
 
-dummyDocs : D.Documentation
-dummyDocs =
-  D.Documentation context.moduleName "Loading documentation..." [] [] []
-
-
-handleResult : Http.Response String -> D.Documentation
-handleResult response =
-  case response of
-    Http.Success string ->
-      case Json.decodeString D.documentation string of
-        Ok docs -> docs
-        Err msg ->
-            { dummyDocs |
-                comment <- "There was an error loading these docs! They may be corrupted."
-            }
-
-    _ -> dummyDocs
+dummyDocs : String -> D.Documentation
+dummyDocs msg =
+  D.Documentation context.moduleName msg [] [] []
 
 
 main : Signal Element
 main =
-    Signal.map2 view Window.dimensions documentation
+    Signal.map2 view Window.dimensions documentation.signal
 
 
-versionChan : Signal.Channel String
-versionChan =
-    Signal.channel ""
+version : Signal.Mailbox String
+version =
+    Signal.mailbox ""
 
 
 port redirect : Signal String
 port redirect =
-  Signal.keepIf ((/=) "") "" (Signal.subscribe versionChan)
+  Signal.filter ((/=) "") "" version.signal
     |> Signal.map (\v -> packageUrl v ++ "/" ++ moduleNameToUrl context.moduleName)
 
 
 port docsLoaded : Signal ()
 port docsLoaded =
-  Signal.map (always ()) documentation
+  Signal.map (always ()) documentation.signal
 
 
 view : (Int,Int) -> D.Documentation -> Element
@@ -96,6 +91,6 @@ view (windowWidth, windowHeight) docs =
     [ TopBar.view windowWidth
     , flow right
       [ spacer ((windowWidth - innerWidth) // 2) (windowHeight - TopBar.topBarHeight)
-      , Module.view (LC.create identity versionChan) innerWidth context.user context.name context.version context.versionList docs
+      , Module.view version.address innerWidth context.user context.name context.version context.versionList docs
       ]
     ]

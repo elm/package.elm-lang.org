@@ -1,6 +1,6 @@
-module ColorScheme where 
+module ColorScheme where
 
-import Color (rgb)
+import Color exposing (rgb)
 
 
 greyBlue = rgb 90 99 120

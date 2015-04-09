@@ -1,16 +1,13 @@
 module Page.Package where
 
-import Basics (..)
 import Color
 import ColorScheme as C
 import Dict
 import Json.Decode as Json
-import Graphics.Element (..)
+import Graphics.Element exposing (..)
 import Http
-import List
-import LocalChannel as LC
-import Signal
 import String
+import Task exposing (Task, andThen, onError)
 import Window
 
 import Component.TopBar as TopBar
@@ -36,10 +33,24 @@ documentationUrl =
   packageUrl context.version ++ "/documentation.json"
 
 
-moduleList : Signal ModuleList.Model
+port getModuleList : Task x ()
+port getModuleList =
+  let
+    get =
+      Http.get (Json.list Doc.valueList) documentationUrl
+
+    recover _ =
+      Task.succeed []
+
+    send list =
+      Signal.send moduleList.address (packageInfo list)
+  in
+    (get `onError` recover) `andThen` send
+
+
+moduleList : Signal.Mailbox ModuleList.Model
 moduleList =
-    Http.sendGet (Signal.constant documentationUrl)
-      |> Signal.map handleResult
+  Signal.mailbox (packageInfo [])
 
 
 packageInfo : List (String, List String) -> ModuleList.Model
@@ -47,54 +58,42 @@ packageInfo modules =
   ModuleList.Model context.user context.name context.version context.versionList modules
 
 
-handleResult : Http.Response String -> ModuleList.Model
-handleResult response =
-  case response of
-    Http.Success msg ->
-      case Json.decodeString (Json.list Doc.valueList) msg of
-        Err _ -> packageInfo []
-        Ok modules ->
-            packageInfo modules
-
-    _ -> packageInfo []
-
-
 readmeUrl : String
 readmeUrl =
   packageUrl context.version ++ "/README.md"
 
 
-readme : Signal (Maybe String)
+readme : Signal.Mailbox (Maybe String)
 readme =
-    Http.sendGet (Signal.constant readmeUrl)
-      |> Signal.map extractReadme
+  Signal.mailbox Nothing
 
 
-extractReadme : Http.Response String -> Maybe String
-extractReadme response =
-  case response of
-    Http.Success str -> Just str
-    _ -> Nothing
+port getReadme : Task x ()
+port getReadme =
+  let
+    get = Http.get Json.string readmeUrl
+  in
+    Task.toMaybe get `andThen` Signal.send readme.address
 
 
 main : Signal Element
 main =
-    Signal.map4 view Window.dimensions moduleList (Signal.subscribe searchChan) readme
+    Signal.map4 view Window.dimensions moduleList.signal searchMailbox.signal readme.signal
 
 
-searchChan : Signal.Channel String
-searchChan =
-    Signal.channel ""
+searchMailbox : Signal.Mailbox String
+searchMailbox =
+    Signal.mailbox ""
 
 
-versionChan : Signal.Channel String
-versionChan =
-    Signal.channel ""
+versionMailbox : Signal.Mailbox String
+versionMailbox =
+    Signal.mailbox ""
 
 
 port redirect : Signal String
 port redirect =
-  Signal.keepIf ((/=) "") "" (Signal.subscribe versionChan)
+  Signal.filter ((/=) "") "" versionMailbox.signal
     |> Signal.map packageUrl
 
 
@@ -108,8 +107,8 @@ view (windowWidth, windowHeight) moduleList searchTerm readme =
     , flow right
       [ spacer ((windowWidth - innerWidth) // 2) (windowHeight - TopBar.topBarHeight)
       , Package.view
-          (LC.create identity versionChan)
-          (LC.create identity searchChan)
+          versionMailbox.address
+          searchMailbox.address
           innerWidth
           moduleList
           searchTerm

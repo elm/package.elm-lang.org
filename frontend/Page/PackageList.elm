@@ -2,11 +2,11 @@ module Page.PackageList where
 
 import Color
 import ColorScheme as C
-import Graphics.Element (..)
+import Graphics.Element exposing (..)
 import Http
 import Json.Decode as Json
-import Signal
 import String
+import Task exposing (Task, andThen, onError)
 import Window
 
 import Component.TopBar as TopBar
@@ -20,7 +20,7 @@ port title =
 
 main : Signal Element
 main =
-    Signal.map2 view Window.dimensions packages
+    Signal.map2 view Window.dimensions packages.signal
 
 
 view : (Int,Int) -> List PackageList.Package -> Element
@@ -42,18 +42,18 @@ allPackagesUrl =
     "/all-packages"
 
 
-packages : Signal (List PackageList.Package)
+packages : Signal.Mailbox (List PackageList.Package)
 packages =
-    Http.sendGet (Signal.constant allPackagesUrl)
-      |> Signal.map handleResult
+  Signal.mailbox []
 
 
-handleResult : Http.Response String -> List PackageList.Package
-handleResult response =
-  case response of
-    Http.Success msg ->
-      case Json.decodeString (Json.list PackageList.package) msg of
-        Ok packages -> packages
-        Err _ -> []
+port getPackages : Task x ()
+port getPackages =
+  let
+    get =
+      Http.get (Json.list PackageList.package) allPackagesUrl
 
-    _ -> []
+    recover _ =
+      Task.succeed []
+  in
+    (get `onError` recover) `andThen` Signal.send packages.address

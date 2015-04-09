@@ -1,22 +1,20 @@
 module Component.DropDown where
 
-import Html (..)
-import Html.Attributes (..)
-import Html.Events (..)
-import Json.Decode (at, int)
-import List
-import LocalChannel as LC
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+import Json.Decode exposing (at, int)
 
 
-dropdown : LC.LocalChannel String -> String -> List String -> Html
-dropdown updates current options =
+dropdown : Signal.Address String -> String -> List String -> Html
+dropdown address current options =
   div
     [ style [("text-align", "center")] ]
     [ select
         [ style [ ("display","inline-block"), ("vertical-align","middle") ]
         , on "change"
             (at ["target","selectedIndex"] int)
-            (LC.send updates << nth options)
+            (Signal.message address << nth options)
         ]
         (List.map (viewOption current) options)
     ]

@@ -1,22 +1,21 @@
 module Component.Package.Search (view) where
 
-import Graphics.Element (Element)
-import Html (..)
-import Html.Attributes (..)
-import Html.Events (..)
-import Html.Lazy (lazy)
-import LocalChannel as LC
+import Graphics.Element exposing (Element)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
+import Html.Lazy exposing (lazy)
 import Markdown
 
 
-view : LC.LocalChannel String -> Int -> Bool -> String -> Element
-view fieldChan width isCore fieldContent =
+view : Signal.Address String -> Int -> Bool -> String -> Element
+view fieldAddr width isCore fieldContent =
   toElement width 150 <|
   div []
     [ input
         [ placeholder "Package Search"
         , value fieldContent
-        , on "input" targetValue (LC.send fieldChan)
+        , on "input" targetValue (Signal.message fieldAddr)
         , inputStyle
         ]
         []

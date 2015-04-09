@@ -1,8 +1,6 @@
 module Component.Package.ModuleList (Model, view, isCore) where
 
-import Graphics.Element (..)
-import List
-import List ((::))
+import Graphics.Element exposing (..)
 import String
 import Text
 
@@ -60,7 +58,7 @@ viewModule width rootUrl searchStatus (moduleName, values) =
 link : Int -> String -> String -> Text.Text -> Element
 link width url padding txt =
   Text.monospace (Text.fromString padding) ++ Text.link url txt
-    |> Text.leftAligned
+    |> leftAligned
     |> container width 24 midLeft
 
 
@@ -68,7 +66,7 @@ notFound : String -> Element
 notFound term =
   Text.fromString "No matches for " ++ Text.monospace (Text.fromString term)
     |> Text.color C.mediumGrey
-    |> Text.leftAligned
+    |> leftAligned
 
 
 search : String -> List (String, List String) -> List (String, List String)

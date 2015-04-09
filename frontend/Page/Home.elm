@@ -1,9 +1,8 @@
 module Page.Home where
 
-import Color (..)
-import Graphics.Element (..)
+import Color exposing (..)
+import Graphics.Element exposing (..)
 import Markdown
-import Signal
 import Text
 import Window
 
@@ -51,7 +50,7 @@ navigationBox =
 
 button : String -> String -> Element
 button href txt =
-  Text.leftAligned (Text.color white (Text.fromString txt))
+  leftAligned (Text.color white (Text.fromString txt))
     |> container 158 38 middle
     |> color C.blue
     |> container 160 40 middle

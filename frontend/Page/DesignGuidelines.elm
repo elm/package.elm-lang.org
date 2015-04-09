@@ -1,8 +1,7 @@
 module Page.DesignGuidelines where
 
-import Graphics.Element (..)
+import Graphics.Element exposing (..)
 import Markdown
-import Signal
 import Window
 
 import ColorScheme as C

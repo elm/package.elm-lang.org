@@ -2,10 +2,8 @@ module Component.PackageList where
 
 import Color
 import ColorScheme as C
-import Graphics.Element (..)
-import Json.Decode (..)
-import List
-import List ((::))
+import Graphics.Element exposing  (..)
+import Json.Decode exposing  (..)
 import String
 import Text
 
@@ -29,7 +27,7 @@ view innerWidth packages =
     let bigWords =
           Text.fromString "Packages"
             |> Text.height 30
-            |> Text.leftAligned
+            |> leftAligned
     in
       flow down
       [ container innerWidth 100 midLeft bigWords
@@ -40,14 +38,18 @@ view innerWidth packages =
 
 viewPackage : Int -> Package -> Element
 viewPackage innerWidth package =
-  let pkgLink =
+  let version =
+        case List.head package.versions of
+          Just v -> v
+
+      pkgLink =
         Text.fromString package.name
-          |> Text.link ("/packages/" ++ package.name ++ "/" ++ List.head package.versions)
-          |> Text.leftAligned
+          |> Text.link ("/packages/" ++ package.name ++ "/" ++ version)
+          |> leftAligned
 
       summary =
         Text.fromString package.summary
-          |> Text.leftAligned
+          |> leftAligned
   in
       flow down
       [ color C.lightGrey (spacer innerWidth 1)
