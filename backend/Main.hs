@@ -19,6 +19,7 @@ import System.IO (hPutStrLn, stderr)
 import Elm.Utils ((|>))
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Utils as Utils
+import qualified NewPackageList
 import qualified Path
 import qualified Routes as Route
 import qualified ServeFile
@@ -58,6 +59,7 @@ main =
             , ("description", Route.description)
             , ("documentation", Route.documentation)
             , ("all-packages", Route.allPackages)
+            , ("new-packages", serveFile NewPackageList.newPackages)
             , ("assets", serveDirectoryWith directoryConfig "assets")
             , ("help/design-guidelines", ifTop $ ServeFile.filler (Module.Name ["Page","DesignGuidelines"]))
             , ("help/documentation-format", ifTop $ ServeFile.filler (Module.Name ["Page","DocumentationFormat"]))

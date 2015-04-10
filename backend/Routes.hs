@@ -25,6 +25,7 @@ import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Version as V
 import qualified GitHub
+import qualified NewPackageList
 import qualified NativeWhitelist
 import qualified PackageSummary as PkgSummary
 import qualified ServeFile
@@ -129,7 +130,9 @@ register =
 
       case result of
         Right () ->
-          liftIO (PkgSummary.add description)
+          liftIO $ do
+              PkgSummary.add description
+              NewPackageList.addIfNew description
 
         Left err ->
           do  liftIO (removeDirectoryRecursive directory)
