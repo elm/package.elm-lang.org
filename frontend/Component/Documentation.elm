@@ -3,10 +3,8 @@ module Component.Documentation where
 import Char
 import Color
 import Dict
-import Graphics.Element (..)
-import Json.Decode (..)
-import List
-import List ((::))
+import Graphics.Element exposing (..)
+import Json.Decode exposing (..)
 import Markdown
 import String
 import Text
@@ -48,6 +46,18 @@ documentation =
       ("aliases" := list alias)
       ("types" := list union)
       ("values" := list value)
+
+
+valueList : Decoder (String, List String)
+valueList =
+    let nameList = list ("name" := string)
+        allNames =
+          object3 (\x y z -> x ++ y ++ z)
+            ("aliases" := nameList)
+            ("types" := nameList)
+            ("values" := nameList)
+    in
+        object2 (,) ("name" := string) allNames
 
 
 type alias Alias =
@@ -167,7 +177,7 @@ viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
             assoc ++ "-associative / precedence " ++ toString prec
               |> Text.fromString
               |> Text.height 12
-              |> Text.rightAligned
+              |> rightAligned
 
       assocPrecWidth =
         widthOf rawAssocPrec + 20
@@ -176,7 +186,7 @@ viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
         container assocPrecWidth (min annotationHeight 24) middle rawAssocPrec
 
       annotationText =
-        Text.leftAligned (Text.monospace annotation)
+        leftAligned (Text.monospace annotation)
           |> width annotationWidth
 
       annotationPadding = 10
@@ -291,10 +301,7 @@ viewTypeHelp context tipe =
         Text.fromString name
 
     App (Type name) args ->
-      if  | name == "_List" && List.length args == 1 ->
-              sandwich "[" "]" (viewType (List.head args))
-
-          | isTuple name ->
+      if  | isTuple name ->
               List.map viewType args
                   |> List.intersperse (Text.fromString ", ")
                   |> Text.concat

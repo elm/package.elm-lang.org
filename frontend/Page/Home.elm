@@ -1,8 +1,8 @@
 module Page.Home where
 
-import Graphics.Element (..)
+import Color exposing (..)
+import Graphics.Element exposing (..)
 import Markdown
-import Signal
 import Text
 import Window
 
@@ -11,7 +11,7 @@ import Component.TopBar as TopBar
 
 
 port title : String
-port title = "Design Guidelines"
+port title = "Elm Package Catalog"
 
 
 main : Signal Element
@@ -19,223 +19,109 @@ main =
     Signal.map view Window.dimensions
 
 
-search : Signal.Channel TopBar.Update
-search =
-    Signal.channel TopBar.NoOp
-
-
 view : (Int,Int) -> Element
 view (windowWidth, windowHeight) =
   color C.background <|
   flow down
-  [ TopBar.view windowWidth search (TopBar.Model TopBar.Global "map" TopBar.Normal)
+  [ TopBar.view windowWidth
+  , color white <| container windowWidth 260 middle navigationBox
+  , color C.mediumGrey (spacer windowWidth 1)
+  , spacer windowWidth 20
   , flow right
-    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , content 980
+    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight - 260 - 20 - 1)
+    , width 450 left1
+    , spacer 80 10
+    , width 450 right1
+    ]
+  , spacer windowWidth 100
+  ]
+
+
+navigationBox : Element
+navigationBox =
+  flow down
+  [ container 400 120 middle (image 360 120 "/assets/website-name.png")
+  , flow right
+    [ button "/packages" "All Packages"
+    , button "/packages/elm-lang/core/latest" "Core Libraries"
     ]
   ]
 
 
-content : Int -> Element
-content w =
-  flow down
-  [ width 600 intro
-  , container 600 60 middle (bigLink "/packages" "Browse All Packages")
-  , container 600 60 middle (bigLink "/packages/elm-lang/core/latest" "Documentation of elm-lang/core")
-  , spacer 600 40
-  , width 600 docs
-  ]
+button : String -> String -> Element
+button href txt =
+  leftAligned (Text.color white (Text.fromString txt))
+    |> container 158 38 middle
+    |> color C.blue
+    |> container 160 40 middle
+    |> color (rgb 5 80 129)
+    |> link href
+    |> container 200 80 middle
 
 
-bigLink : String -> String -> Element
-bigLink url name =
-  Text.fromString name
-    |> Text.link url
-    |> Text.height 30
-    |> Text.leftAligned
+left1 : Element
+left1 = Markdown.toElement """
 
+# Install Packages
 
-intro : Element
-intro = Markdown.toElement """
+Use [`elm-package`][elm-package] to install community packages:
 
-# Elm Package Catalog
+[elm-package]: https://github.com/elm-lang/elm-package
 
-This website hosts the documentation for all publish Elm packages.
-The [`elm-package`](https://github.com/elm-lang/elm-package) command line tool
-lets you install any of these packages and publish your own.
+```
+elm-package install user/project
+```
+
+[`elm-package`][elm-package] is sandboxed by default. All packages are
+installed on a per-project basis, so all your projects dependencies are
+independent.
+
+<br>
+
+# Reliable Versioning
+
+Thanks to Elm&rsquo;s design, `elm-package` is able to automatically enforce
+versioning rules based on API changes. You can always compare APIs by running
+a command like:
+
+```
+elm-package diff evancz/elm-html 1.0.0 1.1.0
+```
+
+This will show you all the values that were added, removed, and changed between
+version 1.0.0 and 1.1.0. Based on these API diffs, `elm-package` enforces [a
+restricted form of semver 2.0.0][rules], so PATCH changes really are PATCH
+changes in Elm.
+
+[rules]: https://github.com/elm-lang/elm-package#version-rules
 
 """
 
-docs : Element
-docs = Markdown.toElement """
+right1 : Element
+right1 = Markdown.toElement """
 
-# Basic Usage
+# Design Guidelines
 
-To install a library run:
+Before publishing packages with [`elm-package`][elm-package], look through the
+[API Design Guidelines][design]. Some key takeaways are:
 
-```bash
-elm-package install evancz/elm-html         # Install latest version
-elm-package install evancz/elm-html 1.0.0   # Install version 1.0.0
+ * Design for a concrete use case
+ * Use human readable names
+ * Avoid gratuitous abstraction
+ * [Write nice documentation][docs]
+
+After looking through [the guidelines][design] carefully and [writing helpful
+documentation][docs], publish your library with:
+
 ```
-
-`elm-package` is sandboxed by default, so the downloaded package will be placed
-in your projects `elm-stuff/` directory. Sandboxing means it is easy for
-different projects to have different dependencies.
-
-Installing a package will also create a file called `elm-package.json` which
-gives a structured overview of your project, including stuff like what license
-you use, what packages you depend on, and which directories contain source
-code. Take a look at this file and see if everything looks correct!
-
-
-# Version Rules
-
-Many people use version numbers in different ways, making it hard to give
-reliable version bounds in your own package. With `elm-package` versions are
-determined based on API changes. The rules are:
-
-  * Versions all have exactly three parts: `MAJOR.MINOR.PATCH`
-
-  * All packages start with initial version 1.0.0
-
-  * Versions are incremented based on how the API changes:
-
-      - `PATCH` - the API is the same, no risk of breaking code
-      - `MINOR` - values have been added, existing values are unchanged
-      - `MAJOR` - existing values have been changed or removed
-
-  * `elm-package` will bump versions for you, automatically enforcing these rules
-
-This means that if your package works with `evancz/elm-html 1.2.1` it is very
-likely to work with everything up until `2.0.0`. At that point, some breaking
-change has occurred that might break your code. It is conceivable that things
-break on a minor change if you are importing things unqualified and a newly
-added value causes a name collision, but that is not extremely likely.
-
-
-# Updating Dependencies
-
-Say you know a new version of `evancz/elm-html` has come out, but you are not
-sure if you want to update. You can see how big of a change it is by running
-the following command:
-
-```bash
-elm-package diff evancz/elm-html 1.2.1 2.0.0
-```
-
-This will show you all of the changes from version `1.2.1` which you have and
-version `2.0.0` which you would like to have. This gives you some real basis
-for deciding if you should update right now.
-
-If you like what you see, take the following steps.
-
-  * Save a copy of `elm-stuff/exact-dependencies.json` so you can always come
-    back to a working state.
-
-  * Change your version bounds in `elm-package.json` to include the newest
-    stuff.
-
-  * Run `elm-package install evancz/elm-html 2.0.0` and see how things go!
-
-
-# Publishing Packages
-
-This is a step by step discussion of how to make a nice package that will be
-useful, easy to learn, and pleasant to use.
-
-## Designing APIs
-
-Before publishing, look through the [design guidelines][guidelines].
-Some key takeaways are:
-
-[guidelines]: /help/design-guidelines
-
-  * Design for a concrete use case
-  * Always give functions human readable names
-  * Avoid gratuitous abstraction
-
-## Preparing for Publication
-
-The information in `elm-package.json` determines what people will see when
-they browse your package on [package.elm-lang.org](http://package.elm-lang.org/).
-Here are some hints for filling in that information:
-
-  * Keep the `summary` under 80 characters.
-
-  * The recommended `license` is BSD3, but of course, you can use whatever
-    license you want.
-
-  * `exposed-modules` lets you expose some small set of modules. Use this to
-    stop internal details from polluting your API and cluttering the docs with
-    modules that are not meant for users.
-
-You should also create a `README.md` for your project. It should explain the
-use case of your library along with some examples to help people get situated
-before deciding to use your library or diving into your documentation.
-
-Finally, you should document all of the publicly exposed modules and functions
-based on [this format][docs]. Examples are one of the most powerful ways to
-learn new APIs so do not be lazy, make your users life easy!
-
-[docs]: /help/documentation-format
-
-## Publishing for the First Time
-
-When you have finished the API, tested everything, and written up docs, it is
-time to share it with others!
-
-All Elm packages start with version number `1.0.0` and then increase according
-to automatically enforced rules. For now, all you need to know is that `1.0.0`
-is where things start.
-
-`elm-package` is currently backed by GitHub, so we use GitHub tags to refer to
-specific version numbers. Add a version tag to your repo like this:
-
-```bash
-git tag -a 1.0.0 -m "initial release"
-git push --tags
-```
-
-This will add a tag `1.0.0` which matches the version number you are
-publishing. It also associates that tag with a message. You can make your
-message more helpful than "initial release".
-
-Once that is done, run the following command:
-
-```bash
 elm-package publish
 ```
 
-This will send all the relevant information to the package catalog and verify
-that everything is in order. You just published a package!
+For more information on publishing with `elm-package` check out
+[the comprehensive usage overview](https://github.com/elm-lang/elm-package/blob/master/README.md).
 
-## Publishing Updates
-
-Once you have published `1.0.0` you enter into the world of automatically
-enforced versioning as described in the [version rules section](#version-rules).
-`elm-package` provides a couple tools to make it easy to diff APIs and figure
-out new version numbers.
-
-First we have API diffing with the following commands:
-
-```bash
-elm-package diff        # diff current API with most recently published API
-elm-package diff 1.0.0  # diff current API with version 1.0.0
-```
-
-Both of these will help you review your changes and make sure everything is
-what you were expecting. From there, you can automatically bump your version
-number by running this command:
-
-```bash
-elm-package bump
-```
-
-Based on the version number listed in your `elm-package.json` file, it will run
-a diff and figure out the magnitude of the changes. It will then tell you your
-new version number!
-
-From here, everything is the same as publishing for the first time. Tag it on
-GitHub and publish it.
+[elm-package]: https://github.com/elm-lang/elm-package
+[design]: /help/design-guidelines
+[docs]: /help/documentation-format
 
 """

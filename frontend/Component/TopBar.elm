@@ -2,44 +2,24 @@ module Component.TopBar where
 
 import Color
 import ColorScheme as C
-import Graphics.Element (..)
-import Signal
+import Graphics.Element exposing (..)
 import Text
-
-
-type SearchScope
-    = Package String
-    | Global
-
-
-type Status
-    = Normal
-    | Hover
-    | Focus
-
-
-type alias Model =
-    { searchScope : SearchScope
-    , query : String
-    , status : Status
-    }
-
-
-type Update = NoOp
 
 
 topBarHeight = 50
 
-innerWidth = 980
+targetWidth = 980
 
 logoSize = 28
 
 searchBarWidth = 100
 
 
-view : Int -> Signal.Channel Update -> Model -> Element
-view outerWidth channel model =
-  let leftPadding =
+view : Int -> Element
+view outerWidth =
+  let innerWidth = min outerWidth targetWidth
+
+      leftPadding =
         (outerWidth - innerWidth) // 2
 
       rightPadding =
@@ -49,7 +29,7 @@ view outerWidth channel model =
   [ bar leftPadding empty
   , bar logoSize
       (link "http://elm-lang.org" (image logoSize logoSize "/assets/elm_logo.svg"))
-  , link "/packages" (bar searchBarWidth (Text.leftAligned (Text.color (Color.rgb 5 80 129) (Text.fromString "Packages"))))
+  , link "/packages" (bar searchBarWidth (leftAligned (Text.color (Color.rgb 5 80 129) (Text.fromString "Packages"))))
   , bar (innerWidth - logoSize - searchBarWidth + rightPadding) empty
   ]
 

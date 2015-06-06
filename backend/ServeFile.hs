@@ -17,6 +17,14 @@ import qualified PackageSummary as PkgSummary
 import qualified Path
 
 
+favicon :: H.Html
+favicon =
+  H.link
+    ! A.rel "shortcut icon"
+    ! A.size "16x16, 32x32, 48x48, 64x64, 128x128, 256x256"
+    ! A.href "/assets/favicon.ico"
+
+
 filler :: Module.Name -> Snap ()
 filler name =
     writeBuilder $
@@ -24,6 +32,7 @@ filler name =
     docTypeHtml $ do 
       H.head $ do
         meta ! charset "UTF-8"
+        favicon
         H.title (toHtml (Module.nameToString name))
         H.style $ preEscapedToMarkup standardStyle
         googleAnalytics
@@ -37,8 +46,8 @@ filler name =
 
 
 
-packageDocs :: N.Name -> V.Version -> Snap ()
-packageDocs pkg@(N.Name user name) version =
+package :: N.Name -> V.Version -> Snap ()
+package pkg@(N.Name user name) version =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
       let versionList =
             maybe [] (List.map V.toString) maybeVersions
@@ -48,12 +57,13 @@ packageDocs pkg@(N.Name user name) version =
         docTypeHtml $ do 
           H.head $ do
             meta ! charset "UTF-8"
+            favicon
             H.title "Elm Package Documentation"
             H.style $ preEscapedToMarkup standardStyle
             googleAnalytics
             link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
-            script ! src "/artifacts/Page-PackageDocs.js" $ ""
+            script ! src "/artifacts/Page-Package.js" $ ""
 
           body $ script $ preEscapedToMarkup $
               context
@@ -62,11 +72,11 @@ packageDocs pkg@(N.Name user name) version =
                 , ("version", show (V.toString version))
                 , ("versionList", show versionList)
                 ]
-              ++ "var page = Elm.fullscreen(Elm.Page.PackageDocs, { context: context });\n"
+              ++ "var page = Elm.fullscreen(Elm.Page.Package, { context: context });\n"
 
 
-moduleDocs :: N.Name -> V.Version -> Module.Name -> Snap ()
-moduleDocs pkg@(N.Name user name) version moduleName =
+module' :: N.Name -> V.Version -> Module.Name -> Snap ()
+module' pkg@(N.Name user name) version moduleName =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
       let versionList =
             maybe [] (List.map V.toString) maybeVersions
@@ -76,12 +86,13 @@ moduleDocs pkg@(N.Name user name) version moduleName =
         docTypeHtml $ do 
           H.head $ do
             meta ! charset "UTF-8"
+            favicon
             H.title "Elm Package Documentation"
             H.style $ preEscapedToMarkup standardStyle
             googleAnalytics
             link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
-            script ! src "/artifacts/Page-ModuleDocs.js" $ ""
+            script ! src "/artifacts/Page-Module.js" $ ""
 
           body $ script $ preEscapedToMarkup $
               context
@@ -91,7 +102,13 @@ moduleDocs pkg@(N.Name user name) version moduleName =
                 , ("versionList", show versionList)
                 , ("moduleName", show (Module.nameToString moduleName))
                 ]
-              ++ "var page = Elm.fullscreen(Elm.Page.ModuleDocs, { context: context });\n"
+              ++
+                "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n\
+                \page.ports.docsLoaded.subscribe(function() {\n\
+                \    if (window.location.hash) {\n\
+                \        setTimeout(function() { window.location = window.location.hash; }, 0);\n\
+                \    }\n\
+                \});\n"
 
 
 context :: [(String, String)] -> String

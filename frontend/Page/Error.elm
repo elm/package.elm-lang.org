@@ -2,9 +2,8 @@
 module Page.Error where
 
 import ColorScheme as C
-import Graphics.Element (..)
+import Graphics.Element exposing (..)
 import Markdown
-import Signal
 import Text
 import Window
 

@@ -1,10 +1,7 @@
-module Component.ModuleDocs where
+module Component.Module where
 
 import Dict
-import Graphics.Element (..)
-import List
-import List ((::))
-import LocalChannel as LC
+import Graphics.Element exposing (..)
 import Markdown
 import Regex
 import String
@@ -15,10 +12,10 @@ import Component.Documentation as D
 import Component.Header as Header
 
 
-view : LC.LocalChannel String -> Int -> String -> String -> String -> List String-> D.Documentation -> Element
-view versionChan innerWidth user package version versionList docs =
+view : Signal.Address String -> Int -> String -> String -> String -> List String-> D.Documentation -> Element
+view versionAddr innerWidth user package version versionList docs =
     flow down
-    [ Header.view versionChan innerWidth user package version versionList (Just docs.name)
+    [ Header.view versionAddr innerWidth user package version versionList (Just docs.name)
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
     , viewDocs innerWidth (D.toDocDict docs) docs.comment
@@ -113,7 +110,7 @@ viewVar innerWidth documentation var =
               , Text.fromString "', please inform the package author."
               ]
         in
-            width innerWidth (Text.leftAligned msg)
+            width innerWidth (leftAligned msg)
 
       Just entry ->
         D.viewEntry innerWidth var entry

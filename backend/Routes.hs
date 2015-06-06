@@ -25,6 +25,7 @@ import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
 import qualified Elm.Package.Version as V
 import qualified GitHub
+import qualified NewPackageList
 import qualified NativeWhitelist
 import qualified PackageSummary as PkgSummary
 import qualified ServeFile
@@ -32,7 +33,7 @@ import qualified ServeFile
 
 packages :: Snap ()
 packages =
-    ifTop (ServeFile.filler (Module.Name ["Page","Packages"]))
+    ifTop (ServeFile.filler (Module.Name ["Page","PackageList"]))
     <|> route [ (":user/:name", package) ]
     <|> serveDirectory "packages"
 
@@ -57,7 +58,7 @@ servePackageInfo name =
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
 
-      ifTop (ServeFile.packageDocs name version)
+      ifTop (ServeFile.package name version)
         <|> serveModule name version
 
 
@@ -73,7 +74,7 @@ serveModule name version =
       case Module.dehyphenate potentialName of
         Nothing -> pass
         Just moduleName ->
-            ServeFile.moduleDocs name version moduleName
+            ServeFile.module' name version moduleName
 
 
 redirectToLatest :: N.Name -> Snap ()
@@ -129,7 +130,9 @@ register =
 
       case result of
         Right () ->
-          liftIO (PkgSummary.add description)
+          liftIO $ do
+              PkgSummary.add description
+              NewPackageList.addIfNew description
 
         Left err ->
           do  liftIO (removeDirectoryRecursive directory)
@@ -174,7 +177,9 @@ whitelistError name =
     \necessary. Please open an issue with the title:\n\n"
     ++ "    \"Native review for " ++ N.toString name ++ "\"\n\n"
     ++ "to begin the review process at the following address.\n"
-    ++ "<https://github.com/elm-lang/package.elm-lang.org/issues>"
+    ++ "<https://github.com/elm-lang/package.elm-lang.org/issues>\n\n"
+    ++ "The issue should link to the relevant repository and provide sufficient\n"
+    ++ "context for evaluation."
 
 
 -- UPLOADING FILES
