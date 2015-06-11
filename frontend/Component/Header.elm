@@ -37,7 +37,7 @@ view versionChan innerWidth user package version versions maybeModule =
       "https://github.com/" ++ user ++ "/" ++ package ++ "/tree/" ++ version
 
     viewSource =
-      Text.fromString "View Source"
+      Text.fromString "Browse Source"
         |> Text.link githubLink
         |> Text.height 12
         |> centered
