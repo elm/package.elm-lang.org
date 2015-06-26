@@ -61,3 +61,23 @@ Executable run-server
     unordered-containers,
     vector
 
+
+Executable upgrade-docs
+  hs-source-dirs:
+    .
+
+  Main-is:
+    upgrade-docs.hs
+
+  ghc-options:
+    -threaded -O2 -W -rtsopts
+
+  Build-depends:
+    aeson,
+    base >=4.2 && <5,
+    bytestring,
+    containers,
+    directory,
+    elm-compiler,
+    filepath,
+    text
