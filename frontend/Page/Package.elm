@@ -16,7 +16,16 @@ import Component.Package.ModuleList as ModuleList
 import Component.Documentation as Doc
 
 
-port context : { user : String, name : String, version : String, versionList : List String }
+type alias Context =
+    { user : String
+    , name : String
+    , version : String
+    , versionList : List String
+    }
+
+
+port context : Context
+
 
 port title : String
 port title =
