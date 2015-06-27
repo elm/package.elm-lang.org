@@ -42,11 +42,18 @@ view versionChan innerWidth user package version versions maybeModule =
         |> Text.height 12
         |> centered
   in
-    flow right
-    [ container (innerWidth - 100) 100 midLeft bigWords
-    , container 100 100 middle <|
-        flow down
-          [ Html.toElement 100 30 (dropdown versionChan version versions)
-          , width 100 viewSource
-          ]
+    flow down <|
+    [ flow right
+      [ container (innerWidth - 100) 100 midLeft bigWords
+      , container 100 100 middle <|
+          flow down
+            [ Html.toElement 100 30 (dropdown versionChan version versions)
+            , width 100 viewSource
+            ]
+      ]
     ]
+    ++
+    if Maybe.withDefault True (Maybe.map ((==) version) (List.head versions))
+    then []
+    else [ leftAligned (Text.fromString "You are not looking at the documentation for the latest version of this package!") ]
+
