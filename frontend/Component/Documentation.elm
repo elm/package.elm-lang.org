@@ -40,24 +40,27 @@ type alias Documentation =
 
 documentation : Decoder Documentation
 documentation =
-    object5 Documentation
-      ("name" := string)
-      ("comment" := string)
-      ("aliases" := list alias)
-      ("types" := list union)
-      ("values" := list value)
+  object5 Documentation
+    ("name" := string)
+    ("comment" := string)
+    ("aliases" := list alias)
+    ("types" := list union)
+    ("values" := list value)
 
 
 valueList : Decoder (String, List String)
 valueList =
-    let nameList = list ("name" := string)
-        allNames =
-          object3 (\x y z -> x ++ y ++ z)
-            ("aliases" := nameList)
-            ("types" := nameList)
-            ("values" := nameList)
-    in
-        object2 (,) ("name" := string) allNames
+  let
+    nameList =
+      list ("name" := string)
+
+    allNames =
+      object3 (\x y z -> x ++ y ++ z)
+        ("aliases" := nameList)
+        ("types" := nameList)
+        ("values" := nameList)
+  in
+    object2 (,) ("name" := string) allNames
 
 
 type alias Alias =
@@ -70,11 +73,11 @@ type alias Alias =
 
 alias : Decoder Alias
 alias =
-    object4 Alias
-      ("name" := string)
-      ("comment" := string)
-      ("args" := list string)
-      ("type" := tipe)
+  object4 Alias
+    ("name" := string)
+    ("comment" := string)
+    ("args" := list string)
+    ("type" := string)
 
 
 type alias Union =
@@ -87,11 +90,11 @@ type alias Union =
 
 union : Decoder Union
 union =
-    object4 Union
-      ("name" := string)
-      ("comment" := string)
-      ("args" := list string)
-      ("cases" := list (tuple2 (,) string (list tipe)))
+  object4 Union
+    ("name" := string)
+    ("comment" := string)
+    ("args" := list string)
+    ("cases" := list (tuple2 (,) string (list string)))
 
 
 type alias Value =
@@ -104,11 +107,12 @@ type alias Value =
 
 value : Decoder Value
 value =
-    object4 Value
-      ("name" := string)
-      ("comment" := string)
-      ("type" := tipe)
-      assocPrec
+  object4 Value
+    ("name" := string)
+    ("comment" := string)
+    ("type" := string)
+    assocPrec
+
 
 assocPrec : Decoder (Maybe (String, Int))
 assocPrec =
@@ -118,102 +122,66 @@ assocPrec =
       ("precedence" := int)
 
 
-type Type
-    = Lambda Type Type
-    | Var String
-    | Type String
-    | App Type (List Type)
-    | Record (List (String, Type)) (Maybe Type)
-
-
-tipe : Decoder Type
-tipe =
-    ("tag" := string) `andThen` specificType
-
-
-specificType : String -> Decoder Type
-specificType tag =
-    case tag of
-      "lambda" ->
-          object2 Lambda
-            ("in" := tipe)
-            ("out" := tipe)
-
-      "var" ->
-          object1 Var ("name" := string)
-
-      "type" ->
-          object1 Type ("name" := string)
-
-      "app" ->
-          object2 App
-            ("func" := tipe)
-            ("args" := list tipe)
-
-      "record" ->
-          object2 Record
-            ("fields" := list (tuple2 (,) string tipe))
-            ("extension" := maybe tipe)
-
---      _ ->
---          error <| "unrecognized tag '" ++ tag ++ "' when getting a Type"
+type alias Type = String
 
 
 -- VIEW
 
 options : Markdown.Options
 options =
-  let defaults = Markdown.defaultOptions
+  let
+    defaults = Markdown.defaultOptions
   in
-      { defaults | sanitize <- True }
+    { defaults | sanitize <- True }
 
 
 viewEntry : Int -> String -> (Text.Text, Maybe (String, Int), String) -> Element
 viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
-  let rawAssocPrec =
-        case maybeAssocPrec of
-          Nothing -> empty
-          Just (assoc, prec) ->
-            assoc ++ "-associative / precedence " ++ toString prec
-              |> Text.fromString
-              |> Text.height 12
-              |> rightAligned
+  let
+    rawAssocPrec =
+      case maybeAssocPrec of
+        Nothing -> empty
+        Just (assoc, prec) ->
+          assoc ++ "-associative / precedence " ++ toString prec
+            |> Text.fromString
+            |> Text.height 12
+            |> rightAligned
 
-      assocPrecWidth =
-        widthOf rawAssocPrec + 20
+    assocPrecWidth =
+      widthOf rawAssocPrec + 20
 
-      assocPrec =
-        container assocPrecWidth (min annotationHeight 24) middle rawAssocPrec
+    assocPrec =
+      container assocPrecWidth (min annotationHeight 24) middle rawAssocPrec
 
-      annotationText =
-        leftAligned (Text.monospace annotation)
-          |> width annotationWidth
+    annotationText =
+      leftAligned (Text.monospace annotation)
+        |> width annotationWidth
 
-      annotationPadding = 10
+    annotationPadding = 10
 
-      annotationWidth =
-        innerWidth - annotationPadding - assocPrecWidth
+    annotationWidth =
+      innerWidth - annotationPadding - assocPrecWidth
 
-      annotationHeight =
-        heightOf annotationText + 8
+    annotationHeight =
+      heightOf annotationText + 8
 
-      commentElement =
-        if String.isEmpty comment
-            then empty
-            else
-                flow right
-                [ spacer 40 1
-                , width (innerWidth - 40) (Markdown.toElementWith options comment)
-                ]
+    commentElement =
+      if String.isEmpty comment
+          then empty
+          else
+              flow right
+              [ spacer 40 1
+              , width (innerWidth - 40) (Markdown.toElementWith options comment)
+              ]
 
-      annotationBar =
-        flow right
-        [ spacer annotationPadding annotationHeight
-        , container annotationWidth annotationHeight midLeft annotationText
-        , assocPrec
-        ]
+    annotationBar =
+      flow right
+      [ spacer annotationPadding annotationHeight
+      , container annotationWidth annotationHeight midLeft annotationText
+      , assocPrec
+      ]
   in
-      flow down
+    flow down
       [ tag name (color C.mediumGrey (spacer innerWidth 1))
       , annotationBar
       , commentElement
@@ -221,168 +189,226 @@ viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
       ]
 
 
+-- VIEW ALIASES
+
 viewAlias : Alias -> Text.Text
 viewAlias alias =
-    Text.concat
-    [ accentString "type alias "
+  Text.concat
+    [ green "type alias "
     , Text.link ("#" ++ alias.name) (Text.bold (Text.fromString alias.name))
-    , spacePrefix (List.map Text.fromString alias.args)
-    , equals
-    , viewType alias.tipe
+    , Text.fromString (String.concat (List.map ((++) " ") alias.args))
+    , green " = "
+    , case String.uncons alias.tipe of
+        Just ('{', _) ->
+          viewRecordType alias.tipe
+
+        _ ->
+          typeToText alias.tipe
     ]
 
 
+-- VIEW UNIONS
+
 viewUnion : Union -> Text.Text
 viewUnion union =
-  let seperators =
-        "=" :: List.repeat (List.length union.cases - 1) "|"
+  let
+    seperators =
+      green "\n    = "
+      :: List.repeat (List.length union.cases - 1) (green "\n    | ")
   in
-      Text.concat
-      [ accentString "type "
+    Text.concat
+      [ green "type "
       , Text.link ("#" ++ union.name) (Text.bold (Text.fromString union.name))
-      , spacePrefix (List.map Text.fromString union.args)
-      , Text.concat (List.map2 viewCase seperators union.cases)
+      , Text.fromString (String.concat (List.map ((++) " ") union.args))
+      , Text.concat (List.map2 (++) seperators (List.map viewCase union.cases))
       ]
 
 
-viewCase : String -> (String, List Type) -> Text.Text
-viewCase sep (tag, args) =
-  Text.fromString "\n    " ++ accentString sep
-  ++ spacePrefix (Text.fromString tag :: List.map (viewTypeHelp ADT) args)
+viewCase : (String, List Type) -> Text.Text
+viewCase (tag, args) =
+  List.map viewArg args
+    |> (::) (Text.fromString tag)
+    |> List.intersperse (Text.fromString " ")
+    |> Text.concat
 
+
+viewArg : String -> Text.Text
+viewArg tipe =
+  let
+    (Just (c,_)) =
+      String.uncons tipe
+  in
+    if c == '(' || c == '{' || not (String.contains " " tipe) then
+      typeToText tipe
+    else
+      typeToText ("(" ++ tipe ++ ")")
+
+
+-- VIEW VALUES
 
 viewValue : Value -> Text.Text
 viewValue value =
-    Text.concat
+  Text.concat
     [ Text.link ("#" ++ value.name) (Text.bold (viewVar value.name))
-    , colon
-    , viewType value.tipe
+    , viewFunctionType value.tipe
     ]
 
 
 viewVar : String -> Text.Text
 viewVar str =
-  let txt = Text.fromString str
-  in
-      case String.uncons str of
-        Nothing -> txt
-        Just (c, _) ->
-          if isVarChar c then txt else parens txt
+  Text.fromString <|
+    case String.uncons str of
+      Nothing ->
+        str
+
+      Just (c, _) ->
+        if isVarChar c then str else "(" ++ str ++ ")"
 
 
 isVarChar : Char -> Bool
 isVarChar c =
-    Char.isLower c || Char.isUpper c || Char.isDigit c || c == '_' || c == '\''
+  Char.isLower c || Char.isUpper c || Char.isDigit c || c == '_' || c == '\''
 
 
+-- VIEW TYPES
 
-type Context = None | ADT | Function
-
-
-viewType : Type -> Text.Text
-viewType tipe =
-  viewTypeHelp None tipe
-
-
-viewTypeHelp : Context -> Type -> Text.Text
-viewTypeHelp context tipe =
-  case tipe of
-    Lambda t1 t2 ->
-        let txt = viewTypeHelp Function t1 ++ arrow ++ viewType t2
-        in
-            case context of
-              None -> txt
-              _ -> parens txt
-
-    Var name ->
-        Text.fromString name
-
-    Type name ->
-        Text.fromString name
-
-    App (Type name) args ->
-      if  | isTuple name ->
-              List.map viewType args
-                  |> List.intersperse (Text.fromString ", ")
-                  |> Text.concat
-                  |> parens
-
-          | otherwise ->
-              let txt = Text.fromString name ++ spacePrefix (List.map (viewTypeHelp ADT) args)
-              in
-                  case (context, args) of
-                    (ADT, _ :: _) -> parens txt
-                    _ -> txt
-
-    Record fields extension ->
-        let viewField (key, value) =
-                Text.fromString key ++ colon ++ viewType value
-
-            viewExtension maybeType =
-                case maybeType of
-                  Nothing -> Text.fromString ""
-                  Just t -> viewType t ++ Text.fromString " | "
-        in
-            sandwich "{ " " }" <|
-            Text.concat
-            [ viewExtension extension
-            , List.map viewField fields
-                |> Text.join (Text.fromString ", ")
-            ]
+viewRecordType : String -> Text.Text
+viewRecordType tipe =
+  splitRecord tipe
+    |> List.map (typeToText << (++) "\n    ")
+    |> Text.concat
 
 
-isTuple : String -> Bool
-isTuple str =
-  case String.toInt (String.dropLeft 6 str) of
-    Err _ -> False
-    Ok _ -> String.left 6 str == "_Tuple"
+viewFunctionType : Type -> Text.Text
+viewFunctionType tipe =
+  if String.length tipe < 80 then
+    green " : " ++ typeToText tipe
+  else
+    let
+      parts =
+        splitArgs tipe
+
+      seperators =
+        "\n    :  "
+        :: List.repeat (List.length parts - 1) "\n    ->"
+    in
+      Text.concat (List.map2 (\sep part -> typeToText (sep ++ part)) seperators parts)
 
 
-parens : Text.Text -> Text.Text
-parens txt =
-  sandwich "(" ")" txt
+-- TYPE TO TEXT
+
+typeToText : String -> Text.Text
+typeToText tipe =
+  String.split "->" tipe
+    |> List.map prettyColons
+    |> List.intersperse (green "->")
+    |> Text.concat
 
 
-spacePrefix : List Text.Text -> Text.Text
-spacePrefix txts =
-  Text.concat (List.map (\txt -> space ++ txt) txts)
+prettyColons : String -> Text.Text
+prettyColons tipe =
+  String.split ":" tipe
+    |> List.map Text.fromString
+    |> List.intersperse (green ":")
+    |> Text.concat
 
 
-space : Text.Text
-space =
-  Text.fromString " "
+-- VIEW HELPERS
 
-
-equals : Text.Text
-equals =
-  pad (accentString "=")
-
-
-bar : Text.Text
-bar =
-  pad (accentString "|")
-
-
-arrow : Text.Text
-arrow =
-  pad (accentString "->")
-
-
-colon : Text.Text
-colon =
-  pad (accentString ":")
-
-
-accentString : String -> Text.Text
-accentString str =
+green : String -> Text.Text
+green str =
   Text.color (C.green) (Text.fromString str)
 
 
-pad : Text.Text -> Text.Text
-pad txt =
-  sandwich " " " " txt
+-- SPLITTING TYPES
+
+type alias SplitState =
+  { parenDepth : Int
+  , bracketDepth : Int
+  , currentChunk : String
+  , chunks : List String
+  }
 
 
-sandwich : String -> String -> Text.Text -> Text.Text
-sandwich start stop txt =
-    Text.fromString start ++ txt ++ Text.fromString stop
+updateDepths : Char -> SplitState -> SplitState
+updateDepths char state =
+  case char of
+    '(' ->
+        { state | parenDepth <- state.parenDepth + 1 }
+
+    ')' ->
+        { state | parenDepth <- state.parenDepth - 1 }
+
+    '{' ->
+        { state | bracketDepth <- state.bracketDepth + 1 }
+
+    '}' ->
+        { state | bracketDepth <- state.bracketDepth - 1 }
+
+    _ ->
+        state
+
+
+-- SPLIT FUNCTION TYPES
+
+splitArgs : String -> List String
+splitArgs tipe =
+  let
+    formattedType =
+      String.join "$" (String.split "->" tipe)
+
+    state =
+      String.foldl splitArgsHelp (SplitState 0 0 "" []) formattedType
+  in
+    List.reverse (String.reverse state.currentChunk :: state.chunks)
+      |> List.map (String.split "$" >> String.join "->")
+
+
+splitArgsHelp : Char -> SplitState -> SplitState
+splitArgsHelp char startState =
+  let
+    state =
+      updateDepths char startState
+  in
+    if char == '$' && state.parenDepth == 0 && state.bracketDepth == 0 then
+        { state |
+            currentChunk <- "",
+            chunks <- String.reverse state.currentChunk :: state.chunks
+        }
+    else
+        { state |
+            currentChunk <- String.cons char state.currentChunk
+        }
+
+
+-- SPLIT RECORD TYPES
+
+splitRecord : String -> List String
+splitRecord tipe =
+  let
+    state =
+      String.foldl splitRecordHelp (SplitState 0 0 "" []) tipe
+  in
+    List.reverse (String.reverse state.currentChunk :: state.chunks)
+
+
+splitRecordHelp : Char -> SplitState -> SplitState
+splitRecordHelp char startState =
+  let
+    state =
+      updateDepths char startState
+  in
+    if state.bracketDepth == 0 then
+        { state |
+            currentChunk <- "}",
+            chunks <- String.reverse state.currentChunk :: state.chunks
+        }
+    else if char == ',' && state.parenDepth == 0 && state.bracketDepth == 1 then
+        { state |
+            currentChunk <- ",",
+            chunks <- String.reverse state.currentChunk :: state.chunks
+        }
+    else
+        { state |
+            currentChunk <- String.cons char state.currentChunk
+        }
