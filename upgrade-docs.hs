@@ -37,7 +37,7 @@ fixAllDocs :: FilePath -> IO ()
 fixAllDocs pkg =
   do  maybeValue <- Json.decode <$> BS.readFile (pkg </> "documentation.json")
       writeAsJson
-        (pkg </> "new-documentation.json")
+        (pkg </> "documentation.json")
         (maybeValue :: Maybe [Docs.Documentation])
 
 
@@ -51,9 +51,8 @@ fixModuleDocs pkg =
 
       forM_ moduleDocs $ \file ->
         do  maybeValue <- Json.decode <$> BS.readFile (pkg </> "docs" </> file)
-            Dir.createDirectoryIfMissing True (pkg </> "new-docs")
             writeAsJson
-              (pkg </> "new-docs" </> file)
+              (pkg </> "docs" </> file)
               (maybeValue :: Maybe Docs.Documentation)
 
 
