@@ -96,7 +96,7 @@ a library, so give them some structure!
 
 Function composition works better when the data structure is the last argument:
 
-```haskell
+```elm
 getCombinedHeight people =
     people
       |> map .height
@@ -106,7 +106,7 @@ getCombinedHeight people =
 Folding also works better when the data structure is the last argument of the
 accumulator function. `foldl`, `foldr`, and `foldp` all work this way:
 
-```haskell
+```elm
 -- Good API
 remove : String -> Dict String a -> Dict String a
 

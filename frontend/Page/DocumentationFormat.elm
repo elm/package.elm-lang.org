@@ -47,7 +47,7 @@ documentation for complete examples.
 
 Here is an example from [the `String` library](/packages/elm-lang/core/latest/String):
 
-```haskell
+```elm
 {-| Convert a list of characters into a String. Can be useful if you
 want to create a string primarly by consing, perhaps for decoding
 something.
@@ -78,7 +78,7 @@ and writers do not need to argue about style.
 
 Here is the module documentation for [the `Maybe` library](/packages/elm-lang/core/latest/Maybe):
 
-```haskell
+```elm
 module Maybe (Maybe(Just,Nothing), andThen, map, withDefault, oneOf) where
 
 {-| This library fills a bunch of important niches in Elm. A `Maybe` can help
