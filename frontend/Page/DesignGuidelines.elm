@@ -43,7 +43,7 @@ important to read through and see why these recommendations matter.
   * [Avoid gratuitous abstraction](#avoid-gratuitous-abstraction)
   * [Write helpful documentation with examples](#write-helpful-documentation-with-examples)
   * [The data structure is always the last argument](#the-data-structure-is-always-the-last-argument)
-  * [Do not expose ADTs or record constructors](#do-not-expose-ADTs-or-record-constructors)
+  * [Keep tags and record constructors secret](#keep-tags-and-record-constructors-secret)
   * [Naming](#naming)
     - [Use human readable names](#use-human-readable-names)
     - [Module names should not reappear in function names](#module-names-should-not-reappear-in-function-names)
@@ -74,7 +74,7 @@ use case you have in mind for your library?
 
 Abstraction is a tool, not a design goal. Unless abstraction is
 making someones life easier, it is not a good idea. If you cannot
-*demonstrate* why your abstraction is helpful, it is a problem with your API.
+*demonstrate* why your abstraction is helpful, there is a problem with your API.
 
 ## Write helpful documentation with examples
 
@@ -90,7 +90,7 @@ example that shows how to use many functions together, showcasing the API.
 
 Finally, think hard about the order that the functions appear in and what kind
 of title each section gets. People will read documentation linearly when learning
-a library so give them some structure!
+a library, so give them some structure!
 
 ## The data structure is always the last argument
 
@@ -103,9 +103,8 @@ getCombinedHeight people =
       |> foldl (+) 0
 ```
 
-Folding also works better when the data structure is the last argument.
-`foldl`, `foldr`, and `foldp` use an accumulator function where the
-data structure is the last argument:
+Folding also works better when the data structure is the last argument of the
+accumulator function. `foldl`, `foldr`, and `foldp` all work this way:
 
 ```haskell
 -- Good API
@@ -125,10 +124,30 @@ filteredPeople =
 The order of arguments in fold is specifically intended to make this very
 straight-forward: *the data structure is always the last argument*.
 
-## Do not expose ADTs or record constructors
+## Keep tags and record constructors secret
 
-This makes it hard to extend things later. Prefer exposing functions to construct
-these values.
+It's convenient to be able to write `Point x y` instead of `{x = x, y = y}`. But
+what happens when you want to add a third dimension, or switch to a polar
+representation? Then you have to break everyone's code in a major version
+release. Instead, provide a function like `fromXY` to construct a point. Then
+you can add `fromPolar` or `fromXYZ` later.
+
+If your points are type aliased records or tuples, and the type is completely
+hidden, other people can't write type annotations without knowing and relying on
+the type. Exported or not, client code can construct and inspect the values
+without your library, which is also bad when it comes time to extend it.
+
+Instead, use a union type where the type is exported but the tags are not, known
+as an _opaque_ type. It's not hidden since you can see that it's there, but you
+can't see into it, hence it's opaque. To create such a type, you include it in
+the list of values that the module exports. So the first line of your file might
+be `module MyModule (myFunction, MyType) where`. In this example, `MyType` (if
+it is a union type) will be opaque. Then `myFunction` can take or return the
+opaque type.
+
+You can (and often should) use opaque types even if there is only one tag. If
+you have a dozen values to track, you can tag a record. Then you can change the
+record even between minor releases.
 
 ## Naming
 
@@ -145,17 +164,18 @@ came from. This makes them even harder to find. More on this later.
 
 ### Module names should not reappear in function names
 
-A function called `State.runState` is redundant and silly. More importantly,
-it encourages people to use `import open State` which does not scale well.
-In files with many `open` dependencies, it is essentially impossible to
-figure out where functions are coming from. This can make large code
-bases impossible to understand, especially if custom infix operators are
+A function called `State.runState` is redundant and silly. More importantly, it
+encourages people to use `import State exposing (..)` which does not scale well.
+In files with many so-called "unqualified" dependencies, it is essentially
+impossible to figure out where functions are coming from. This can make large
+code bases impossible to understand, especially if custom infix operators are
 used as well. Repeating the module name actively encourages this kind of
 unreadable code.
 
 With a name like `State.run` the user is encouraged to disambiguate functions
 with namespacing, leading to a codebase that will be clearer to people reading
-the project for the first time.
+the project for the first time. A great example from the standard library is
+`Bitwise.and`. This reads a lot better than `&`, which brings us to...
 
 ### Avoid infix operators
 
