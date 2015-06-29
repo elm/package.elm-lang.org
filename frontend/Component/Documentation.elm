@@ -299,7 +299,10 @@ viewFunctionType tipe =
 
 typeToText : String -> Text.Text
 typeToText tipe =
-  String.split "->" tipe
+  String.words tipe
+    |> List.map dropQualifier
+    |> String.join " "
+    |> String.split "->"
     |> List.map prettyColons
     |> List.intersperse (green "->")
     |> Text.concat
@@ -311,6 +314,24 @@ prettyColons tipe =
     |> List.map Text.fromString
     |> List.intersperse (green ":")
     |> Text.concat
+
+
+dropQualifier : String -> String
+dropQualifier token =
+  Maybe.withDefault token (last (String.split "." token))
+
+
+last : List a -> Maybe a
+last list =
+  case list of
+    [] ->
+      Nothing
+
+    [x] ->
+      Just x
+
+    _ :: xs ->
+      last xs
 
 
 -- VIEW HELPERS
