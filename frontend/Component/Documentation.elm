@@ -6,6 +6,7 @@ import Dict
 import Graphics.Element exposing (..)
 import Json.Decode exposing (..)
 import Markdown
+import Regex
 import String
 import Text
 
@@ -299,9 +300,7 @@ viewFunctionType tipe =
 
 typeToText : String -> Text.Text
 typeToText tipe =
-  String.words tipe
-    |> List.map dropQualifier
-    |> String.join " "
+  dropQualifier tipe
     |> String.split "->"
     |> List.map prettyColons
     |> List.intersperse (green "->")
@@ -318,20 +317,12 @@ prettyColons tipe =
 
 dropQualifier : String -> String
 dropQualifier token =
-  Maybe.withDefault token (last (String.split "." token))
+  Regex.replace Regex.All qualifiers (always "") token
 
 
-last : List a -> Maybe a
-last list =
-  case list of
-    [] ->
-      Nothing
-
-    [x] ->
-      Just x
-
-    _ :: xs ->
-      last xs
+qualifiers : Regex.Regex
+qualifiers =
+  Regex.regex "[A-Za-z1-9_]*\\."
 
 
 -- VIEW HELPERS
