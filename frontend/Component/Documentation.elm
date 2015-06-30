@@ -6,9 +6,9 @@ import Dict
 import Graphics.Element exposing (..)
 import Json.Decode exposing (..)
 import Markdown
+import Regex
 import String
 import Text
-import Regex
 
 import ColorScheme as C
 
@@ -317,8 +317,12 @@ prettyColons tipe =
 
 dropQualifier : String -> String
 dropQualifier token =
-  let qualifiers = Regex.regex "[A-Za-z1-9_]*\\."
-  in Regex.replace Regex.All qualifiers (always "") token
+  Regex.replace Regex.All qualifiers (always "") token
+
+
+qualifiers : Regex.Regex
+qualifiers =
+  Regex.regex "[A-Za-z1-9_]*\\."
 
 
 -- VIEW HELPERS
