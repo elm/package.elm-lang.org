@@ -8,6 +8,7 @@ import Json.Decode exposing (..)
 import Markdown
 import String
 import Text
+import Regex
 
 import ColorScheme as C
 
@@ -299,9 +300,7 @@ viewFunctionType tipe =
 
 typeToText : String -> Text.Text
 typeToText tipe =
-  String.words tipe
-    |> List.map dropQualifier
-    |> String.join " "
+  dropQualifier tipe
     |> String.split "->"
     |> List.map prettyColons
     |> List.intersperse (green "->")
@@ -318,20 +317,8 @@ prettyColons tipe =
 
 dropQualifier : String -> String
 dropQualifier token =
-  Maybe.withDefault token (last (String.split "." token))
-
-
-last : List a -> Maybe a
-last list =
-  case list of
-    [] ->
-      Nothing
-
-    [x] ->
-      Just x
-
-    _ :: xs ->
-      last xs
+  let qualifiers = Regex.regex "[A-Za-z1-9_]*\\."
+  in Regex.replace Regex.All qualifiers (always "") token
 
 
 -- VIEW HELPERS
