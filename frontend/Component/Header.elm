@@ -10,7 +10,9 @@ view : Signal.Address String -> Int -> String -> String -> String -> List String
 view versionChan innerWidth user package version versions maybeModule =
   let
     userLink =
-      Text.fromString user
+      Text.link
+        ("https://github.com/" ++ user)
+        (Text.fromString user)
 
     packageLink =
       case maybeModule of
