@@ -53,7 +53,12 @@ view versionChan innerWidth user package version versions maybeModule =
       ]
     ]
     ++
-    if Maybe.withDefault True (Maybe.map ((==) version) (List.head versions))
-    then []
-    else [ leftAligned (Text.fromString "You are not looking at the documentation for the latest version of this package!") ]
+    case List.head versions of
+      Nothing -> []
+      Just latestVersion ->
+        if version == latestVersion
+        then []
+        else [ leftAligned (Text.fromString "The latest version of this package is: "
+                            ++ Text.link ("/packages/" ++ user ++ "/" ++ package ++ "/" ++ latestVersion)
+                                         (Text.fromString latestVersion)) ]
 
