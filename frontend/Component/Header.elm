@@ -58,7 +58,8 @@ view versionChan innerWidth user package version versions maybeModule =
       Just latestVersion ->
         if version == latestVersion
         then []
-        else [ leftAligned (Text.fromString "The latest version of this package is: "
-                            ++ Text.link ("/packages/" ++ user ++ "/" ++ package ++ "/" ++ latestVersion)
-                                         (Text.fromString latestVersion)) ]
+        else [ container innerWidth 25 topLeft
+               (leftAligned (Text.fromString "The latest version of this package is: "
+                             ++ Text.link ("/packages/" ++ user ++ "/" ++ package ++ "/" ++ latestVersion)
+                                          (Text.fromString latestVersion))) ]
 
