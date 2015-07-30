@@ -12,13 +12,13 @@ import Component.Documentation as D
 import Component.Header as Header
 
 
-view : Signal.Address String -> Int -> String -> String -> String -> List String-> D.Documentation -> Element
-view versionAddr innerWidth user package version versionList docs =
+view : Signal.Address String -> Int -> String -> String -> String -> List String -> List String -> D.Documentation -> Element
+view versionAddr innerWidth user package version versionList modules docs =
     flow down
     [ Header.view versionAddr innerWidth user package version versionList (Just docs.name)
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
-    , viewDocs innerWidth (D.toDocDict docs) docs.comment
+    , viewDocs innerWidth (D.toDocDict modules docs) docs.comment
     ]
 
 

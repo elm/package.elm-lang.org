@@ -17,8 +17,8 @@ type alias DocDict =
     Dict.Dict String (Text.Text, Maybe (String, Int), String)
 
 
-toDocDict : Documentation -> DocDict
-toDocDict docs =
+toDocDict : List String -> Documentation -> DocDict
+toDocDict modules docs =
   let toPairs view getAssocPrec entries =
           List.map (\entry -> (entry.name, (view entry, getAssocPrec entry, entry.comment))) entries
   in

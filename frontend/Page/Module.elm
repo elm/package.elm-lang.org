@@ -63,7 +63,7 @@ dummyDocs msg =
 
 main : Signal Element
 main =
-    Signal.map2 view Window.dimensions documentation.signal
+    Signal.map3 view Window.dimensions moduleList.signal documentation.signal
 
 
 version : Signal.Mailbox String
@@ -82,8 +82,28 @@ port docsLoaded =
   Signal.map (always ()) documentation.signal
 
 
-view : (Int,Int) -> D.Documentation -> Element
-view (windowWidth, windowHeight) docs =
+port getModuleList : Task x ()
+port getModuleList =
+  let
+    get =
+      Http.get (Json.list D.valueList) (packageUrl context.version ++ "/documentation.json")
+
+    recover _ =
+      Task.succeed []
+
+    send list =
+      Signal.send moduleList.address (List.map fst list)
+  in
+    (get `onError` recover) `andThen` send
+
+
+moduleList : Signal.Mailbox (List String)
+moduleList =
+  Signal.mailbox []
+
+
+view : (Int,Int) -> List String -> D.Documentation -> Element
+view (windowWidth, windowHeight) modules docs =
   let innerWidth = min 980 windowWidth
   in
     color C.background <|
@@ -91,6 +111,6 @@ view (windowWidth, windowHeight) docs =
     [ TopBar.view windowWidth
     , flow right
       [ spacer ((windowWidth - innerWidth) // 2) (windowHeight - TopBar.topBarHeight)
-      , Module.view version.address innerWidth context.user context.name context.version context.versionList docs
+      , Module.view version.address innerWidth context.user context.name context.version context.versionList modules docs
       ]
     ]
