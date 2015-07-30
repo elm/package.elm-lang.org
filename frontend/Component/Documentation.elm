@@ -282,7 +282,7 @@ viewRecordType tipe =
 
 viewFunctionType : Type -> Text.Text
 viewFunctionType tipe =
-  if String.length tipe < 80 then
+  if String.length (dropQualifiers tipe) < 80 then
     green " : " ++ typeToText tipe
   else
     let
@@ -300,7 +300,7 @@ viewFunctionType tipe =
 
 typeToText : String -> Text.Text
 typeToText tipe =
-  dropQualifier tipe
+  dropQualifiers tipe
     |> String.split "->"
     |> List.map prettyColons
     |> List.intersperse (green "->")
@@ -315,9 +315,9 @@ prettyColons tipe =
     |> Text.concat
 
 
-dropQualifier : String -> String
-dropQualifier token =
-  Regex.replace Regex.All qualifiers (always "") token
+dropQualifiers : String -> String
+dropQualifiers =
+  Regex.replace Regex.All qualifiers (always "")
 
 
 qualifiers : Regex.Regex
