@@ -1,4 +1,5 @@
 [
+    "coreytrampe/elm-vendor",
     "elm-lang/core",
     "evancz/elm-http",
     "evancz/elm-markdown",
