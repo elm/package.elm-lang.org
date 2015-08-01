@@ -290,8 +290,8 @@ viewFunctionType modules tipe =
         splitArgs tipe
 
       seperators =
-        Text.fromString "\n    :  "
-        :: List.repeat (List.length parts - 1) (Text.fromString "\n    ->")
+        green "\n    :  "
+        :: List.repeat (List.length parts - 1) (green "\n    ->")
     in
       Text.concat (List.map2 (\sep -> Text.append sep << typeToText modules) seperators parts)
 
