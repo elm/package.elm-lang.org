@@ -314,13 +314,12 @@ typeToText modules =
 replaceMap : String -> Text.Text -> (String -> Text.Text) -> String -> Text.Text
 replaceMap s t f =
   String.split s
-    >> List.map f
+    >> List.map (\token -> if String.isEmpty token then Text.empty else f token)
     >> Text.join t
 
 
 linkQualified : List String -> String -> Text.Text
 linkQualified modules token =
-  if String.isEmpty token then Text.empty else
   case List.reverse (String.split "." token) of
     name :: rest ->
       let
