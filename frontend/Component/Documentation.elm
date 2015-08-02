@@ -301,7 +301,7 @@ viewFunctionType modules tipe =
 typeToText : List String -> String -> Text.Text
 typeToText modules =
   replaceMap " " (Text.fromString " ")
-    <| replaceMap "," (Text.fromString ",")
+    <| replaceMap "," (green ",")
     <| replaceMap "(" (Text.fromString "(")
     <| replaceMap ")" (Text.fromString ")")
     <| replaceMap "{" (Text.fromString "{")
