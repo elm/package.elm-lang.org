@@ -5,6 +5,8 @@ import Graphics.Element exposing (..)
 import Html
 import Text
 
+import ColorScheme as C
+
 
 view : Signal.Address String -> Int -> String -> String -> String -> List String -> Maybe String -> Element
 view versionChan innerWidth user package version versions maybeModule =
@@ -41,12 +43,26 @@ view versionChan innerWidth user package version versions maybeModule =
         |> Text.link githubLink
         |> Text.height 12
         |> centered
+
+    toWarning latestVersion =
+      if version == latestVersion then
+        []
+      else
+        [ color C.lightGrey (spacer innerWidth 1)
+        , container innerWidth 40 middle <| centered <|
+            Text.fromString "Warning! The latest version of this package is "
+            ++ Text.link ("/packages/" ++ user ++ "/" ++ package ++ "/" ++ latestVersion) (Text.fromString latestVersion)
+        ]
   in
-    flow right
-    [ container (innerWidth - 100) 100 midLeft bigWords
-    , container 100 100 middle <|
-        flow down
-          [ Html.toElement 100 30 (dropdown versionChan version versions)
-          , width 100 viewSource
-          ]
-    ]
+    flow down <|
+      [ flow right
+        [ container (innerWidth - 100) 100 midLeft bigWords
+        , container 100 100 middle <|
+            flow down
+              [ Html.toElement 100 30 (dropdown versionChan version versions)
+              , width 100 viewSource
+              ]
+        ]
+      ]
+      ++ Maybe.withDefault [] (Maybe.map toWarning (List.head versions))
+
