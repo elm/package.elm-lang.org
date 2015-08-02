@@ -17,15 +17,15 @@ type alias DocDict =
     Dict.Dict String (Text.Text, Maybe (String, Int), String)
 
 
-toDocDict : Documentation -> DocDict
-toDocDict docs =
+toDocDict : List String -> Documentation -> DocDict
+toDocDict modules docs =
   let toPairs view getAssocPrec entries =
           List.map (\entry -> (entry.name, (view entry, getAssocPrec entry, entry.comment))) entries
   in
       Dict.fromList <|
-        toPairs viewAlias (always Nothing) docs.aliases
-        ++ toPairs viewUnion (always Nothing) docs.unions
-        ++ toPairs viewValue .assocPrec docs.values
+        toPairs (viewAlias modules) (always Nothing) docs.aliases
+        ++ toPairs (viewUnion modules) (always Nothing) docs.unions
+        ++ toPairs (viewValue modules) .assocPrec docs.values
 
 
 -- MODEL
@@ -192,8 +192,8 @@ viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
 
 -- VIEW ALIASES
 
-viewAlias : Alias -> Text.Text
-viewAlias alias =
+viewAlias : List String -> Alias -> Text.Text
+viewAlias modules alias =
   Text.concat
     [ green "type alias "
     , Text.link ("#" ++ alias.name) (Text.bold (Text.fromString alias.name))
@@ -201,17 +201,17 @@ viewAlias alias =
     , green " = "
     , case String.uncons alias.tipe of
         Just ('{', _) ->
-          viewRecordType alias.tipe
+          viewRecordType modules alias.tipe
 
         _ ->
-          typeToText alias.tipe
+          typeToText modules alias.tipe
     ]
 
 
 -- VIEW UNIONS
 
-viewUnion : Union -> Text.Text
-viewUnion union =
+viewUnion : List String -> Union -> Text.Text
+viewUnion modules union =
   let
     seperators =
       green "\n    = "
@@ -221,37 +221,37 @@ viewUnion union =
       [ green "type "
       , Text.link ("#" ++ union.name) (Text.bold (Text.fromString union.name))
       , Text.fromString (String.concat (List.map ((++) " ") union.args))
-      , Text.concat (List.map2 (++) seperators (List.map viewCase union.cases))
+      , Text.concat (List.map2 (++) seperators (List.map (viewCase modules) union.cases))
       ]
 
 
-viewCase : (String, List Type) -> Text.Text
-viewCase (tag, args) =
-  List.map viewArg args
+viewCase : List String -> (String, List Type) -> Text.Text
+viewCase modules (tag, args) =
+  List.map (viewArg modules) args
     |> (::) (Text.fromString tag)
     |> List.intersperse (Text.fromString " ")
     |> Text.concat
 
 
-viewArg : String -> Text.Text
-viewArg tipe =
+viewArg : List String -> String -> Text.Text
+viewArg modules tipe =
   let
     (Just (c,_)) =
       String.uncons tipe
   in
     if c == '(' || c == '{' || not (String.contains " " tipe) then
-      typeToText tipe
+      typeToText modules tipe
     else
-      typeToText ("(" ++ tipe ++ ")")
+      typeToText modules ("(" ++ tipe ++ ")")
 
 
 -- VIEW VALUES
 
-viewValue : Value -> Text.Text
-viewValue value =
+viewValue : List String -> Value -> Text.Text
+viewValue modules value =
   Text.concat
     [ Text.link ("#" ++ value.name) (Text.bold (viewVar value.name))
-    , viewFunctionType value.tipe
+    , viewFunctionType modules value.tipe
     ]
 
 
@@ -273,51 +273,70 @@ isVarChar c =
 
 -- VIEW TYPES
 
-viewRecordType : String -> Text.Text
-viewRecordType tipe =
+viewRecordType : List String -> String -> Text.Text
+viewRecordType modules tipe =
   splitRecord tipe
-    |> List.map (typeToText << (++) "\n    ")
+    |> List.map (Text.append (Text.fromString "\n    ") << typeToText modules)
     |> Text.concat
 
 
-viewFunctionType : Type -> Text.Text
-viewFunctionType tipe =
-  if String.length tipe < 80 then
-    green " : " ++ typeToText tipe
+viewFunctionType : List String -> Type -> Text.Text
+viewFunctionType modules tipe =
+  if String.length (dropQualifiers tipe) < 80 then
+    green " : " ++ typeToText modules tipe
   else
     let
       parts =
         splitArgs tipe
 
       seperators =
-        "\n    :  "
-        :: List.repeat (List.length parts - 1) "\n    ->"
+        green "\n    :  "
+        :: List.repeat (List.length parts - 1) (green "\n    ->")
     in
-      Text.concat (List.map2 (\sep part -> typeToText (sep ++ part)) seperators parts)
+      Text.concat (List.map2 (\sep -> Text.append sep << typeToText modules) seperators parts)
 
 
 -- TYPE TO TEXT
 
-typeToText : String -> Text.Text
-typeToText tipe =
-  dropQualifier tipe
-    |> String.split "->"
-    |> List.map prettyColons
-    |> List.intersperse (green "->")
-    |> Text.concat
+typeToText : List String -> String -> Text.Text
+typeToText modules =
+  replaceMap " " (Text.fromString " ")
+    <| replaceMap "," (Text.fromString ",")
+    <| replaceMap "(" (Text.fromString "(")
+    <| replaceMap ")" (Text.fromString ")")
+    <| replaceMap "{" (Text.fromString "{")
+    <| replaceMap "}" (Text.fromString "}")
+    <| replaceMap "->" (green "->")
+    <| replaceMap ":" (green ":")
+    <| linkQualified modules
 
 
-prettyColons : String -> Text.Text
-prettyColons tipe =
-  String.split ":" tipe
-    |> List.map Text.fromString
-    |> List.intersperse (green ":")
-    |> Text.concat
+replaceMap : String -> Text.Text -> (String -> Text.Text) -> String -> Text.Text
+replaceMap s t f =
+  String.split s
+    >> List.map (\token -> if String.isEmpty token then Text.empty else f token)
+    >> Text.join t
 
 
-dropQualifier : String -> String
-dropQualifier token =
-  Regex.replace Regex.All qualifiers (always "") token
+linkQualified : List String -> String -> Text.Text
+linkQualified modules token =
+  case List.reverse (String.split "." token) of
+    name :: rest ->
+      let
+        qualifiers = List.reverse rest
+      in
+        if List.member (String.join "." qualifiers) modules
+        then
+          Text.link
+            (String.join "-" qualifiers ++ "#" ++ name)
+            (Text.fromString name)
+        else
+          Text.fromString name
+
+
+dropQualifiers : String -> String
+dropQualifiers =
+  Regex.replace Regex.All qualifiers (always "")
 
 
 qualifiers : Regex.Regex
