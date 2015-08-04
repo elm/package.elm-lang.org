@@ -146,7 +146,7 @@ came from. This makes them even harder to find. More on this later.
 ### Module names should not reappear in function names
 
 A function called `State.runState` is redundant and silly. More importantly,
-it encourages people to use `import open State` which does not scale well.
+it encourages people to use `import State exposing (..)` which does not scale well.
 In files with many `open` dependencies, it is essentially impossible to
 figure out where functions are coming from. This can make large code
 bases impossible to understand, especially if custom infix operators are
