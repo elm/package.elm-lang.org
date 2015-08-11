@@ -1,6 +1,7 @@
 [
     "coreytrampe/elm-vendor",
     "elm-lang/core",
+    "evancz/elm-effects",
     "evancz/elm-http",
     "evancz/elm-markdown",
     "evancz/task-tutorial",
