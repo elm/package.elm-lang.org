@@ -28,7 +28,7 @@ view outerWidth =
   flow right
   [ bar leftPadding empty
   , bar logoSize
-      (link "/" (image logoSize logoSize "/assets/elm_logo.svg"))
+      (link "http://elm-lang.org" (image logoSize logoSize "/assets/elm_logo.svg"))
   , link "/packages" (bar searchBarWidth (leftAligned (Text.color (Color.rgb 5 80 129) (Text.fromString "Packages"))))
   , bar (innerWidth - logoSize - searchBarWidth + rightPadding) empty
   ]
