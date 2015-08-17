@@ -242,7 +242,7 @@ splitDocs directory =
         Nothing -> throwError "The uploaded documentation is invalid."
         Just docs ->
           liftIO $
-            forM_ docs $ \doc ->
+            forM_ (docs :: [Docs.Documentation]) $ \doc ->
               do  let name = Module.hyphenate (Docs.moduleName doc)
                   let docPath = directory </> "docs" </> name <.> "json"
                   createDirectoryIfMissing True (directory </> "docs")
