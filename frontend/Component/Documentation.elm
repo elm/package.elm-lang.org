@@ -61,7 +61,9 @@ valueList =
     allNames =
       object3 (\x y z -> x ++ List.concat y ++ z)
         ("aliases" := Json.Decode.map (List.map (\n -> (n, n))) nameList)
-        ("types" := list (object2 (\n cs -> List.map ((,) n) (n :: cs)) ("name" := string) ("cases" := constructorList)))
+        ("types" := list (object2 (\n cs -> List.map ((,) n) (n :: List.filter ((/=) n) cs))
+                            ("name" := string)
+                            ("cases" := constructorList)))
         ("values" := Json.Decode.map (List.map (\n -> (n, n))) nameList)
   in
     object2 (,) ("name" := string) allNames
