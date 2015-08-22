@@ -62,7 +62,7 @@ moduleList =
   Signal.mailbox (packageInfo [])
 
 
-packageInfo : List (String, List String) -> ModuleList.Model
+packageInfo : List (String, List (String, String)) -> ModuleList.Model
 packageInfo modules =
   ModuleList.Model context.user context.name context.version context.versionList modules
 

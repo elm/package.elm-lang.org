@@ -49,7 +49,7 @@ documentation =
     ("values" := list value)
 
 
-valueList : Decoder (String, List String)
+valueList : Decoder (String, List (String, String))
 valueList =
   let
     nameList =
@@ -60,9 +60,9 @@ valueList =
 
     allNames =
       object3 (\x y z -> x ++ List.concat y ++ z)
-        ("aliases" := nameList)
-        ("types" := list (object2 (::) ("name" := string) ("cases" := constructorList)))
-        ("values" := nameList)
+        ("aliases" := Json.Decode.map (List.map (\n -> (n, n))) nameList)
+        ("types" := list (object2 (\n cs -> List.map ((,) n) (n :: cs)) ("name" := string) ("cases" := constructorList)))
+        ("values" := Json.Decode.map (List.map (\n -> (n, n))) nameList)
   in
     object2 (,) ("name" := string) allNames
 
