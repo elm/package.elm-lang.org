@@ -55,10 +55,13 @@ valueList =
     nameList =
       list ("name" := string)
 
+    constructorList =
+      list (tuple2 always string (list string))
+
     allNames =
-      object3 (\x y z -> x ++ y ++ z)
+      object3 (\x y z -> x ++ List.concat y ++ z)
         ("aliases" := nameList)
-        ("types" := nameList)
+        ("types" := list (object2 (::) ("name" := string) ("cases" := constructorList)))
         ("values" := nameList)
   in
     object2 (,) ("name" := string) allNames
