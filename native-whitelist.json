@@ -13,5 +13,6 @@
     "maxsnew/lazy",
     "mgold/elm-socketio",
     "michaelbjames/elm-benchmark",
-    "TheSeamau5/elm-history"
+    "TheSeamau5/elm-history",
+    "ThomasWeiser/elmfire"
 ]
