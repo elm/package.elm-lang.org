@@ -41,7 +41,6 @@ Executable run-server
     base >=4.2 && <5,
     binary,
     blaze-html,
-    blaze-markup,
     bytestring,
     cmdargs,
     containers,
@@ -49,17 +48,11 @@ Executable run-server
     elm-package >= 0.1,
     directory,
     filepath,
-    http-client >= 0.3.2,
-    http-types,
     mtl,
-    network,
-    parsec,
-    process,
     snap-core,
     snap-server,
     text,
-    unordered-containers,
-    vector
+    unordered-containers
 
 
 Executable upgrade-docs
@@ -76,7 +69,6 @@ Executable upgrade-docs
     aeson,
     base >=4.2 && <5,
     bytestring,
-    containers,
     directory,
     elm-compiler,
     filepath,
