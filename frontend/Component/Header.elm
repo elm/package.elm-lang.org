@@ -50,8 +50,9 @@ view versionChan innerWidth user package version versions maybeModule =
       else
         [ color C.lightGrey (spacer innerWidth 1)
         , container innerWidth 40 middle <| centered <|
-            Text.fromString "Warning! The latest version of this package is "
+            Text.fromString "Warning! You are looking at an outdated version of this package. The latest version is "
             ++ Text.link ("/packages/" ++ user ++ "/" ++ package ++ "/" ++ latestVersion) (Text.fromString latestVersion)
+            ++ Text.fromString "."
         ]
   in
     flow down <|
