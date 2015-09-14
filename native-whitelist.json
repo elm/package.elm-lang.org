@@ -10,7 +10,7 @@
     "johnpmayer/elm-webgl",
     "johnpmayer/elm-linear-algebra",
     "jwmerrill/elm-animation-frame",
-    "maxsnew/IO",
+    "laszlopandy/elm-console",
     "maxsnew/lazy",
     "mgold/elm-socketio",
     "michaelbjames/elm-benchmark",
