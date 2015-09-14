@@ -19,7 +19,7 @@ port context : { user : String, name : String, version : String, versionList : L
 
 port title : String
 port title =
-    context.moduleName ++ " " ++ context.user ++ "/" ++ context.name ++ context.version 
+    context.moduleName ++ " " ++ context.user ++ "/" ++ context.name ++ " " ++ context.version 
 
 
 packageUrl : String -> String
