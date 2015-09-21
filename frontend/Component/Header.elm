@@ -23,7 +23,7 @@ view versionChan innerWidth user package version versions maybeModule =
             (Text.fromString package)
 
     userPackageText =
-      userLink ++ Text.fromString " / " ++ packageLink
+      userLink ++ Text.fromString "/" ++ packageLink
 
     headerText =
       case maybeModule of
