@@ -10,15 +10,14 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified System.Directory as Dir
 import System.IO
 
+import qualified Elm.Package as Pkg
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Name as N
-import qualified Elm.Package.Version as V
 
 
 data Summary = Summary
-    { name     :: N.Name
+    { name     :: Pkg.Name
     , summary  :: String
-    , versions :: [V.Version]
+    , versions :: [Pkg.Version]
     }
 
 
@@ -71,7 +70,7 @@ readAllSummaries =
                     Just summaries -> return summaries
 
 
-readVersionsOf :: N.Name -> IO (Maybe [V.Version])
+readVersionsOf :: Pkg.Name -> IO (Maybe [Pkg.Version])
 readVersionsOf packageName =
   do  summaries <- readAllSummaries
       let maybeSummary =

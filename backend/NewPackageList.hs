@@ -8,9 +8,9 @@ import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified System.Directory as Dir
 import System.IO
 
+import qualified Elm.Compiler as Compiler
 import qualified Elm.Package.Constraint as C
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Version as V
 
 
 newPackages :: String
@@ -20,7 +20,7 @@ newPackages =
 
 addIfNew :: Desc.Description -> IO ()
 addIfNew desc =
-  case C.isSatisfied (Desc.elmVersion desc) V.elm of
+  case C.isSatisfied (Desc.elmVersion desc) Compiler.version of
     False ->
         return ()
     True ->

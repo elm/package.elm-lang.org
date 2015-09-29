@@ -11,8 +11,7 @@ import Text.Blaze.Html5.Attributes as A
 import qualified Text.Blaze.Html.Renderer.Utf8 as Blaze
 
 import qualified Elm.Compiler.Module as Module
-import qualified Elm.Package.Name as N
-import qualified Elm.Package.Version as V
+import qualified Elm.Package as Pkg
 import qualified PackageSummary as PkgSummary
 import qualified Path
 
@@ -29,7 +28,7 @@ filler :: Module.Name -> Snap ()
 filler name =
     writeBuilder $
     Blaze.renderHtmlBuilder $
-    docTypeHtml $ do 
+    docTypeHtml $ do
       H.head $ do
         meta ! charset "UTF-8"
         favicon
@@ -46,15 +45,15 @@ filler name =
 
 
 
-package :: N.Name -> V.Version -> Snap ()
-package pkg@(N.Name user name) version =
+package :: Pkg.Name -> Pkg.Version -> Snap ()
+package pkg@(Pkg.Name user name) version =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
       let versionList =
-            maybe [] (List.map V.toString) maybeVersions
+            maybe [] (List.map Pkg.versionToString) maybeVersions
 
       writeBuilder $
         Blaze.renderHtmlBuilder $
-        docTypeHtml $ do 
+        docTypeHtml $ do
           H.head $ do
             meta ! charset "UTF-8"
             favicon
@@ -69,21 +68,21 @@ package pkg@(N.Name user name) version =
               context
                 [ ("user", show user)
                 , ("name", show name)
-                , ("version", show (V.toString version))
+                , ("version", show (Pkg.versionToString version))
                 , ("versionList", show versionList)
                 ]
               ++ "var page = Elm.fullscreen(Elm.Page.Package, { context: context });\n"
 
 
-module' :: N.Name -> V.Version -> Module.Name -> Snap ()
-module' pkg@(N.Name user name) version moduleName =
+module' :: Pkg.Name -> Pkg.Version -> Module.Name -> Snap ()
+module' pkg@(Pkg.Name user name) version moduleName =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
       let versionList =
-            maybe [] (List.map V.toString) maybeVersions
+            maybe [] (List.map Pkg.versionToString) maybeVersions
 
       writeBuilder $
         Blaze.renderHtmlBuilder $
-        docTypeHtml $ do 
+        docTypeHtml $ do
           H.head $ do
             meta ! charset "UTF-8"
             favicon
@@ -98,7 +97,7 @@ module' pkg@(N.Name user name) version moduleName =
               context
                 [ ("user", show user)
                 , ("name", show name)
-                , ("version", show (V.toString version))
+                , ("version", show (Pkg.versionToString version))
                 , ("versionList", show versionList)
                 , ("moduleName", show (Module.nameToString moduleName))
                 ]
@@ -117,7 +116,7 @@ context pairs =
 
 
 standardStyle :: Text.Text
-standardStyle = 
+standardStyle =
     "html, head, body { padding:0; margin:0; }\n\
     \body { font-family: 'Lucida Grande','Trebuchet MS','Bitstream Vera Sans',Verdana,Helvetica,sans-serif; }\n\
     \a {\n\

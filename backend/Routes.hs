@@ -1,16 +1,15 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Routes where
 
 import Control.Applicative
-import Control.Monad.Error
+import Control.Monad.Except (ExceptT, forM_, runExceptT, liftIO, throwError, when)
 import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Either as Either
 import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
 import qualified Text.Read as Read
 import Snap.Core
 import Snap.Util.FileServe
@@ -20,10 +19,9 @@ import System.FilePath
 
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Docs as Docs
+import qualified Elm.Package as Pkg
 import qualified Elm.Package.Description as Desc
-import qualified Elm.Package.Name as N
 import qualified Elm.Package.Paths as Path
-import qualified Elm.Package.Version as V
 import qualified GitHub
 import qualified NewPackageList
 import qualified NativeWhitelist
@@ -40,9 +38,9 @@ packages =
 
 package :: Snap ()
 package =
-  do  user <- getParameter "user" Just
-      name <- getParameter "name" Just
-      let pkg = N.Name user name
+  do  user <- getParameter "user" Right
+      name <- getParameter "name" Right
+      let pkg = Pkg.Name user name
 
       route
         [ ("latest", redirectToLatest pkg)
@@ -50,9 +48,9 @@ package =
         ]
 
 
-servePackageInfo :: N.Name -> Snap ()
+servePackageInfo :: Pkg.Name -> Snap ()
 servePackageInfo name =
-  do  version <- getParameter "version" V.fromString
+  do  version <- getParameter "version" Pkg.versionFromString
 
       let pkgDir = packageRoot name version
       exists <- liftIO $ doesDirectoryExist pkgDir
@@ -62,7 +60,7 @@ servePackageInfo name =
         <|> serveModule name version
 
 
-serveModule :: N.Name -> V.Version -> Snap ()
+serveModule :: Pkg.Name -> Pkg.Version -> Snap ()
 serveModule name version =
   do  request <- getRequest
       let potentialName = BS.unpack (rqPathInfo request)
@@ -77,17 +75,17 @@ serveModule name version =
             ServeFile.module' name version moduleName
 
 
-redirectToLatest :: N.Name -> Snap ()
+redirectToLatest :: Pkg.Name -> Snap ()
 redirectToLatest name =
-  do  rawVersions <- liftIO (getDirectoryContents (packageDirectory </> N.toFilePath name))
-      case Maybe.catMaybes (map V.fromString rawVersions) of
+  do  rawVersions <- liftIO (getDirectoryContents (packageDirectory </> Pkg.toFilePath name))
+      case Either.rights (map Pkg.versionFromString rawVersions) of
         [] ->
           httpStringError 404 $
-            "Could not find any versions of package " ++ N.toString name
+            "Could not find any versions of package " ++ Pkg.toString name
 
         versions ->
           do  let latestVersion = last (List.sort versions)
-              let url = "/packages/" ++ N.toUrl name ++ "/" ++ V.toString latestVersion ++ "/"
+              let url = "/packages/" ++ Pkg.toUrl name ++ "/" ++ Pkg.versionToString latestVersion ++ "/"
               request <- getRequest
               redirect (BS.append (BS.pack url) (rqPathInfo request))
 
@@ -99,9 +97,9 @@ packageDirectory =
     "packages"
 
 
-packageRoot :: N.Name -> V.Version -> FilePath
+packageRoot :: Pkg.Name -> Pkg.Version -> FilePath
 packageRoot name version =
-    packageDirectory </> N.toFilePath name </> V.toString version
+    packageDirectory </> Pkg.toFilePath name </> Pkg.versionToString version
 
 
 documentationPath :: FilePath
@@ -113,8 +111,8 @@ documentationPath =
 
 register :: Snap ()
 register =
-  do  name <- getParameter "name" N.fromString
-      version <- getParameter "version" V.fromString
+  do  name <- getParameter "name" Pkg.fromString
+      version <- getParameter "version" Pkg.versionFromString
 
       verifyVersion name version
 
@@ -124,7 +122,7 @@ register =
       description <- Desc.read (directory </> Path.description)
 
       result <-
-          liftIO $ runErrorT $ do
+          liftIO $ runExceptT $ do
             verifyWhitelist (Desc.natives description) (Desc.name description)
             splitDocs directory
 
@@ -139,14 +137,14 @@ register =
               httpStringError 400 err
 
 
-verifyVersion :: N.Name -> V.Version -> Snap ()
+verifyVersion :: Pkg.Name -> Pkg.Version -> Snap ()
 verifyVersion name version =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf name)
       case maybeVersions of
         Just localVersions
           | version `elem` localVersions ->
                 httpStringError 400
-                    ("Version " ++ V.toString version ++ " has already been registered.")
+                    ("Version " ++ Pkg.versionToString version ++ " has already been registered.")
 
         _ -> return ()
 
@@ -155,10 +153,10 @@ verifyVersion name version =
         True -> return ()
         False ->
            httpStringError 400
-              ("The tag " ++ V.toString version ++ " has not been pushed to GitHub.")
+              ("The tag " ++ Pkg.versionToString version ++ " has not been pushed to GitHub.")
 
 
-verifyWhitelist :: Bool -> N.Name -> ErrorT String IO ()
+verifyWhitelist :: Bool -> Pkg.Name -> ExceptT String IO ()
 verifyWhitelist allowNatives name =
   case allowNatives of
     False -> return ()
@@ -169,13 +167,13 @@ verifyWhitelist allowNatives name =
             False -> throwError (whitelistError name)
 
 
-whitelistError :: N.Name -> String
+whitelistError :: Pkg.Name -> String
 whitelistError name =
     "You are trying to publish a project that has native modules. For now,\n\
     \any modules that use Native code must go through a formal review process to\n\
     \make sure the exposed API is pure and the Native code is absolutely\n\
     \necessary. Please open an issue with the title:\n\n"
-    ++ "    \"Native review for " ++ N.toString name ++ "\"\n\n"
+    ++ "    \"Native review for " ++ Pkg.toString name ++ "\"\n\n"
     ++ "to begin the review process at the following address.\n"
     ++ "<https://github.com/elm-lang/package.elm-lang.org/issues>\n\n"
     ++ "The issue should link to the relevant repository and provide sufficient\n"
@@ -235,7 +233,7 @@ writePartError part =
           writeText (policyViolationExceptionReason exception)
 
 
-splitDocs :: FilePath -> ErrorT String IO ()
+splitDocs :: FilePath -> ExceptT String IO ()
 splitDocs directory =
   do  json <- liftIO (LBS.readFile (directory </> documentationPath))
       case Json.decode json of
@@ -254,7 +252,7 @@ splitDocs directory =
 
 versions :: Snap ()
 versions =
-  do  name <- getParameter "name" N.fromString
+  do  name <- getParameter "name" Pkg.fromString
       versions <- liftIO (PkgSummary.readVersionsOf name)
       writeLBS (Binary.encode versions)
 
@@ -289,8 +287,8 @@ description =
 
 fetch :: FilePath -> Snap ()
 fetch filePath =
-  do  name <- getParameter "name" N.fromString
-      version <- getParameter "version" V.fromString
+  do  name <- getParameter "name" Pkg.fromString
+      version <- getParameter "version" Pkg.versionFromString
 
       let target = packageRoot name version </> filePath
       exists <- liftIO $ doesFileExist target
@@ -302,14 +300,17 @@ fetch filePath =
 
 -- HELPERS
 
-getParameter :: BS.ByteString -> (String -> Maybe a) -> Snap a
+getParameter :: BS.ByteString -> (String -> Either String a) -> Snap a
 getParameter param fromString =
   do  maybeValue <- getParam param
-      let maybeString = fmap BS.unpack maybeValue
-      case fromString =<< maybeString of
-        Just value -> return value
-        Nothing ->
-            httpError 400 $ BS.concat [ "problem with parameter '", param, "'" ]
+      let notFoundMsg = "could not find parameter named " ++ BS.unpack param
+      let eitherString = maybe (Left notFoundMsg) (Right . BS.unpack) maybeValue
+      case fromString =<< eitherString of
+        Right value ->
+            return value
+
+        Left problem ->
+            httpError 400 $ BS.concat [ "problem with parameter '", param, "': ", BS.pack problem ]
 
 
 httpStringError :: Int -> String -> Snap a
