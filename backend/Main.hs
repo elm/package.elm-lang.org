@@ -3,7 +3,7 @@
 module Main where
 
 import Control.Applicative
-import Control.Monad.Error
+import Control.Monad.Except (forM, runExceptT, when)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashMap.Strict as Map
 import GHC.Conc
@@ -87,7 +87,7 @@ compileElmFiles :: IO ()
 compileElmFiles =
   do  createDirectoryIfMissing True Path.artifactDirectory
       result <-
-        runErrorT $
+        runExceptT $
             forM publicModules $ \name ->
                 Utils.run "elm-make"
                     [ "frontend" </> Module.nameToPath name <.> "elm"
