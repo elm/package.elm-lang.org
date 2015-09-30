@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Control.Applicative ((<$>))
 import Control.Monad (forM_)
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BS

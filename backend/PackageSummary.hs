@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module PackageSummary where
 
-import Control.Applicative
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as Json
 import qualified Data.Aeson.Encode.Pretty as Json
