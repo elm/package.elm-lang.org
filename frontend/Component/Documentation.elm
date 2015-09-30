@@ -4,7 +4,7 @@ import Char
 import Color
 import Dict
 import Graphics.Element exposing (..)
-import Json.Decode exposing (..)
+import Json.Decode as Json exposing (..)
 import Markdown
 import Regex
 import String
@@ -52,19 +52,28 @@ documentation =
 valueList : Decoder (String, List (String, String))
 valueList =
   let
-    nameList =
-      list ("name" := string)
+    allNames =
+      object3 buildPairs
+        ("aliases" := list ("name" := string))
+        ("types" := list tipe)
+        ("values" := list ("name" := string))
+
+    -- build pairings
+    buildPairs aliases types values =
+      selfPair aliases ++ List.concat types ++ selfPair values
+
+    selfPair names =
+      List.map (\n -> (n, n)) names
+
+    -- extract types
+    tipe =
+      object2 tagPairs ("name" := string) ("cases" := constructorList)
 
     constructorList =
-      list (tuple2 always string (list string))
+      list (tuple2 always string Json.value)
 
-    allNames =
-      object3 (\x y z -> x ++ List.concat y ++ z)
-        ("aliases" := Json.Decode.map (List.map (\n -> (n, n))) nameList)
-        ("types" := list (object2 (\n cs -> List.map ((,) n) (n :: List.filter ((/=) n) cs))
-                            ("name" := string)
-                            ("cases" := constructorList)))
-        ("values" := Json.Decode.map (List.map (\n -> (n, n))) nameList)
+    tagPairs name tags =
+      List.map ((,) name) (name :: List.filter ((/=) name) tags)
   in
     object2 (,) ("name" := string) allNames
 
