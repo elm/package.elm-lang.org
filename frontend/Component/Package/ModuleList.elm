@@ -12,7 +12,7 @@ type alias Model =
     , name : String
     , version : String
     , versionList : List String
-    , modules : List (String, List String)
+    , modules : List (String, List (String, String))
     }
 
 
@@ -41,11 +41,11 @@ view w searchTerm model =
         _ -> flow down (List.map (viewModule w (toUrl model) searchStatus) modules)
 
 
-viewModule : Int -> String -> SearchStatus -> (String, List String) -> Element
+viewModule : Int -> String -> SearchStatus -> (String, List (String, String)) -> Element
 viewModule width rootUrl searchStatus (moduleName, values) =
     let url = rootUrl ++ "/" ++ String.map (\c -> if c == '.' then '-' else c) moduleName
-        viewValue name =
-            link width (url ++ "#" ++ name) "  " (Text.monospace (Text.fromString name))
+        viewValue (anchor, name) =
+            link width (url ++ "#" ++ anchor) "  " (Text.monospace (Text.fromString name))
 
         name = link width url "" (Text.fromString moduleName)
     in
@@ -69,14 +69,14 @@ notFound term =
     |> leftAligned
 
 
-search : String -> List (String, List String) -> List (String, List String)
+search : String -> List (String, List (String, String)) -> List (String, List (String, String))
 search searchTerm modules =
   List.filterMap (searchModule searchTerm) modules
 
 
-searchModule : String -> (String, List String) -> Maybe (String, List String)
+searchModule : String -> (String, List (String, String)) -> Maybe (String, List (String, String))
 searchModule searchTerm (moduleName, values) =
-  case List.filter (String.contains searchTerm << String.toLower) values of
+  case List.filter (String.contains searchTerm << String.toLower << snd) values of
     [] ->
         if String.contains searchTerm (String.toLower moduleName)
           then Just (moduleName, [])
