@@ -17,15 +17,29 @@ type alias DocDict =
     Dict.Dict String (Text.Text, Maybe (String, Int), String)
 
 
-toDocDict : List String -> Documentation -> DocDict
-toDocDict modules docs =
+toDocDict : List String -> List (String, String) -> Documentation -> DocDict
+toDocDict modules mentionedTypes docs =
   let toPairs view getAssocPrec entries =
           List.map (\entry -> (entry.name, (view entry, getAssocPrec entry, entry.comment))) entries
+
+      ambiguousTypes =
+          dropUniques (List.sort (List.map snd mentionedTypes))
   in
       Dict.fromList <|
-        toPairs (viewAlias modules) (always Nothing) docs.aliases
-        ++ toPairs (viewUnion modules) (always Nothing) docs.unions
-        ++ toPairs (viewValue modules) .assocPrec docs.values
+        toPairs (viewAlias modules ambiguousTypes) (always Nothing) docs.aliases
+        ++ toPairs (viewUnion modules ambiguousTypes) (always Nothing) docs.unions
+        ++ toPairs (viewValue modules ambiguousTypes) .assocPrec docs.values
+
+
+-- assumes the input list is sorted
+dropUniques : List String -> List String
+dropUniques list =
+  case list of
+    x :: y :: zs ->
+      if x == y then x :: dropUniques zs else dropUniques (y :: zs)              
+
+    _ ->
+      []
 
 
 -- MODEL
@@ -237,8 +251,8 @@ viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
 
 -- VIEW ALIASES
 
-viewAlias : List String -> Alias -> Text.Text
-viewAlias modules alias =
+viewAlias : List String -> List String -> Alias -> Text.Text
+viewAlias modules ambiguousTypes alias =
   Text.concat
     [ green "type alias "
     , Text.link ("#" ++ alias.name) (Text.bold (Text.fromString alias.name))
@@ -246,17 +260,17 @@ viewAlias modules alias =
     , green " = "
     , case String.uncons alias.tipe of
         Just ('{', _) ->
-          viewRecordType modules alias.tipe
+          viewRecordType modules ambiguousTypes alias.tipe
 
         _ ->
-          typeToText modules alias.tipe
+          typeToText modules ambiguousTypes alias.tipe
     ]
 
 
 -- VIEW UNIONS
 
-viewUnion : List String -> Union -> Text.Text
-viewUnion modules union =
+viewUnion : List String -> List String -> Union -> Text.Text
+viewUnion modules ambiguousTypes union =
   let
     seperators =
       green "\n    = "
@@ -266,37 +280,37 @@ viewUnion modules union =
       [ green "type "
       , Text.link ("#" ++ union.name) (Text.bold (Text.fromString union.name))
       , Text.fromString (String.concat (List.map ((++) " ") union.args))
-      , Text.concat (List.map2 (++) seperators (List.map (viewCase modules) union.cases))
+      , Text.concat (List.map2 (++) seperators (List.map (viewCase modules ambiguousTypes) union.cases))
       ]
 
 
-viewCase : List String -> (String, List Type) -> Text.Text
-viewCase modules (tag, args) =
-  List.map (viewArg modules) args
+viewCase : List String -> List String -> (String, List Type) -> Text.Text
+viewCase modules ambiguousTypes (tag, args) =
+  List.map (viewArg modules ambiguousTypes) args
     |> (::) (Text.fromString tag)
     |> List.intersperse (Text.fromString " ")
     |> Text.concat
 
 
-viewArg : List String -> String -> Text.Text
-viewArg modules tipe =
+viewArg : List String -> List String -> String -> Text.Text
+viewArg modules ambiguousTypes tipe =
   let
     (Just (c,_)) =
       String.uncons tipe
   in
     if c == '(' || c == '{' || not (String.contains " " tipe) then
-      typeToText modules tipe
+      typeToText modules ambiguousTypes tipe
     else
-      typeToText modules ("(" ++ tipe ++ ")")
+      typeToText modules ambiguousTypes ("(" ++ tipe ++ ")")
 
 
 -- VIEW VALUES
 
-viewValue : List String -> Value -> Text.Text
-viewValue modules value =
+viewValue : List String -> List String -> Value -> Text.Text
+viewValue modules ambiguousTypes value =
   Text.concat
     [ Text.link ("#" ++ value.name) (Text.bold (viewVar value.name))
-    , viewFunctionType modules value.tipe
+    , viewFunctionType modules ambiguousTypes value.tipe
     ]
 
 
@@ -318,17 +332,17 @@ isVarChar c =
 
 -- VIEW TYPES
 
-viewRecordType : List String -> String -> Text.Text
-viewRecordType modules tipe =
+viewRecordType : List String -> List String -> String -> Text.Text
+viewRecordType modules ambiguousTypes tipe =
   splitRecord tipe
-    |> List.map (Text.append (Text.fromString "\n    ") << typeToText modules)
+    |> List.map (Text.append (Text.fromString "\n    ") << typeToText modules ambiguousTypes)
     |> Text.concat
 
 
-viewFunctionType : List String -> Type -> Text.Text
-viewFunctionType modules tipe =
+viewFunctionType : List String -> List String -> Type -> Text.Text
+viewFunctionType modules ambiguousTypes tipe =
   if String.length (dropQualifiers tipe) < 80 then
-    green " : " ++ typeToText modules tipe
+    green " : " ++ typeToText modules ambiguousTypes tipe
   else
     let
       parts =
@@ -338,13 +352,13 @@ viewFunctionType modules tipe =
         green "\n    :  "
         :: List.repeat (List.length parts - 1) (green "\n    ->")
     in
-      Text.concat (List.map2 (\sep -> Text.append sep << typeToText modules) seperators parts)
+      Text.concat (List.map2 (\sep -> Text.append sep << typeToText modules ambiguousTypes) seperators parts)
 
 
 -- TYPE TO TEXT
 
-typeToText : List String -> String -> Text.Text
-typeToText modules =
+typeToText : List String -> List String -> String -> Text.Text
+typeToText modules ambiguousTypes =
   replaceMap " " (Text.fromString " ")
     <| replaceMap "," (Text.fromString ",")
     <| replaceMap "(" (Text.fromString "(")
@@ -353,7 +367,7 @@ typeToText modules =
     <| replaceMap "}" (Text.fromString "}")
     <| replaceMap "->" (green "->")
     <| replaceMap ":" (green ":")
-    <| linkQualified modules
+    <| linkQualified modules ambiguousTypes
 
 
 replaceMap : String -> Text.Text -> (String -> Text.Text) -> String -> Text.Text
@@ -363,20 +377,27 @@ replaceMap s t f =
     >> Text.join t
 
 
-linkQualified : List String -> String -> Text.Text
-linkQualified modules token =
+linkQualified : List String -> List String -> String -> Text.Text
+linkQualified modules ambiguousTypes token =
   case List.reverse (String.split "." token) of
     name :: rest ->
       let
         qualifiers = List.reverse rest
+
+        nameToShow =
+          if List.member name ambiguousTypes
+          then
+            token
+          else
+            name
       in
         if List.member (String.join "." qualifiers) modules
         then
           Text.link
             (String.join "-" qualifiers ++ "#" ++ name)
-            (Text.fromString name)
+            (Text.fromString nameToShow)
         else
-          Text.fromString name
+          Text.fromString nameToShow
 
 
 dropQualifiers : String -> String

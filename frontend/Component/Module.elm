@@ -18,7 +18,7 @@ view versionAddr innerWidth user package version versionList modules mentionedTy
     [ Header.view versionAddr innerWidth user package version versionList (Just docs.name)
     , color C.lightGrey (spacer innerWidth 1)
     , spacer innerWidth 12
-    , viewDocs innerWidth (D.toDocDict modules docs) docs.comment
+    , viewDocs innerWidth (D.toDocDict modules mentionedTypes docs) docs.comment
     ]
 
 
