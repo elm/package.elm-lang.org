@@ -39,6 +39,37 @@ type alias Documentation =
     }
 
 
+mentionedTypes : Documentation -> List (String, String)
+mentionedTypes { name, aliases, unions, values } =
+  let
+    moduleName = name
+
+    extractFromAlias { name, tipe } =
+      (moduleName ++ ".", name) :: extractQualifiersAndType tipe
+
+    extractFromUnion { name, cases } =
+      (moduleName ++ ".", name) :: List.concatMap (List.concatMap extractQualifiersAndType << snd) cases
+
+    extractFromValue { tipe } =
+      extractQualifiersAndType tipe
+  in
+    List.concat <|
+      List.map extractFromAlias aliases
+      ++ List.map extractFromUnion unions
+      ++ List.map extractFromValue values
+
+
+extractQualifiersAndType : Type -> List (String, String)
+extractQualifiersAndType =
+  Regex.find Regex.All qualifiersAndType
+    >> List.map (.submatches >> \[Just qs, _, Just t] -> (qs, t))
+
+
+qualifiersAndType : Regex.Regex
+qualifiersAndType =
+  Regex.regex "(([A-Z][A-Za-z1-9_]*\\.)*)([A-Z][A-Za-z1-9_]*)"
+
+
 documentation : Decoder Documentation
 documentation =
   object5 Documentation

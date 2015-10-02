@@ -12,8 +12,8 @@ import Component.Documentation as D
 import Component.Header as Header
 
 
-view : Signal.Address String -> Int -> String -> String -> String -> List String -> List String -> D.Documentation -> Element
-view versionAddr innerWidth user package version versionList modules docs =
+view : Signal.Address String -> Int -> String -> String -> String -> List String -> List String -> List (String, String) -> D.Documentation -> Element
+view versionAddr innerWidth user package version versionList modules mentionedTypes docs =
     flow down
     [ Header.view versionAddr innerWidth user package version versionList (Just docs.name)
     , color C.lightGrey (spacer innerWidth 1)
