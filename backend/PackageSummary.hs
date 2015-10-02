@@ -64,11 +64,11 @@ readAllSummaries =
         True ->
           withBinaryFile allPackages ReadMode $ \handle ->
               do  json <- LBS.hGetContents handle
-                  case Json.decode json of
-                    Nothing ->
-                        error "summaries are corrupted! do not modify them."
+                  case Json.eitherDecode json of
+                    Left msg ->
+                        error msg
 
-                    Just summaries ->
+                    Right summaries ->
                         return summaries
 
 
