@@ -1,5 +1,6 @@
 module Component.Module where
 
+import Debug
 import Dict
 import Graphics.Element exposing (..)
 import Markdown
@@ -24,16 +25,19 @@ view versionAddr innerWidth user package version versionList modules docs =
 
 viewDocs : Int -> D.DocDict -> String  -> Element
 viewDocs innerWidth documentation comment =
-  let (prose :: chunks) =
-        String.split "\n@docs " comment
+  case String.split "\n@docs " comment of
+    [] ->
+        Debug.crash "invalid module docs, no @docs declarations"
 
-      varProsePairs : List (List String, String)
-      varProsePairs =
-        List.map extractVars chunks
-  in
-      flow down <|
-        viewProse innerWidth prose
-        :: List.concatMap (viewPair innerWidth documentation) varProsePairs
+    prose :: chunks ->
+        let
+          varProsePairs : List (List String, String)
+          varProsePairs =
+            List.map extractVars chunks
+        in
+          flow down <|
+            viewProse innerWidth prose
+            :: List.concatMap (viewPair innerWidth documentation) varProsePairs
 
 
 extractVars : String -> (List String, String)
@@ -45,17 +49,21 @@ extractVars rawChunk =
           ([], "")
 
         Just (c, subchunk) ->
-          if  | D.isVarChar c ->
-                  let (var, rest) = takeWhile D.isVarChar chunk
-                      (vars, nextChunk) = extractCommaThenVars rest
-                  in
-                      (var :: vars, nextChunk)
+            if D.isVarChar c then
 
-              | otherwise ->
-                  let (op, rest) = takeWhile ((/=) ')') subchunk
-                      (vars, nextChunk) = extractCommaThenVars (String.dropLeft 1 rest)
-                  in
-                      (op :: vars, nextChunk)
+                let
+                  (var, rest) = takeWhile D.isVarChar chunk
+                  (vars, nextChunk) = extractCommaThenVars rest
+                in
+                  (var :: vars, nextChunk)
+
+            else
+
+                let
+                  (op, rest) = takeWhile ((/=) ')') subchunk
+                  (vars, nextChunk) = extractCommaThenVars (String.dropLeft 1 rest)
+                in
+                  (op :: vars, nextChunk)
 
 
 extractCommaThenVars : String -> (List String, String)
@@ -72,15 +80,19 @@ extractCommaThenVars rawChunk =
 takeWhile : (Char -> Bool) -> String -> (String, String)
 takeWhile pred chunk =
   case String.uncons chunk of
-    Nothing -> ("", "")
-    Just (c, rest) ->
-      if  | pred c ->
-              let (result, chunk') = takeWhile pred rest
-              in
-                  (String.cons c result, chunk')
+    Nothing ->
+        ("", "")
 
-          | otherwise ->
-              ("", chunk)
+    Just (c, rest) ->
+        if pred c then
+
+            let
+              (result, chunk') = takeWhile pred rest
+            in
+              (String.cons c result, chunk')
+
+        else
+            ("", chunk)
 
 
 docsPattern : Regex.Regex

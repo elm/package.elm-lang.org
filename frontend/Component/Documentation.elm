@@ -2,6 +2,7 @@ module Component.Documentation where
 
 import Char
 import Color
+import Debug
 import Dict
 import Graphics.Element exposing (..)
 import Json.Decode as Json exposing (..)
@@ -147,7 +148,7 @@ options =
   let
     defaults = Markdown.defaultOptions
   in
-    { defaults | sanitize <- True }
+    { defaults | sanitize = True }
 
 
 viewEntry : Int -> String -> (Text.Text, Maybe (String, Int), String) -> Element
@@ -155,12 +156,14 @@ viewEntry innerWidth name (annotation, maybeAssocPrec, comment) =
   let
     rawAssocPrec =
       case maybeAssocPrec of
-        Nothing -> empty
+        Nothing ->
+            empty
+
         Just (assoc, prec) ->
-          assoc ++ "-associative / precedence " ++ toString prec
-            |> Text.fromString
-            |> Text.height 12
-            |> rightAligned
+            assoc ++ "-associative / precedence " ++ toString prec
+              |> Text.fromString
+              |> Text.height 12
+              |> rightAligned
 
     assocPrecWidth =
       widthOf rawAssocPrec + 20
@@ -215,10 +218,10 @@ viewAlias modules alias =
     , green " = "
     , case String.uncons alias.tipe of
         Just ('{', _) ->
-          viewRecordType modules alias.tipe
+            viewRecordType modules alias.tipe
 
         _ ->
-          typeToText modules alias.tipe
+            typeToText modules alias.tipe
     ]
 
 
@@ -249,14 +252,17 @@ viewCase modules (tag, args) =
 
 viewArg : List String -> String -> Text.Text
 viewArg modules tipe =
-  let
-    (Just (c,_)) =
-      String.uncons tipe
-  in
-    if c == '(' || c == '{' || not (String.contains " " tipe) then
-      typeToText modules tipe
-    else
-      typeToText modules ("(" ++ tipe ++ ")")
+  case String.uncons tipe of
+    Just (c,_) ->
+        if c == '(' || c == '{' || not (String.contains " " tipe) then
+          typeToText modules tipe
+
+        else
+          typeToText modules ("(" ++ tipe ++ ")")
+
+
+    Nothing ->
+        Debug.crash "impossible to have an empty string as a type argument"
 
 
 -- VIEW VALUES
@@ -334,18 +340,29 @@ replaceMap s t f =
 
 linkQualified : List String -> String -> Text.Text
 linkQualified modules token =
-  case List.reverse (String.split "." token) of
-    name :: rest ->
-      let
-        qualifiers = List.reverse rest
-      in
-        if List.member (String.join "." qualifiers) modules
-        then
-          Text.link
-            (String.join "-" qualifiers ++ "#" ++ name)
-            (Text.fromString name)
-        else
-          Text.fromString name
+  let
+    (qualifiers, name) = splitLast (String.split "." token)
+  in
+    if List.member (String.join "." qualifiers) modules then
+
+        Text.link (String.join "-" qualifiers ++ "#" ++ name) (Text.fromString name)
+
+    else
+
+        Text.fromString name
+
+
+splitLast : List a -> (List a, a)
+splitLast list =
+  case list of
+    [] ->
+        Debug.crash "cannot call splitLast on an empty list"
+
+    x :: rest ->
+        let
+          (xs, last) = splitLast rest
+        in
+          (x :: xs, last)
 
 
 dropQualifiers : String -> String
@@ -379,16 +396,16 @@ updateDepths : Char -> SplitState -> SplitState
 updateDepths char state =
   case char of
     '(' ->
-        { state | parenDepth <- state.parenDepth + 1 }
+        { state | parenDepth = state.parenDepth + 1 }
 
     ')' ->
-        { state | parenDepth <- state.parenDepth - 1 }
+        { state | parenDepth = state.parenDepth - 1 }
 
     '{' ->
-        { state | bracketDepth <- state.bracketDepth + 1 }
+        { state | bracketDepth = state.bracketDepth + 1 }
 
     '}' ->
-        { state | bracketDepth <- state.bracketDepth - 1 }
+        { state | bracketDepth = state.bracketDepth - 1 }
 
     _ ->
         state
@@ -417,12 +434,12 @@ splitArgsHelp char startState =
   in
     if char == '$' && state.parenDepth == 0 && state.bracketDepth == 0 then
         { state |
-            currentChunk <- "",
-            chunks <- String.reverse state.currentChunk :: state.chunks
+            currentChunk = "",
+            chunks = String.reverse state.currentChunk :: state.chunks
         }
     else
         { state |
-            currentChunk <- String.cons char state.currentChunk
+            currentChunk = String.cons char state.currentChunk
         }
 
 
@@ -445,15 +462,15 @@ splitRecordHelp char startState =
   in
     if state.bracketDepth == 0 then
         { state |
-            currentChunk <- "}",
-            chunks <- String.reverse state.currentChunk :: state.chunks
+            currentChunk = "}",
+            chunks = String.reverse state.currentChunk :: state.chunks
         }
     else if char == ',' && state.parenDepth == 0 && state.bracketDepth == 1 then
         { state |
-            currentChunk <- ",",
-            chunks <- String.reverse state.currentChunk :: state.chunks
+            currentChunk = ",",
+            chunks = String.reverse state.currentChunk :: state.chunks
         }
     else
         { state |
-            currentChunk <- String.cons char state.currentChunk
+            currentChunk = String.cons char state.currentChunk
         }

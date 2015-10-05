@@ -1,5 +1,6 @@
 module Component.DropDown where
 
+import Debug
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -28,5 +29,10 @@ viewOption current string =
 
 
 nth : List a -> Int -> a
-nth (x::rest) n =
-  if n == 0 then x else nth rest (n-1)
+nth list n =
+  case list of
+    [] ->
+        Debug.crash "Problem in `nth` trying to access element out of range."
+
+    x :: rest ->
+        if n == 0 then x else nth rest (n-1)

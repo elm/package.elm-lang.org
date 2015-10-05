@@ -2,6 +2,7 @@ module Component.PackageList where
 
 import Color
 import ColorScheme as C
+import Debug
 import Graphics.Element exposing  (..)
 import Json.Decode exposing  (..)
 import Set
@@ -73,7 +74,11 @@ viewPackage : Int -> Package -> Element
 viewPackage innerWidth package =
   let version =
         case List.head package.versions of
-          Just v -> v
+          Just v ->
+              v
+
+          Nothing ->
+              Debug.crash ("something is badly wrong with the version for " ++ package.name)
 
       pkgLink =
         Text.fromString package.name

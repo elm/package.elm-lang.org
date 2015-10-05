@@ -37,4 +37,4 @@ options : Markdown.Options
 options =
   let defaults = Markdown.defaultOptions
   in
-      { defaults | sanitize <- True }
+      { defaults | sanitize = True, defaultHighlighting = Just "elm" }
