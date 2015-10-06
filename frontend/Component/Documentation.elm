@@ -358,6 +358,9 @@ splitLast list =
     [] ->
         Debug.crash "cannot call splitLast on an empty list"
 
+    [x] ->
+        ([], x)
+
     x :: rest ->
         let
           (xs, last) = splitLast rest
