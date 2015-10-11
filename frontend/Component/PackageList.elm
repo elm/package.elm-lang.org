@@ -48,7 +48,7 @@ view innerWidth updatedPackages packages =
                       List.partition (\{name} -> Set.member name updatedPackagesSet) packages
 
                     msg =
-                      Text.fromString "Warning: packages below here are not yet updated for Elm 0.15!"
+                      Text.fromString "Warning: packages below here are not yet updated for Elm 0.16!"
                         |> Text.color C.green
                         |> centered
                   in
