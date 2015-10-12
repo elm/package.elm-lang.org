@@ -75,9 +75,17 @@ mentionedTypes { name, aliases, unions, values } =
 
 
 extractQualifiersAndType : Type -> List (String, String)
-extractQualifiersAndType =
-  Regex.find Regex.All qualifiersAndType
-    >> List.map (.submatches >> \[Just qs, _, Just t] -> (qs, t))
+extractQualifiersAndType tipe =
+  let
+    extract regexResult =
+        case regexResult.submatches of
+          [Just qs, _, Just t] ->
+              (qs, t)
+
+          _ ->
+              Debug.crash "the regex qualifiersAndType should never produce other results"
+  in
+    List.map extract (Regex.find Regex.All qualifiersAndType tipe)
 
 
 qualifiersAndType : Regex.Regex
