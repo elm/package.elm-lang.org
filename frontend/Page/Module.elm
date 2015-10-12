@@ -9,6 +9,7 @@ import Http
 import String
 import Task exposing (Task, andThen, onError, succeed)
 import Window
+import Set
 
 import Component.TopBar as TopBar
 import Component.Module as Module
@@ -63,7 +64,7 @@ dummyDocs msg =
 
 main : Signal Element
 main =
-    Signal.map3 view Window.dimensions moduleList.signal documentation.signal
+    Signal.map3 view Window.dimensions modulesAndMentionedTypes.signal documentation.signal
 
 
 version : Signal.Mailbox String
@@ -82,28 +83,31 @@ port docsLoaded =
   Signal.map (always ()) documentation.signal
 
 
-port getModuleList : Task x ()
-port getModuleList =
+port getModulesAndMentionedTypes : Task x ()
+port getModulesAndMentionedTypes =
   let
     get =
-      Http.get (Json.list D.valueList) (packageUrl context.version ++ "/documentation.json")
+      Http.get (Json.list D.documentation) (packageUrl context.version ++ "/documentation.json")
 
     recover _ =
       Task.succeed []
 
+    removeDuplicates =
+      Set.toList << Set.fromList
+
     send list =
-      Signal.send moduleList.address (List.map fst list)
+      Signal.send modulesAndMentionedTypes.address (List.map .name list, removeDuplicates (List.concatMap D.mentionedTypes list))
   in
     (get `onError` recover) `andThen` send
 
 
-moduleList : Signal.Mailbox (List String)
-moduleList =
-  Signal.mailbox []
+modulesAndMentionedTypes : Signal.Mailbox (List String, List (String, String))
+modulesAndMentionedTypes =
+  Signal.mailbox ([], [])
 
 
-view : (Int,Int) -> List String -> D.Documentation -> Element
-view (windowWidth, windowHeight) modules docs =
+view : (Int,Int) -> (List String, List (String, String)) -> D.Documentation -> Element
+view (windowWidth, windowHeight) (modules, mentionedTypes) docs =
   let innerWidth = min 980 windowWidth
   in
     color C.background <|
@@ -111,6 +115,6 @@ view (windowWidth, windowHeight) modules docs =
     [ TopBar.view windowWidth
     , flow right
       [ spacer ((windowWidth - innerWidth) // 2) (windowHeight - TopBar.topBarHeight)
-      , Module.view version.address innerWidth context.user context.name context.version context.versionList modules docs
+      , Module.view version.address innerWidth context.user context.name context.version context.versionList modules mentionedTypes docs
       ]
     ]
