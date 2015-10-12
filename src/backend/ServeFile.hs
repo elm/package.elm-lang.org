@@ -4,7 +4,6 @@ module ServeFile where
 
 import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
-import qualified Data.Text.Lazy as Text
 import Snap.Core (Snap, writeBuilder)
 import Text.Blaze.Html5 as H
 import Text.Blaze.Html5.Attributes as A
@@ -33,9 +32,9 @@ filler name =
         meta ! charset "UTF-8"
         favicon
         H.title (toHtml (Module.nameToString name))
-        H.style $ preEscapedToMarkup standardStyle
         googleAnalytics
         link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
+        link ! rel "stylesheet" ! href "/assets/style.css"
         script ! src "/assets/highlight/highlight.pack.js" $ ""
         script ! src (toValue ("/" ++ Path.artifact name)) $ ""
 
@@ -58,9 +57,9 @@ package pkg@(Pkg.Name user name) version =
             meta ! charset "UTF-8"
             favicon
             H.title "Elm Package Documentation"
-            H.style $ preEscapedToMarkup standardStyle
             googleAnalytics
             link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
+            link ! rel "stylesheet" ! href "/assets/style.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
             script ! src "/artifacts/Page-Package.js" $ ""
 
@@ -87,9 +86,9 @@ module' pkg@(Pkg.Name user name) version moduleName =
             meta ! charset "UTF-8"
             favicon
             H.title "Elm Package Documentation"
-            H.style $ preEscapedToMarkup standardStyle
             googleAnalytics
             link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
+            link ! rel "stylesheet" ! href "/assets/style.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
             script ! src "/artifacts/Page-Module.js" $ ""
 
@@ -114,33 +113,6 @@ context :: [(String, String)] -> String
 context pairs =
   "\nvar context = { " ++ List.intercalate ", " (List.map (\(k,v) -> k ++ ": " ++ v) pairs) ++ " };\n"
 
-
-standardStyle :: Text.Text
-standardStyle =
-    "html, head, body { padding:0; margin:0; }\n\
-    \body { font-family: 'Lucida Grande','Trebuchet MS','Bitstream Vera Sans',Verdana,Helvetica,sans-serif; }\n\
-    \a {\n\
-    \  color: #1184CE;\n\
-    \  text-decoration: none;\n\
-    \}\n\
-    \a:hover {\n\
-    \  text-decoration: underline;\n\
-    \  color: rgb(234,21,122);\n\
-    \}\n\
-    \h1,h2,h3,h4 { font-weight:normal; font-family: futura, 'century gothic', 'twentieth century', calibri, verdana, helvetica, arial; }\n\
-    \p, li {\n\
-    \  font-size: 14px !important;\n\
-    \  line-height: 1.5em !important;\n\
-    \}\n\
-    \pre {\n\
-    \  margin: 0;\n\
-    \  padding: 10px;\n\
-    \  background-color: rgb(254,254,254);\n\
-    \  border-style: solid;\n\
-    \  border-width: 1px;\n\
-    \  border-color: rgb(245,245,245);\n\
-    \  border-radius: 6px;\n\
-    \}\n"
 
 
 -- | Add analytics to a page.

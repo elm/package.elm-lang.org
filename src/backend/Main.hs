@@ -90,7 +90,7 @@ compileElmFiles =
         runExceptT $
             forM publicModules $ \name ->
                 Utils.run "elm-make"
-                    [ "frontend" </> Module.nameToPath name <.> "elm"
+                    [ "src" </> "frontend" </> Module.nameToPath name <.> "elm"
                     , "--yes"
                     , "--output=" ++ Path.artifact name
                     ]

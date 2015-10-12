@@ -1,0 +1,81 @@
+@import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700,400italic,700italic|Source+Code+Pro);
+
+html, head, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande', 'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
+  color: #293c4b;
+}
+
+h1, h2, h3, h4 {
+  font-weight: normal;
+}
+
+p {
+  line-height: 1.5em;
+}
+
+a {
+  color: rgb(17, 132, 206);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+  color: rgb(234,21,122);
+}
+
+pre {
+  margin: 0;
+  padding: 10px;
+  background-color: rgb(254,254,254);
+  border-style: solid;
+  border-width: 1px;
+  border-color: rgb(245,245,245);
+  border-radius: 6px;
+}
+
+/* HEADER */
+
+
+.center {
+  width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.header {
+  padding: 10px 0;
+  color: white;
+  font-size: 24px;
+  margin: 0;
+}
+
+.header a:hover {
+  color: white;
+}
+
+.logo {
+  font-size: 36px;
+  color: white;
+  padding-right: 30px;
+}
+
+.logo img {
+  width: 26px;
+  vertical-align: baseline;
+  padding-right: 8px;
+}
+
+.version-warning {
+  text-align: center;
+  background-color: #eee;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.spacey-char {
+  margin: 0 10px;
+}
