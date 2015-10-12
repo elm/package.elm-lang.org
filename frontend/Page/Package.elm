@@ -52,7 +52,7 @@ port getModuleList =
       Task.succeed []
 
     send list =
-      Signal.send moduleList.address (packageInfo list)
+      Signal.send moduleList.address (packageInfo (List.sort list))
   in
     (get `onError` recover) `andThen` send
 
