@@ -76,9 +76,9 @@ view _ model =
         Alias {vars,tipe} ->
             aliasAnnotation model.name vars tipe
   in
-    div [ class "docs-entry" ]
+    div [ class "docs-entry", id model.name ]
       [ annotationBlock annotation
-      , Markdown.block model.docs
+      , div [class "docs-comment"] [Markdown.block model.docs]
       ]
 
 

@@ -86,11 +86,27 @@ pre {
 /* DOCUMENTATION */
 
 
-.docs-annotation {
-  white-space: pre;
-  font-family: 'Source Code Pro';
+.docs-entry {
+  margin-top: 1em;
+  margin-bottom: 2em;
 }
 
 
+.docs-annotation {
+  white-space: pre;
+  font-family: 'Source Code Pro';
+  border-left: 4px solid #1184CE;
+  margin-left: 10px;
+  padding-left: 1em;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
 
+
+.docs-comment {
+  overflow: hidden;
+  border-left: 4px solid #eeeeee;
+  margin-left: 10px;
+  padding-left: 1em;
+}
 

@@ -7,7 +7,7 @@ import Html.Attributes exposing (..)
 
 keyword : String -> Html
 keyword kw =
-  span [class "keyword"] [text kw]
+  span [class "hljs-keyword"] [text kw]
 
 
 addParens : List Html -> List Html
