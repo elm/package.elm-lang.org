@@ -53,7 +53,7 @@ init : (Model, Effects Action)
 init =
   let
     ( moduleDocs, fx ) =
-        MDocs.init (MDocs.Context "elm-lang" "core" "3.0.0" "Maybe")
+        MDocs.init (MDocs.Context "elm-lang" "core" "3.0.0" "Graphics.Element")
   in
     ( Model Header.dummy moduleDocs
     , Fx.map UpdateDocs fx

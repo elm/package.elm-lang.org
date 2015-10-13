@@ -43,7 +43,7 @@ pre {
 
 
 .center {
-  width: 920px;
+  max-width: 920px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -53,6 +53,7 @@ pre {
   color: white;
   font-size: 24px;
   margin: 0;
+  text-overflow: ellipsis;
 }
 
 .header a:hover {
@@ -63,6 +64,7 @@ pre {
   font-size: 36px;
   color: white;
   padding-right: 30px;
+  display: inline-block;
 }
 
 .logo img {
@@ -86,7 +88,21 @@ pre {
 /* DOCUMENTATION */
 
 
+.entry-list {
+  max-width: 600px;
+}
+
+.entry-list-title {
+  font-size: 3em;
+}
+
+.markdown-entry h1 {
+  margin-top: 2em;
+  margin-bottom: 0.5px
+}
+
 .docs-entry {
+  border-top: 1px solid #eeeeee;
   margin-top: 1em;
   margin-bottom: 2em;
 }
@@ -95,18 +111,13 @@ pre {
 .docs-annotation {
   white-space: pre;
   font-family: 'Source Code Pro';
-  border-left: 4px solid #1184CE;
-  margin-left: 10px;
-  padding-left: 1em;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 
 .docs-comment {
   overflow: hidden;
-  border-left: 4px solid #eeeeee;
-  margin-left: 10px;
-  padding-left: 1em;
+  padding-left: 3em;
 }
 

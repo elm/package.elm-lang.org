@@ -19,7 +19,7 @@ import Utils.Markdown as Markdown
 type Model
     = Loading
     | Failed Http.Error
-    | Success (List Chunk)
+    | Success { name : String, chunks : List Chunk }
 
 
 type Chunk
@@ -57,10 +57,14 @@ update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
     Load (Err httpError) ->
-        ( Failed httpError, Fx.none )
+        ( Failed httpError
+        , Fx.none
+        )
 
     Load (Ok docs) ->
-        ( Success (toChunks docs), Fx.none )
+        ( Success { name = docs.name, chunks = toChunks docs }
+        , Fx.none
+        )
 
 
 
@@ -75,10 +79,14 @@ loadDocs : Context -> Effects Action
 loadDocs {user,project,version,module_} =
   let
     get =
-      Http.get Decode.module_ ("/packages" </> user </> project </> version </> "docs" </> module_ ++ ".json")
+      Http.get Decode.module_ ("/packages" </> user </> project </> version </> "docs" </> hyphenate module_ ++ ".json")
   in
     Fx.task (Task.map Load (Task.toResult get))
 
+
+hyphenate : String -> String
+hyphenate str =
+  String.map (\c -> if c == '.' then '-' else c) str
 
 
 -- VIEW
@@ -100,12 +108,10 @@ view addr model =
           , p [] [text (toString httpError)]
           ]
 
-      Success chunks ->
-          [ div [ style ["width" => "720px", "float" => "left"] ]
-              (List.map (viewChunk addr) chunks)
-          , div [ style ["width" => "200px", "height" => "400px", "background" =>"#eeeeee", "float" => "left"] ]
-              [ p [] [text "placeholder"]
-              ]
+      Success {name,chunks} ->
+          [ div [ class "entry-list" ] <|
+              h1 [class "entry-list-title"] [text name]
+              :: List.map (viewChunk addr) chunks
           ]
 
 
@@ -113,7 +119,7 @@ viewChunk : Signal.Address Action -> Chunk -> Html
 viewChunk addr chunk =
   case chunk of
     Markdown md ->
-        Markdown.block md
+        span [class "markdown-entry"] [ Markdown.block md ]
 
     Entry entry ->
         Entry.view addr entry
