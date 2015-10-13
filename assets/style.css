@@ -50,18 +50,18 @@ pre {
 
 .header {
   padding: 10px 0;
-  color: #eeeeee;
+  color: white;
   font-size: 24px;
   margin: 0;
 }
 
 .header a:hover {
-  color: #eeeeee;
+  color: white;
 }
 
 .logo {
   font-size: 36px;
-  color: #eeeeee;
+  color: white;
   padding-right: 30px;
 }
 

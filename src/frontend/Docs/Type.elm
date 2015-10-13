@@ -27,6 +27,15 @@ type alias Tag =
 
 
 
+-- PARSE
+
+
+parse : String -> Type
+parse rawType =
+  Var "a"
+
+
+
 -- TYPE TO FLAT HTML
 
 

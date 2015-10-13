@@ -2,13 +2,11 @@ module Docs where
 
 import Dict
 
-import Docs.Entry
+import Docs.Entry as Entry
 
 
 type alias Package =
-    { readme : Maybe String
-    , modules : Dict.Dict String Module
-    }
+    Dict.Dict String Module
 
 
 type alias Module =
@@ -16,4 +14,5 @@ type alias Module =
     , comment : String
     , entries : Dict.Dict String Entry.Model
     }
+
 

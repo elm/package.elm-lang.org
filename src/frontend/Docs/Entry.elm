@@ -16,7 +16,7 @@ import Utils.Markdown as Markdown
 
 
 type alias Model =
-    { name : Name.Canonical
+    { name : String
     , info : Info
     , docs : String
     }
@@ -88,22 +88,27 @@ annotationBlock bits =
     (List.concat (List.intersperse [text "\n"] bits))
 
 
+nameToLink : String -> Html
+nameToLink name =
+  a [href ("#" ++ name)] [text name]
+
+
 
 -- VALUE ANNOTATIONS
 
 
-valueAnnotation : Name.Canonical -> Type -> List (List Html)
+valueAnnotation : String -> Type -> List (List Html)
 valueAnnotation name tipe =
   case tipe of
     Type.Function args result ->
         if Type.length Type.Other tipe > 120 then
-            [ Name.toLink name ] :: longFunctionAnnotation args result
+            [ nameToLink name ] :: longFunctionAnnotation args result
 
         else
-            [ Name.toLink name :: padded colon ++ Type.toHtml Type.Other tipe ]
+            [ nameToLink name :: padded colon ++ Type.toHtml Type.Other tipe ]
 
     _ ->
-        [ Name.toLink name :: padded colon ++ Type.toHtml Type.Other tipe ]
+        [ nameToLink name :: padded colon ++ Type.toHtml Type.Other tipe ]
 
 
 longFunctionAnnotation : List Type -> Type -> List (List Html)
@@ -124,14 +129,13 @@ longFunctionAnnotation args result =
 -- UNION ANNOTATIONS
 
 
-unionAnnotation : Name.Canonical -> List String -> List Tag -> List (List Html)
+unionAnnotation : String -> List String -> List Tag -> List (List Html)
 unionAnnotation name vars tags =
   let
     nameLine =
       [ keyword "type"
       , space
-      , Name.toLink name
-      , space
+      , nameToLink name
       , text (String.concat (List.map ((++) " ") vars))
       ]
 
@@ -152,7 +156,7 @@ viewTag {tag,args} =
 -- ALIAS ANNOTATIONS
 
 
-aliasAnnotation : Name.Canonical -> List String -> Type -> List (List Html)
+aliasAnnotation : String -> List String -> Type -> List (List Html)
 aliasAnnotation name vars tipe =
   let
     nameLine =
@@ -160,7 +164,7 @@ aliasAnnotation name vars tipe =
       , space
       , keyword "alias"
       , space
-      , Name.toLink name
+      , nameToLink name
       , text (String.concat (List.map ((++) " ") vars))
       , space
       , equals

@@ -4,9 +4,10 @@ import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import StartApp
+import Task
 
 import Header
-import Docs.Entry
+import Docs.Module as MDocs
 
 
 -- WIRES
@@ -29,30 +30,69 @@ main =
   app.html
 
 
+port worker : Signal (Task.Task Fx.Never ())
+port worker =
+  app.tasks
+
+
+
 -- MODEL
+
 
 type alias Model =
     { header : Header.Model
+    , moduleDocs : MDocs.Model
     }
 
 
-init : (Model, Effects act)
+
+-- INIT
+
+
+init : (Model, Effects Action)
 init =
-  ( Model Header.dummy
-  , Fx.none
-  )
+  let
+    ( moduleDocs, fx ) =
+        MDocs.init (MDocs.Context "elm-lang" "core" "3.0.0" "Maybe")
+  in
+    ( Model Header.dummy moduleDocs
+    , Fx.map UpdateDocs fx
+    )
+
 
 
 -- UPDATE
 
-update : act -> Model -> (Model, Effects act)
+
+type Action
+    = UpdateDocs MDocs.Action
+
+
+update : Action -> Model -> (Model, Effects Action)
 update action model =
-  (model, Fx.none)
+  case action of
+    UpdateDocs act ->
+        let
+          (newDocs, fx) =
+            MDocs.update act model.moduleDocs
+        in
+          ( Model model.header newDocs
+          , Fx.map UpdateDocs fx
+          )
+
 
 
 -- VIEW
 
-view : Signal.Address act -> Model -> Html
+
+view : Signal.Address Action -> Model -> Html
 view addr model =
-  Header.view addr model.header
+  div []
+    [ Header.view addr model.header
+    , MDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
+    ]
+
+
+
+
 
