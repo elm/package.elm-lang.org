@@ -19,7 +19,7 @@ p {
 }
 
 a {
-  color: rgb(17, 132, 206);
+  color: #1184CE;
   text-decoration: none;
 }
 a:hover {
@@ -37,6 +37,8 @@ pre {
   border-radius: 6px;
 }
 
+
+
 /* HEADER */
 
 
@@ -48,18 +50,18 @@ pre {
 
 .header {
   padding: 10px 0;
-  color: white;
+  color: #eeeeee;
   font-size: 24px;
   margin: 0;
 }
 
 .header a:hover {
-  color: white;
+  color: #eeeeee;
 }
 
 .logo {
   font-size: 36px;
-  color: white;
+  color: #eeeeee;
   padding-right: 30px;
 }
 
@@ -71,7 +73,6 @@ pre {
 
 .version-warning {
   text-align: center;
-  background-color: #eee;
   margin: 0;
   padding: 4px 0;
 }
@@ -79,3 +80,17 @@ pre {
 .spacey-char {
   margin: 0 10px;
 }
+
+
+
+/* DOCUMENTATION */
+
+
+.docs-annotation {
+  white-space: pre;
+  font-family: 'Source Code Pro';
+}
+
+
+
+

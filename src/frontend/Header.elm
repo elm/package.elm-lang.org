@@ -36,8 +36,8 @@ update action model =
 view : Signal.Address a -> Model -> Html
 view _ model =
   div []
-    [ center "rgb(17, 132, 206)" [ headerLinks model ]
-    , center "#eeeeee" [ versionWarning model ]
+    [ center "#1184CE" [ headerLinks model ]
+    , center "#eeeeee" (versionWarning model)
     ]
 
 
@@ -102,18 +102,18 @@ versionLink model =
 -- version warnings
 
 versionWarning model =
-  p [ class "version-warning" ] <|
-    case List.head model.allVersions of
-      Nothing ->
-          []
+  case List.head model.allVersions of
+    Nothing ->
+        []
 
-      Just latestVersion ->
-          if model.version == latestVersion then
-              []
+    Just latestVersion ->
+        if model.version == latestVersion then
+            []
 
-          else
-              [ text "Warning! The latest version of this package is "
-              , a [ href ("/packages/" ++ model.user ++ "/" ++ model.package ++ "/" ++ latestVersion) ]
-                  [ text latestVersion ]
-              ]
-
+        else
+            [ p [ class "version-warning" ]
+                [ text "Warning! The latest version of this package is "
+                , a [ href ("/packages/" ++ model.user ++ "/" ++ model.package ++ "/" ++ latestVersion) ]
+                    [ text latestVersion ]
+                ]
+            ]

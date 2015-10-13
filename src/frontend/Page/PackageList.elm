@@ -6,6 +6,7 @@ import Html.Attributes exposing (..)
 import StartApp
 
 import Header
+import Docs.Entry
 
 
 -- WIRES

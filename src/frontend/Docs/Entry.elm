@@ -1,56 +1,194 @@
-module Website.Docs.Entry (entry) where
+module Docs.Entry where
 
+import Effects as Fx exposing (Effects)
+import Html exposing (..)
+import Html.Attributes exposing (..)
 import String
-import Website.ColorScheme as C
 
-entry : Int -> String -> String -> Maybe (String,Int) -> Element -> Element
-entry w name tipe assocPrec prose =
-    let box n pos txt = container w (heightOf txt + n) pos txt
-        ap = case assocPrec of
-               Nothing -> []
-               Just (a,p) -> [ box 2 topRight . leftAligned . Text.height 12 . toText <|
-                                   a ++ "-associative, precedence " ++ show p ++ " " ]
-        tipe' = box 2 topLeft . leftAligned <| monospace (toText " ") ++ prettify tipe
-    in
-      flow down [ tag name . color C.mediumGrey <| spacer w 1
-                , color (rgb 238 238 240) <| layers <| ap ++ [ tipe' ]
-                , flow right [ spacer 40 10, width (w-40) prose ]
-                , spacer w 12
-                ]
+import Docs.Name as Name
+import Docs.Type as Type exposing (Type)
+import Utils.Code exposing (arrow, colon, equals, keyword, padded, space)
+import Utils.Markdown as Markdown
 
-until c xs =
-  case String.uncons xs of
-    Nothing -> ("","")
-    Just (hd,tl) ->
-        if | hd == '(' -> let (chomped,rest) = until ')' tl
-                              (before,after) = until c rest
-                          in  (String.cons hd chomped ++ before, after)
-           | hd == c -> ("", xs)
-           | otherwise -> let (before,after) = until c tl
-                          in  (String.cons hd before, after)
 
-prettify raw =
-    if | String.startsWith "type " raw || String.startsWith "data " raw ->
-           let (name, rest) = until ' ' (String.slice 5 (String.length raw) raw) in
-           monospace <| concat [ Text.color C.accent1 <| toText (String.slice 0 5 raw)
-                               , bold <| toText name
-                               , colorize "" rest
-                               ]
-       | otherwise ->
-           let (name, rest) = until ':' raw
-           in  monospace <| bold (toText name) ++ colorize "" rest
 
-colorize stuff str =
-  let continue clr op rest =
-          toText (String.reverse stuff) ++ Text.color clr (toText op) ++ colorize "" rest
-  in 
-  case String.uncons str of
-    Nothing -> toText (String.reverse stuff)
-    Just (c,rest) ->
-        if | c == ':' -> continue C.accent1 ":" rest
-           | c == '|' -> continue C.accent1 "|" rest
-           | c == '=' -> continue C.accent1 "=" rest
-           | c == '-' -> case String.uncons rest of
-                           Just ('>',rest') -> continue C.accent1 "->" rest'
-                           _ -> colorize (String.cons c stuff) rest
-           | otherwise -> colorize (String.cons c stuff) rest
+-- MODEL
+
+
+type alias Model =
+    { name : Name.Canonical
+    , info : Info
+    , docs : String
+    }
+
+
+type Info
+    = Value Type (Maybe Fixity)
+    | Union
+        { vars : List String
+        , tags : List Tag
+        }
+    | Alias
+        { vars : List String
+        , tipe : Type
+        }
+
+
+type alias Tag =
+    { tag : String
+    , args : List Type
+    }
+
+
+type alias Fixity =
+    { precedence : Int
+    , associativity : String
+    }
+
+
+
+-- UPDATE
+
+
+update : a -> Model -> (Model, Effects a)
+update action model =
+  (model, Fx.none)
+
+
+
+-- VIEW
+
+
+(=>) = (,)
+
+
+view : Signal.Address a -> Model -> Html
+view _ model =
+  let
+    annotation =
+      case model.info of
+        Value tipe _ ->
+            valueAnnotation model.name tipe
+
+        Union {vars,tags} ->
+            unionAnnotation model.name vars tags
+
+        Alias {vars,tipe} ->
+            aliasAnnotation model.name vars tipe
+  in
+    div [ class "docs-entry" ]
+      [ annotationBlock annotation
+      , Markdown.block model.docs
+      ]
+
+
+annotationBlock : List (List Html) -> Html
+annotationBlock bits =
+  div [ class "docs-annotation" ]
+    (List.concat (List.intersperse [text "\n"] bits))
+
+
+
+-- VALUE ANNOTATIONS
+
+
+valueAnnotation : Name.Canonical -> Type -> List (List Html)
+valueAnnotation name tipe =
+  case tipe of
+    Type.Function args result ->
+        if Type.length Type.Other tipe > 120 then
+            [ Name.toLink name ] :: longFunctionAnnotation args result
+
+        else
+            [ Name.toLink name :: padded colon ++ Type.toHtml Type.Other tipe ]
+
+    _ ->
+        [ Name.toLink name :: padded colon ++ Type.toHtml Type.Other tipe ]
+
+
+longFunctionAnnotation : List Type -> Type -> List (List Html)
+longFunctionAnnotation args result =
+  let
+    tipeHtml =
+      List.map (Type.toHtml Type.Func) (args ++ [result])
+
+    starters =
+      [ text "    ", colon, text "  " ]
+      ::
+      List.repeat (List.length args) [ text "    ", arrow, space ]
+  in
+    List.map2 (++) starters tipeHtml
+
+
+
+-- UNION ANNOTATIONS
+
+
+unionAnnotation : Name.Canonical -> List String -> List Tag -> List (List Html)
+unionAnnotation name vars tags =
+  let
+    nameLine =
+      [ keyword "type"
+      , space
+      , Name.toLink name
+      , space
+      , text (String.concat (List.map ((++) " ") vars))
+      ]
+
+    tagLines =
+      List.map2 (::)
+        (text "    = " :: List.repeat (List.length tags - 1) (text "    | "))
+        (List.map viewTag tags)
+  in
+    nameLine :: tagLines
+
+
+viewTag : Tag -> List Html
+viewTag {tag,args} =
+  text tag :: List.concatMap ((::) space) (List.map (Type.toHtml Type.App) args)
+
+
+
+-- ALIAS ANNOTATIONS
+
+
+aliasAnnotation : Name.Canonical -> List String -> Type -> List (List Html)
+aliasAnnotation name vars tipe =
+  let
+    nameLine =
+      [ keyword "type"
+      , space
+      , keyword "alias"
+      , space
+      , Name.toLink name
+      , text (String.concat (List.map ((++) " ") vars))
+      , space
+      , equals
+      , space
+      ]
+
+    typeLines =
+      case tipe of
+        Type.Record fields ext ->
+            let
+              (firstLine, starters) =
+                  case ext of
+                    Nothing ->
+                      ( []
+                      , text "    { " :: List.repeat (List.length fields) (text "    , ")
+                      )
+
+                    Just extTipe ->
+                      ( [ text "    { " :: Type.toHtml Type.Other extTipe ++ [text " |"] ]
+                      , text "      | " :: List.repeat (List.length fields) (text "      , ")
+                      )
+            in
+              firstLine
+              ++ List.map2 (::) starters (List.map Type.fieldToHtml fields)
+              ++ [[text "    }"]]
+
+        _ ->
+            [ Type.toHtml Type.Other tipe ]
+  in
+    nameLine :: typeLines
+
