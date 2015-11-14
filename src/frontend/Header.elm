@@ -4,61 +4,70 @@ import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
+import Route exposing (..)
+
+
 
 -- MODEL
 
+
 type alias Model =
-    { user : String
-    , package : String
-    , version : String
-    , allVersions : List String
-    , focus : Maybe String
+    { route : Route
     }
 
 
-dummy : Model
-dummy =
-  Model "evancz" "core" "3.0.0" ["3.0.0", "2.0.0", "1.0.0"] Nothing
+init : Route -> (Model, Effects a)
+init route =
+  ( Model route
+  , Fx.none
+  )
+
 
 
 -- UPDATE
+
 
 update : a -> Model -> (Model, Effects a)
 update action model =
   (model, Fx.none)
 
 
+
 -- VIEW
+
 
 (=>) = (,)
 
 
 view : Signal.Address a -> Model -> Html
 view _ model =
-  div []
-    [ center "#1184CE" [ headerLinks model ]
-    , center "#eeeeee" (versionWarning model)
+  div
+    [ style [ "border-bottom" => "solid #D8DDE1 2px" ]
     ]
-
-
--- header links
-
-headerLinks model =
-  h1 [ class "header" ] <|
-    [ logo, packageList, spacey "/", userLink model, spacey "/", packageLink model, spacey "/", versionLink model ]
-    ++
-    case model.focus of
-      Nothing ->
-        []
-
-      Just moduleName ->
-        [ spacey "/", text moduleName ]
+    [ center "#eeeeee" [ headerLinks model ]
+--    , center "#eeeeee" (versionWarning model)
+    ]
 
 
 center color kids =
   div [ style [ "background-color" => color ] ]
     [ div [ class "center" ] kids
     ]
+
+
+
+-- VIEW ROUTE LINKS
+
+
+headerLinks model =
+  h1 [ class "header" ] <|
+    logo :: unrollRoute model.route
+
+
+-- helpers
+
+(</>) a b =
+    a ++ "/" ++ b
 
 
 spacey token =
@@ -73,30 +82,55 @@ logo =
 
 
 headerLink url words =
-  a [ href url, style [ "color" => "white" ] ]
+  a [ href url, style [ "color" => "#333333" ] ]
     [ text words ]
 
 
-packageList =
-  headerLink "/packages" "packages"
+-- route unrolling
+
+unrollRoute : Route -> List Html
+unrollRoute route =
+  case route of
+    Home ->
+        []
+
+    Help ->
+        []
+
+    Packages userRoute ->
+        headerLink "/packages" "packages"
+        :: maybe unrollUserRoute userRoute
 
 
-userLink model =
-  headerLink
-    ("https://github.com/" ++ model.user)
-    model.user
+maybe : (a -> List Html) -> Maybe a -> List Html
+maybe unroll maybeRoute =
+  case maybeRoute of
+    Nothing ->
+        []
+
+    Just route ->
+        unroll route
 
 
-packageLink model =
-  headerLink
-    ("/packages/" ++ model.user ++ "/" ++ model.package)
-    model.package
+unrollUserRoute : UserRoute -> List Html
+unrollUserRoute (User user packageRoute) =
+    spacey "/"
+    :: headerLink ("https://github.com" </> user) user
+    :: maybe (unrollPackageRoute user) packageRoute
 
 
-versionLink model =
-  headerLink
-    ("/packages/" ++ model.user ++ "/" ++ model.package ++ "/" ++ model.version)
-    model.version
+unrollPackageRoute : String -> PackageRoute -> List Html
+unrollPackageRoute user (Package pkg versionRoute) =
+    spacey "/"
+    :: headerLink ("/packages" </> user </> pkg) pkg
+    :: maybe (unrollVersionRoute user pkg) versionRoute
+
+
+unrollVersionRoute : String -> String -> String -> List Html
+unrollVersionRoute user pkg vsn =
+  [ spacey "/"
+  , headerLink ("/packages" </> user </> pkg </> vsn) vsn
+  ]
 
 
 -- version warnings

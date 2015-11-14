@@ -1,6 +1,5 @@
-module Docs.Module where
+module Component.ModuleDocs where
 
-import Debug
 import Dict
 import Effects as Fx exposing (Effects)
 import Html exposing (..)
@@ -10,9 +9,9 @@ import Regex
 import String
 import Task
 
-import Docs
-import Docs.Decoder as Decode
+import Docs.Package as Docs
 import Docs.Entry as Entry
+import Page.Context as Ctx
 import Utils.Markdown as Markdown
 
 
@@ -30,15 +29,7 @@ type Chunk
 -- INIT
 
 
-type alias Context =
-    { user : String
-    , project : String
-    , version : String
-    , module_ : String
-    }
-
-
-init : Context -> (Model, Effects Action)
+init : Ctx.Context -> (Model, Effects Action)
 init context =
   ( Loading
   , loadDocs context
@@ -71,22 +62,23 @@ update action model =
 -- EFFECTS
 
 
-(</>) a b =
-    a ++ "/" ++ b
+loadDocs : Ctx.Context -> Effects Action
+loadDocs context =
+  Ctx.getDocs context
+    |> Task.toResult
+    |> Task.map (\r -> Load (r `Result.andThen` getModule (Maybe.withDefault "" context.moduleName)))
+    |> Fx.task
 
 
-loadDocs : Context -> Effects Action
-loadDocs {user,project,version,module_} =
-  let
-    get =
-      Http.get Decode.module_ ("/packages" </> user </> project </> version </> "docs" </> hyphenate module_ ++ ".json")
-  in
-    Fx.task (Task.map Load (Task.toResult get))
+getModule : String -> Docs.Package -> Result Http.Error Docs.Module
+getModule moduleName pkg =
+  case Dict.get moduleName pkg of
+    Just moduleDocs ->
+        Ok moduleDocs
 
+    Nothing ->
+        Err (Http.UnexpectedPayload ("Could not find module '" ++ moduleName ++ "'"))
 
-hyphenate : String -> String
-hyphenate str =
-  String.map (\c -> if c == '.' then '-' else c) str
 
 
 -- VIEW
@@ -97,7 +89,7 @@ hyphenate str =
 
 view : Signal.Address Action -> Model -> Html
 view addr model =
-  div [class "center"] <|
+  div [ class "entry-list" ] <|
     case model of
       Loading ->
           [ p [] [text "Documentation is loading..."]
@@ -109,10 +101,8 @@ view addr model =
           ]
 
       Success {name,chunks} ->
-          [ div [ class "entry-list" ] <|
-              h1 [class "entry-list-title"] [text name]
-              :: List.map (viewChunk addr) chunks
-          ]
+          h1 [class "entry-list-title"] [text name]
+          :: List.map (viewChunk addr) chunks
 
 
 viewChunk : Signal.Address Action -> Chunk -> Html
@@ -157,11 +147,12 @@ subChunksHelp moduleDocs parts =
           part =
             String.trim rawPart
         in
-          if Regex.contains var part then
-              toEntry moduleDocs part
+          case isValue part of
+            Just valueName ->
+              toEntry moduleDocs valueName
               :: subChunksHelp moduleDocs remainingParts
 
-          else
+            Nothing ->
               let
                 trimmedPart =
                   String.trimLeft rawPart
@@ -171,12 +162,13 @@ subChunksHelp moduleDocs parts =
                       [ Markdown (String.join "," parts) ]
 
                   token :: _ ->
-                      if Regex.contains var token then
-                          [ toEntry moduleDocs token
+                      case isValue token of
+                        Just valueName ->
+                          [ toEntry moduleDocs valueName
                           , Markdown (String.dropLeft (String.length token) trimmedPart)
                           ]
 
-                      else
+                        Nothing ->
                           [ Markdown (String.join "," parts) ]
 
 
@@ -185,11 +177,30 @@ var =
   Regex.regex "^[a-zA-Z0-9_']+$"
 
 
+operator : Regex.Regex
+operator =
+  Regex.regex "^\\([^a-zA-Z0-9]+\\)$"
+
+
+isValue : String -> Maybe String
+isValue str =
+  if Regex.contains var str then
+    Just str
+
+  else if Regex.contains operator str then
+    Just (String.dropLeft 1 (String.dropRight 1 str))
+
+  else
+    Nothing
+
+
+
 toEntry : Docs.Module -> String -> Chunk
 toEntry moduleDocs name =
   case Dict.get name moduleDocs.entries of
     Nothing ->
-        Debug.crash "docs have been corrupted"
+        Debug.crash ("docs have been corrupted, could not find " ++ name)
 
     Just entry ->
         Entry entry
+

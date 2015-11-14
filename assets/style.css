@@ -50,19 +50,19 @@ pre {
 
 .header {
   padding: 10px 0;
-  color: white;
+  color: #333333;
   font-size: 24px;
   margin: 0;
   text-overflow: ellipsis;
 }
 
 .header a:hover {
-  color: white;
+  color: #333333;
 }
 
 .logo {
   font-size: 36px;
-  color: white;
+  color: #333333;
   padding-right: 30px;
   display: inline-block;
 }
@@ -90,6 +90,8 @@ pre {
 
 .entry-list {
   max-width: 600px;
+  float: left;
+  display: block;
 }
 
 .entry-list-title {
@@ -119,5 +121,53 @@ pre {
 .docs-comment {
   overflow: hidden;
   padding-left: 3em;
+}
+
+
+/* PACKAGE NAVIGATION */
+
+
+.pkg-nav {
+  width: 200px;
+  font-family: 'Source Code Pro';
+  float: left;
+  display: block;
+  padding: 20px;
+  margin: 20px 20px 20px 40px;
+  border-left: 1px solid #eeeeee;
+}
+
+.pkg-nav input {
+  width: 200px;
+  font-family: 'Source Code Pro';
+  font-size: 1em;
+  padding: 6px;
+  margin: 10px 0;
+  border: 1px solid #eeeeee;
+  border-radius: 6px;
+}
+
+.pkg-nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pkg-nav ul ul {
+  list-style-type: none;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.pkg-nav-module {
+  text-overflow: ellipsis;
+}
+
+.pkg-nav-value {
+  text-overflow: ellipsis;
+}
+
+.pkg-nav-search-chunk {
+  padding-bottom: 10px;
 }
 

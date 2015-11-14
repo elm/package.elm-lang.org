@@ -95,18 +95,13 @@ module' pkg@(Pkg.Name user name) version moduleName =
           body $ script $ preEscapedToMarkup $
               context
                 [ ("user", show user)
-                , ("name", show name)
+                , ("project", show name)
                 , ("version", show (Pkg.versionToString version))
-                , ("versionList", show versionList)
+                , ("allVersions", show versionList)
                 , ("moduleName", show (Module.nameToString moduleName))
                 ]
               ++
-                "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n\
-                \page.ports.docsLoaded.subscribe(function() {\n\
-                \    if (window.location.hash) {\n\
-                \        setTimeout(function() { window.location = window.location.hash; }, 0);\n\
-                \    }\n\
-                \});\n"
+                "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n"
 
 
 context :: [(String, String)] -> String

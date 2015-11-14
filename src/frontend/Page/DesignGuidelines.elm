@@ -1,36 +1,8 @@
-module Page.DesignGuidelines where
-
-import Graphics.Element exposing (..)
-import Markdown
-import Window
-
-import ColorScheme as C
-import Component.TopBar as TopBar
+module DesignGuidelines where
 
 
-port title : String
-port title = "Design Guidelines"
-
-
-main : Signal Element
-main =
-    Signal.map view Window.dimensions
-
-
-view : (Int,Int) -> Element
-view (windowWidth, windowHeight) =
-  color C.background <|
-  flow down
-  [ TopBar.view windowWidth
-  , flow right
-    [ spacer ((windowWidth - 980) // 2) (windowHeight - TopBar.topBarHeight)
-    , width 600 content
-    ]
-  ]
-
-
-content : Element
-content = Markdown.toElement """
+content : String
+content = """
 
 # Design Guidelines
 

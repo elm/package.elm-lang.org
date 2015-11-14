@@ -69,7 +69,7 @@ main =
             ]
           <|>
             do  modifyResponse $ setResponseStatus 404 "Not found"
-                (ServeFile.filler (Module.Name ["Page","Error"]))
+                (ServeFile.filler (Module.Name ["Page","NotFound"]))
 
 
 setupLogging :: IO ()
@@ -103,14 +103,12 @@ compileElmFiles =
 
 publicModules :: [Module.Name]
 publicModules =
-    map Module.Name
+  map
+    Module.Name
     [ ["Page","DesignGuidelines"]
     , ["Page","DocumentationFormat"]
-    , ["Page","Error"]
-    , ["Page","Home"]
+    , ["Page","NotFound"]
     , ["Page","Module"]
-    , ["Page","Package"]
-    , ["Page","PackageList"]
     ]
 
 

@@ -3,6 +3,7 @@ module Docs.Entry where
 import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Regex
 import String
 
 import Docs.Name as Name
@@ -90,7 +91,20 @@ annotationBlock bits =
 
 nameToLink : String -> Html
 nameToLink name =
-  a [href ("#" ++ name)] [text name]
+  let
+    humanName =
+      if Regex.contains operator name then
+        "(" ++ name ++ ")"
+
+      else
+        name
+  in
+    a [href ("#" ++ name)] [text humanName]
+
+
+operator : Regex.Regex
+operator =
+  Regex.regex "^[^a-zA-Z0-9]+$"
 
 
 

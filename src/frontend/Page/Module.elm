@@ -1,120 +1,135 @@
 module Page.Module where
 
-import Color
-import ColorScheme as C
-import Dict
-import Json.Decode as Json
-import Graphics.Element exposing (..)
-import Http
-import String
-import Task exposing (Task, andThen, onError, succeed)
-import Window
-import Set
+import Effects as Fx exposing (Effects)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import StartApp
+import Task
 
-import Component.TopBar as TopBar
-import Component.Module as Module
-import Component.Documentation as D
+import Component.ModuleDocs as MDocs
+import Component.PackageNavigator as PkgNav
+import Header
+import Page.Context as Ctx
+import Route
 
 
-port context : { user : String, name : String, version : String, versionList : List String, moduleName : String }
+
+-- WIRES
+
+
+port context : Ctx.Context
+
 
 port title : String
 port title =
-  context.moduleName ++ " - " ++ context.name ++ " " ++ context.version
+  case context.moduleName of
+    Just name ->
+      name ++ " - " ++ context.project ++ " " ++ context.version
+
+    Nothing ->
+      context.project ++ " " ++ context.version
 
 
-packageUrl : String -> String
-packageUrl version =
-  "/packages/" ++ context.user ++ "/" ++ context.name ++ "/" ++ version
+app =
+  StartApp.start
+    { init = init
+    , view = view
+    , update = update
+    , inputs = []
+    }
 
 
-moduleNameToUrl : String -> String
-moduleNameToUrl name =
-  String.map (\c -> if c == '.' then '-' else c) name
-
-
-documentationUrl : String
-documentationUrl =
-  let name = moduleNameToUrl context.moduleName
-  in
-      packageUrl context.version ++ "/docs/" ++ name ++ ".json"
-
-
-port getDocs : Task x ()
-port getDocs =
-  let
-    get = Http.get D.documentation documentationUrl
-
-    recover _ =
-        succeed (dummyDocs "There was an error loading these docs! They may be corrupted.")
-  in
-    (get `onError` recover)
-        `andThen` Signal.send documentation.address
-
-
-documentation : Signal.Mailbox D.Documentation
-documentation =
-  Signal.mailbox (dummyDocs "Loading documentation...")
-
-
-dummyDocs : String -> D.Documentation
-dummyDocs msg =
-  D.Documentation context.moduleName msg [] [] []
-
-
-main : Signal Element
 main =
-    Signal.map3 view Window.dimensions modulesAndMentionedTypes.signal documentation.signal
+  app.html
 
 
-version : Signal.Mailbox String
-version =
-    Signal.mailbox ""
+port worker : Signal (Task.Task Fx.Never ())
+port worker =
+  app.tasks
 
 
-port redirect : Signal String
-port redirect =
-  Signal.filter ((/=) "") "" version.signal
-    |> Signal.map (\v -> packageUrl v ++ "/" ++ moduleNameToUrl context.moduleName)
+
+-- MODEL
 
 
-port docsLoaded : Signal ()
-port docsLoaded =
-  Signal.map (always ()) documentation.signal
+type alias Model =
+    { header : Header.Model
+    , moduleDocs : MDocs.Model
+    , pkgNav : PkgNav.Model
+    }
 
 
-port getModulesAndMentionedTypes : Task x ()
-port getModulesAndMentionedTypes =
+
+-- INIT
+
+
+init : (Model, Effects Action)
+init =
   let
-    get =
-      Http.get (Json.list D.documentation) (packageUrl context.version ++ "/documentation.json")
+    (header, headerFx) =
+      Header.init Route.dummy
 
-    recover _ =
-      Task.succeed []
+    (moduleDocs, moduleFx) =
+      MDocs.init context
 
-    removeDuplicates =
-      Set.toList << Set.fromList
-
-    send list =
-      Signal.send modulesAndMentionedTypes.address (List.map .name list, removeDuplicates (List.concatMap D.mentionedTypes list))
+    (pkgNav, navFx) =
+      PkgNav.init context
   in
-    (get `onError` recover) `andThen` send
+    ( Model header moduleDocs pkgNav
+    , Fx.batch
+        [ headerFx
+        , Fx.map UpdateDocs moduleFx
+        , Fx.map UpdateNav navFx
+        ]
+    )
 
 
-modulesAndMentionedTypes : Signal.Mailbox (List String, List (String, String))
-modulesAndMentionedTypes =
-  Signal.mailbox ([], [])
+
+-- UPDATE
 
 
-view : (Int,Int) -> (List String, List (String, String)) -> D.Documentation -> Element
-view (windowWidth, windowHeight) (modules, mentionedTypes) docs =
-  let innerWidth = min 980 windowWidth
-  in
-    color C.background <|
-    flow down
-    [ TopBar.view windowWidth
-    , flow right
-      [ spacer ((windowWidth - innerWidth) // 2) (windowHeight - TopBar.topBarHeight)
-      , Module.view version.address innerWidth context.user context.name context.version context.versionList modules mentionedTypes docs
-      ]
+type Action
+    = UpdateDocs MDocs.Action
+    | UpdateNav PkgNav.Action
+
+
+update : Action -> Model -> (Model, Effects Action)
+update action model =
+  case action of
+    UpdateDocs act ->
+        let
+          (newDocs, fx) =
+            MDocs.update act model.moduleDocs
+        in
+          ( { model | moduleDocs = newDocs }
+          , Fx.map UpdateDocs fx
+          )
+
+    UpdateNav act ->
+        let
+          (newPkgNav, fx) =
+            PkgNav.update act model.pkgNav
+        in
+          ( { model | pkgNav = newPkgNav }
+          , Fx.map UpdateNav fx
+          )
+
+
+
+-- VIEW
+
+
+view : Signal.Address Action -> Model -> Html
+view addr model =
+  div []
+    [ Header.view addr model.header
+    , div [class "center"]
+        [ MDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
+        , PkgNav.view (Signal.forwardTo addr UpdateNav) model.pkgNav
+        ]
     ]
+
+
+
+
+

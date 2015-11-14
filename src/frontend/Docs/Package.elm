@@ -1,28 +1,48 @@
-module Docs.Decoder (package, module_) where
+module Docs.Package
+  ( Package
+  , Module
+  , decodePackage
+  , decodeModule
+  )
+  where
 
 import Dict
 import Json.Decode as Json exposing ((:=))
 
-import Docs
 import Docs.Name as Name
 import Docs.Type as Type
 import Docs.Entry as Entry
 
 
 
--- DECODE DOCS
+-- TYPES
 
 
-package : Json.Decoder Docs.Package
-package =
-  Json.map (dictBy .name) (Json.list module_)
+type alias Package =
+    Dict.Dict String Module
 
 
-module_ : Json.Decoder Docs.Module
-module_ =
+type alias Module =
+    { name : String
+    , comment : String
+    , entries : Dict.Dict String Entry.Model
+    }
+
+
+
+-- DECODERS
+
+
+decodePackage : Json.Decoder Package
+decodePackage =
+  Json.map (dictBy .name) (Json.list decodeModule)
+
+
+decodeModule : Json.Decoder Module
+decodeModule =
   let
     make name comment values unions aliases =
-      Docs.Module name comment (dictBy .name (values ++ unions ++ aliases))
+      Module name comment (dictBy .name (values ++ unions ++ aliases))
   in
     Json.object5 make
       ("name" := Json.string)

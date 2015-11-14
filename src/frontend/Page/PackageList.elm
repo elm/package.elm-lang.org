@@ -6,8 +6,11 @@ import Html.Attributes exposing (..)
 import StartApp
 import Task
 
+import Component.ModuleDocs as MDocs
+import Component.PackageNavigator as PkgNav
 import Header
-import Docs.Module as MDocs
+import Page.Context as Ctx
+import Route
 
 
 -- WIRES
@@ -42,6 +45,7 @@ port worker =
 type alias Model =
     { header : Header.Model
     , moduleDocs : MDocs.Model
+    , pkgNav : PkgNav.Model
     }
 
 
@@ -52,11 +56,24 @@ type alias Model =
 init : (Model, Effects Action)
 init =
   let
-    ( moduleDocs, fx ) =
-        MDocs.init (MDocs.Context "elm-lang" "core" "3.0.0" "Graphics.Element")
+    context =
+      Ctx.Context "elm-lang" "core" "3.0.0" ["3.0.0","2.0.0","1.0.0"] (Just "Graphics.Element")
+
+    (header, headerFx) =
+      Header.init Route.dummy
+
+    (moduleDocs, moduleFx) =
+      MDocs.init context
+
+    (pkgNav, navFx) =
+      PkgNav.init context
   in
-    ( Model Header.dummy moduleDocs
-    , Fx.map UpdateDocs fx
+    ( Model header moduleDocs pkgNav
+    , Fx.batch
+        [ headerFx
+        , Fx.map UpdateDocs moduleFx
+        , Fx.map UpdateNav navFx
+        ]
     )
 
 
@@ -66,6 +83,7 @@ init =
 
 type Action
     = UpdateDocs MDocs.Action
+    | UpdateNav PkgNav.Action
 
 
 update : Action -> Model -> (Model, Effects Action)
@@ -76,8 +94,17 @@ update action model =
           (newDocs, fx) =
             MDocs.update act model.moduleDocs
         in
-          ( Model model.header newDocs
+          ( { model | moduleDocs = newDocs }
           , Fx.map UpdateDocs fx
+          )
+
+    UpdateNav act ->
+        let
+          (newPkgNav, fx) =
+            PkgNav.update act model.pkgNav
+        in
+          ( { model | pkgNav = newPkgNav }
+          , Fx.map UpdateNav fx
           )
 
 
@@ -89,7 +116,10 @@ view : Signal.Address Action -> Model -> Html
 view addr model =
   div []
     [ Header.view addr model.header
-    , MDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
+    , div [class "center"]
+        [ MDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
+        , PkgNav.view (Signal.forwardTo addr UpdateNav) model.pkgNav
+        ]
     ]
 
 
