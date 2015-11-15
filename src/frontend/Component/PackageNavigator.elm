@@ -120,8 +120,9 @@ view addr model =
 
       Success {context, query, searchDict} ->
           [ moduleLink context Nothing
+          , h2 [] [ text "Module Docs" ]
           , input
-              [ placeholder "Search this package"
+              [ placeholder "Search"
               , value query
               , on "input" targetValue (Signal.message addr << Query)
               ]
