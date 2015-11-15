@@ -35,6 +35,7 @@ pre {
   border-width: 1px;
   border-color: rgb(245,245,245);
   border-radius: 6px;
+  overflow-x: scroll;
 }
 
 
@@ -100,7 +101,7 @@ pre {
 
 
 .entry-list {
-  max-width: 600px;
+  width: 600px;
   float: left;
   display: block;
 }
@@ -123,7 +124,7 @@ pre {
 
 .docs-annotation {
   white-space: pre;
-  font-family: 'Source Code Pro';
+  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
   padding-top: 10px;
   padding-bottom: 10px;
 }
@@ -140,7 +141,7 @@ pre {
 
 .pkg-nav {
   width: 200px;
-  font-family: 'Source Code Pro';
+  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
   float: left;
   display: block;
   padding: 20px;
@@ -148,11 +149,15 @@ pre {
   border-left: 1px solid #eeeeee;
 }
 
+.pkg-nav h2 {
+  margin-bottom: 0;
+}
+
 .pkg-nav input {
   width: 200px;
-  font-family: 'Source Code Pro';
+  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
   font-size: 1em;
-  padding: 6px;
+  padding: 4px;
   margin: 10px 0;
   border: 1px solid #eeeeee;
   border-radius: 6px;
