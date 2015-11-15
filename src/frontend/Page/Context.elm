@@ -18,10 +18,16 @@ type alias Context =
     a ++ "/" ++ b
 
 
+getReadme : Context -> Task.Task Http.Error String
+getReadme context =
+  Http.getString (pathTo context "README.md")
+
+
 getDocs : Context -> Task.Task Http.Error Docs.Package
-getDocs {user,project,version} =
-  let
-    url =
-      "/packages" </> user </> project </> version </> "documentation.json"
-  in
-    Http.get Docs.decodePackage url
+getDocs context =
+  Http.get Docs.decodePackage (pathTo context "documentation.json")
+
+
+pathTo : Context -> String -> String
+pathTo {user,project,version} file =
+  "/packages" </> user </> project </> version </> file

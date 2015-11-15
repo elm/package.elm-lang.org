@@ -1,5 +1,7 @@
 module Route where
 
+import Page.Context as Ctx
+
 
 type Route
     = Home
@@ -12,11 +14,20 @@ type UserRoute =
 
 
 type PackageRoute =
-    Package String (Maybe String)
+    Package String (Maybe VersionRoute)
 
 
-dummy =
-  Packages <| Just <|
-    User "elm-lang" <| Just <|
-      Package "core" <| Just <|
-        "3.0.0"
+type VersionRoute =
+    Version String (List String)
+
+
+fromContext : Ctx.Context -> Route
+fromContext ctx =
+  Packages => User ctx.user => Package ctx.project => Version ctx.version ctx.allVersions
+
+
+(=>) f a =
+  f (Just a)
+
+
+infixr 0 =>

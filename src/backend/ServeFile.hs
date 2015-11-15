@@ -23,15 +23,15 @@ favicon =
     ! A.href "/assets/favicon.ico"
 
 
-filler :: Module.Name -> Snap ()
-filler name =
+filler :: String -> Module.Name -> Snap ()
+filler title name =
     writeBuilder $
     Blaze.renderHtmlBuilder $
     docTypeHtml $ do
       H.head $ do
         meta ! charset "UTF-8"
         favicon
-        H.title (toHtml (Module.nameToString name))
+        H.title (toHtml title)
         googleAnalytics
         link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
         link ! rel "stylesheet" ! href "/assets/style.css"
@@ -43,9 +43,15 @@ filler name =
           "Elm.fullscreen(Elm." ++ Module.nameToString name ++ ")"
 
 
+pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Name -> Snap ()
+pkgDocs pkg@(Pkg.Name user name) version maybeName =
+  let
+    versionString =
+      Pkg.versionToString version
 
-package :: Pkg.Name -> Pkg.Version -> Snap ()
-package pkg@(Pkg.Name user name) version =
+    maybeStringName =
+      fmap Module.nameToString maybeName
+  in
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
       let versionList =
             maybe [] (List.map Pkg.versionToString) maybeVersions
@@ -56,36 +62,7 @@ package pkg@(Pkg.Name user name) version =
           H.head $ do
             meta ! charset "UTF-8"
             favicon
-            H.title "Elm Package Documentation"
-            googleAnalytics
-            link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
-            link ! rel "stylesheet" ! href "/assets/style.css"
-            script ! src "/assets/highlight/highlight.pack.js" $ ""
-            script ! src "/artifacts/Page-Package.js" $ ""
-
-          body $ script $ preEscapedToMarkup $
-              context
-                [ ("user", show user)
-                , ("name", show name)
-                , ("version", show (Pkg.versionToString version))
-                , ("versionList", show versionList)
-                ]
-              ++ "var page = Elm.fullscreen(Elm.Page.Package, { context: context });\n"
-
-
-module' :: Pkg.Name -> Pkg.Version -> Module.Name -> Snap ()
-module' pkg@(Pkg.Name user name) version moduleName =
-  do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
-      let versionList =
-            maybe [] (List.map Pkg.versionToString) maybeVersions
-
-      writeBuilder $
-        Blaze.renderHtmlBuilder $
-        docTypeHtml $ do
-          H.head $ do
-            meta ! charset "UTF-8"
-            favicon
-            H.title "Elm Package Documentation"
+            H.title (toHtml (maybe "" (++" - ") maybeStringName ++ name ++ " " ++ versionString))
             googleAnalytics
             link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
             link ! rel "stylesheet" ! href "/assets/style.css"
@@ -96,9 +73,9 @@ module' pkg@(Pkg.Name user name) version moduleName =
               context
                 [ ("user", show user)
                 , ("project", show name)
-                , ("version", show (Pkg.versionToString version))
+                , ("version", show versionString)
                 , ("allVersions", show versionList)
-                , ("moduleName", show (Module.nameToString moduleName))
+                , ("moduleName", maybe "null" show maybeStringName)
                 ]
               ++
                 "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n"

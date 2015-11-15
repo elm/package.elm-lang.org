@@ -20,7 +20,8 @@ type Model
     = Loading
     | Failed Http.Error
     | Success
-        { searchDict : SearchDict
+        { context : Ctx.Context
+        , searchDict : SearchDict
         , query : String
         }
 
@@ -45,7 +46,8 @@ init context =
 
 
 type Action
-    = Load (Result Http.Error SearchDict)
+    = Fail Http.Error
+    | Load Ctx.Context SearchDict
     | Query String
 
 
@@ -64,13 +66,17 @@ update action model =
           Failed err ->
               model
 
-    Load (Err httpError) ->
+    Fail httpError ->
         ( Failed httpError
         , Fx.none
         )
 
-    Load (Ok searchDict) ->
-        ( Success { searchDict = searchDict, query = "" }
+    Load context searchDict ->
+        ( Success
+            { context = context
+            , searchDict = searchDict
+            , query = ""
+            }
         , Fx.none
         )
 
@@ -82,9 +88,8 @@ update action model =
 loadDocs : Ctx.Context -> Effects Action
 loadDocs context =
   Ctx.getDocs context
-    |> Task.map makeSearchable
-    |> Task.toResult
-    |> Task.map Load
+    |> Task.map (Load context << makeSearchable)
+    |> flip Task.onError (Task.succeed << Fail)
     |> Fx.task
 
 
@@ -113,22 +118,22 @@ view addr model =
           , p [] [text (toString httpError)]
           ]
 
-      Success {query, searchDict} ->
-          [ a [ class "pkg-nav-module", href "README" ] [ text "README" ]
+      Success {context, query, searchDict} ->
+          [ moduleLink context Nothing
           , input
               [ placeholder "Search this package"
               , value query
               , on "input" targetValue (Signal.message addr << Query)
               ]
               []
-          , viewSearchDict query searchDict
+          , viewSearchDict context query searchDict
           ]
 
 
-viewSearchDict : String -> SearchDict -> Html
-viewSearchDict query searchDict =
+viewSearchDict : Ctx.Context -> String -> SearchDict -> Html
+viewSearchDict context query searchDict =
   if String.isEmpty query then
-    ul [] (List.map (li [] << singleton << moduleLink) (Dict.keys searchDict))
+    ul [] (List.map (li [] << singleton << moduleLink context << Just) (Dict.keys searchDict))
 
   else
     let
@@ -143,32 +148,43 @@ viewSearchDict query searchDict =
           |> Dict.filter (\_ values -> not (List.isEmpty values))
           |> Dict.toList
     in
-      ul [] (List.map viewModuleLinks searchResults)
+      ul [] (List.map (viewModuleLinks context) searchResults)
 
 
-viewModuleLinks : (String, List String) -> Html
-viewModuleLinks (name, values) =
-  li [ class "pkg-nav-search-chunk" ]
-    [ moduleLink name
-    , ul [] (List.map (valueLink name) values)
+viewModuleLinks : Ctx.Context -> (String, List String) -> Html
+viewModuleLinks context (name, values) =
+  li
+    [ class "pkg-nav-search-chunk" ]
+    [ moduleLink context (Just name)
+    , ul [] (List.map (valueLink context name) values)
     ]
 
 
-moduleLink : String -> Html
-moduleLink name =
-  a
-    [ class "pkg-nav-module"
-    , href (hyphenate name)
-    ]
-    [ text name ]
+moduleLink : Ctx.Context -> Maybe String -> Html
+moduleLink context name =
+  let
+    visibleName =
+      Maybe.withDefault "README" name
+
+    url =
+      Ctx.pathTo context (Maybe.withDefault "" (Maybe.map hyphenate name))
+
+    visibleText =
+      if context.moduleName == name then
+          span [ style [ "font-weight" => "bold" ] ] [ text visibleName ]
+
+      else
+          text visibleName
+  in
+    a [ class "pkg-nav-module", href url ] [ visibleText ]
 
 
-valueLink : String -> String -> Html
-valueLink moduleName valueName =
+valueLink : Ctx.Context -> String -> String -> Html
+valueLink context moduleName valueName =
   li
     [ class "pkg-nav-value"
     ]
-    [ a [ href (hyphenate moduleName ++ "#" ++ valueName) ] [ text valueName ]
+    [ a [ href (Ctx.pathTo context (hyphenate moduleName) ++ "#" ++ valueName) ] [ text valueName ]
     ]
 
 

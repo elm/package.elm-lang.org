@@ -1,26 +1,26 @@
-module Docs.Summary (Package, decoder) where
+module Docs.Summary (Summary, decoder) where
 
 import Docs.Version as Vsn
 import Json.Decode exposing (..)
 
 
 
-type alias Package =
+type alias Summary =
     { name : String
     , summary : String
     , versions : List Vsn.Version
     }
 
 
-decoder : Decoder (List Package)
+decoder : Decoder (List Summary)
 decoder =
-  list package
+  list decodeSummary
 
 
-package : Decoder Package
-package =
+decodeSummary : Decoder Summary
+decodeSummary =
   object3
-    Package
+    Summary
     ("name" := string)
     ("summary" := string)
     ("versions" := list Vsn.decoder)

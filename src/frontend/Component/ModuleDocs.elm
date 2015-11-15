@@ -18,7 +18,8 @@ import Utils.Markdown as Markdown
 type Model
     = Loading
     | Failed Http.Error
-    | Success { name : String, chunks : List Chunk }
+    | Readme String
+    | Docs { name : String, chunks : List Chunk }
 
 
 type Chunk
@@ -32,7 +33,7 @@ type Chunk
 init : Ctx.Context -> (Model, Effects Action)
 init context =
   ( Loading
-  , loadDocs context
+  , getContext context
   )
 
 
@@ -41,43 +42,55 @@ init context =
 
 
 type Action
-    = Load (Result Http.Error Docs.Module)
+    = LoadDocs String Docs.Package
+    | LoadReadme String
+    | Fail Http.Error
 
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
-    Load (Err httpError) ->
+    Fail httpError ->
         ( Failed httpError
         , Fx.none
         )
 
-    Load (Ok docs) ->
-        ( Success { name = docs.name, chunks = toChunks docs }
+    LoadReadme readme ->
+        ( Readme readme
         , Fx.none
         )
+
+    LoadDocs moduleName docs ->
+        case Dict.get moduleName docs of
+          Just moduleDocs ->
+              ( Docs { name = moduleName, chunks = toChunks moduleDocs }
+              , Fx.none
+              )
+
+          Nothing ->
+              ( Failed (Http.UnexpectedPayload ("Could not find module '" ++ moduleName ++ "'"))
+              , Fx.none
+              )
 
 
 
 -- EFFECTS
 
 
-loadDocs : Ctx.Context -> Effects Action
-loadDocs context =
-  Ctx.getDocs context
-    |> Task.toResult
-    |> Task.map (\r -> Load (r `Result.andThen` getModule (Maybe.withDefault "" context.moduleName)))
-    |> Fx.task
-
-
-getModule : String -> Docs.Package -> Result Http.Error Docs.Module
-getModule moduleName pkg =
-  case Dict.get moduleName pkg of
-    Just moduleDocs ->
-        Ok moduleDocs
-
+getContext : Ctx.Context -> Effects Action
+getContext context =
+  case context.moduleName of
     Nothing ->
-        Err (Http.UnexpectedPayload ("Could not find module '" ++ moduleName ++ "'"))
+      Ctx.getReadme context
+        |> Task.map LoadReadme
+        |> flip Task.onError (Task.succeed << Fail)
+        |> Fx.task
+
+    Just name ->
+      Ctx.getDocs context
+        |> Task.map (LoadDocs name)
+        |> flip Task.onError (Task.succeed << Fail)
+        |> Fx.task
 
 
 
@@ -100,7 +113,11 @@ view addr model =
           , p [] [text (toString httpError)]
           ]
 
-      Success {name,chunks} ->
+      Readme readme ->
+          [ Markdown.block readme
+          ]
+
+      Docs {name,chunks} ->
           h1 [class "entry-list-title"] [text name]
           :: List.map (viewChunk addr) chunks
 

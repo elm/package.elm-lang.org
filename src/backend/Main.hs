@@ -50,7 +50,7 @@ main =
           compileElmFiles
 
       httpServe (setPort (port cargs) defaultConfig) $
-          ifTop (ServeFile.filler (Module.Name ["Page","Home"]))
+          ifTop (ServeFile.filler "Elm Packages" (Module.Name ["Page","Home"]))
           <|>
             route
             [ ("packages", Route.packages)
@@ -61,15 +61,19 @@ main =
             , ("all-packages", Route.allPackages)
             , ("new-packages", serveFile NewPackageList.newPackages)
             , ("assets", serveDirectoryWith directoryConfig "assets")
-            , ("help/design-guidelines", ifTop $ ServeFile.filler (Module.Name ["Page","DesignGuidelines"]))
-            , ("help/documentation-format", ifTop $ ServeFile.filler (Module.Name ["Page","DocumentationFormat"]))
+            , ("help/design-guidelines"
+              , ifTop $ ServeFile.filler "Design Guidelines" (Module.Name ["Page","DesignGuidelines"])
+              )
+            , ("help/documentation-format"
+              , ifTop $ ServeFile.filler "Documentation Format" (Module.Name ["Page","DocumentationFormat"])
+              )
             , ( BS.pack Path.artifactDirectory
               , serveDirectoryWith directoryConfig Path.artifactDirectory
               )
             ]
           <|>
             do  modifyResponse $ setResponseStatus 404 "Not found"
-                (ServeFile.filler (Module.Name ["Page","NotFound"]))
+                (ServeFile.filler "???" (Module.Name ["Page","NotFound"]))
 
 
 setupLogging :: IO ()
@@ -105,10 +109,12 @@ publicModules :: [Module.Name]
 publicModules =
   map
     Module.Name
-    [ ["Page","DesignGuidelines"]
+    [ ["Page","Catalog"]
+    , ["Page","DesignGuidelines"]
     , ["Page","DocumentationFormat"]
-    , ["Page","NotFound"]
+    , ["Page","Home"]
     , ["Page","Module"]
+    , ["Page","NotFound"]
     ]
 
 

@@ -31,7 +31,7 @@ import qualified ServeFile
 
 packages :: Snap ()
 packages =
-    ifTop (ServeFile.filler (Module.Name ["Page","PackageList"]))
+    ifTop (ServeFile.filler "Elm Packages" (Module.Name ["Page","Catalog"]))
     <|> route [ (":user/:name", package) ]
     <|> serveDirectory "packages"
 
@@ -56,7 +56,7 @@ servePackageInfo name =
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
 
-      ifTop (ServeFile.package name version)
+      ifTop (ServeFile.pkgDocs name version Nothing)
         <|> serveModule name version
 
 
@@ -72,7 +72,7 @@ serveModule name version =
       case Module.dehyphenate potentialName of
         Nothing -> pass
         Just moduleName ->
-            ServeFile.module' name version moduleName
+            ServeFile.pkgDocs name version (Just moduleName)
 
 
 redirectToLatest :: Pkg.Name -> Snap ()

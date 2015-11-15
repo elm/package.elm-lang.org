@@ -73,10 +73,21 @@ pre {
   padding-right: 8px;
 }
 
+.header-underbar {
+  margin: 0;
+  padding: 1px 0;
+}
+
 .version-warning {
   text-align: center;
   margin: 0;
   padding: 4px 0;
+  color: white;
+}
+
+.version-warning a {
+  color: white;
+  text-decoration: underline;
 }
 
 .spacey-char {

@@ -6,9 +6,9 @@ import Html.Attributes exposing (..)
 import StartApp
 import Task
 
+import Component.Header as Header
 import Component.ModuleDocs as MDocs
 import Component.PackageNavigator as PkgNav
-import Header
 import Page.Context as Ctx
 import Route
 
@@ -18,16 +18,6 @@ import Route
 
 
 port context : Ctx.Context
-
-
-port title : String
-port title =
-  case context.moduleName of
-    Just name ->
-      name ++ " - " ++ context.project ++ " " ++ context.version
-
-    Nothing ->
-      context.project ++ " " ++ context.version
 
 
 app =
@@ -67,7 +57,7 @@ init : (Model, Effects Action)
 init =
   let
     (header, headerFx) =
-      Header.init Route.dummy
+      Header.init (Route.fromContext context)
 
     (moduleDocs, moduleFx) =
       MDocs.init context
