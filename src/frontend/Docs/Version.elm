@@ -1,5 +1,6 @@
-module Docs.Version (Version, decoder, realMax, vsnToString) where
+module Docs.Version (Version, decoder, realMax, filterInteresting, vsnToString) where
 
+import Dict
 import Json.Decode as Json exposing (..)
 import String
 
@@ -53,4 +54,27 @@ realMax rawVsn allRawVsns =
 vsnToString : Version -> String
 vsnToString (major, minor, patch) =
   toString major ++ "." ++ toString minor ++ "." ++ toString patch
+
+
+filterInteresting : List Version -> List Version
+filterInteresting versions =
+  let
+    maxes =
+      List.foldl updateMaxes Dict.empty versions
+  in
+    List.map (\(major, (minor,patch)) -> (major, minor, patch)) (Dict.toList maxes)
+
+
+updateMaxes : Version -> Dict.Dict Int (Int,Int) -> Dict.Dict Int (Int,Int)
+updateMaxes (major, minor, patch) dict =
+  let
+    update maybeMinorPatch =
+      case maybeMinorPatch of
+        Nothing ->
+          Just (minor, patch)
+
+        Just oldMinorPatch ->
+          Just (max oldMinorPatch (minor, patch))
+  in
+    Dict.update major update dict
 

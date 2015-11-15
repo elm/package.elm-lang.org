@@ -2,7 +2,7 @@ module Component.Catalog where
 
 import Effects as Fx exposing (Effects)
 import Html exposing (..)
-import Html.Attributes exposing (class, href, style)
+import Html.Attributes exposing (class, href, placeholder, style, value)
 import Html.Events exposing (..)
 import Http
 import String
@@ -21,7 +21,7 @@ import Utils.Markdown as Markdown
 type Model
     = Loading
     | Failed Http.Error
-    | Success (List Summary.Summary)
+    | Success { summaries : List Summary.Summary, query : String }
 
 
 
@@ -42,6 +42,7 @@ init =
 type Action
     = Fail Http.Error
     | Load (List Summary.Summary)
+    | Query String
 
 
 update : Action -> Model -> (Model, Effects Action)
@@ -53,9 +54,36 @@ update action model =
         )
 
     Load summaries ->
-        ( Success summaries
+        ( Success { summaries = summaries, query = "" }
         , Fx.none
         )
+
+    Query query ->
+      flip (,) Fx.none <|
+        case model of
+          Success facts ->
+              Success { facts | query = query }
+
+          Loading ->
+              model
+
+          Failed err ->
+              model
+
+
+
+searchFor : String -> List Summary.Summary -> List Summary.Summary
+searchFor query summaries =
+  let
+    lowerQuery =
+      String.toLower query
+
+    contains {name,summary} =
+      String.contains lowerQuery (String.toLower name)
+      ||
+      String.contains lowerQuery (String.toLower summary)
+  in
+    List.filter contains summaries
 
 
 
@@ -90,25 +118,79 @@ view addr model =
           , p [] [text (toString httpError)]
           ]
 
-      Success summaries ->
-          [ FluidList.fluidList "pkg-summary" 300 3 (List.map viewSummary summaries)
+      Success {summaries, query} ->
+          [ input
+              [ placeholder "Search for Package"
+              , value query
+              , on "input" targetValue (Signal.message addr << Query)
+              ]
+              []
+          , div [] (List.map viewSummary (searchFor query summaries))
           ]
 
 
-viewSummary : Summary.Summary -> List Html
+viewSummary : Summary.Summary -> Html
 viewSummary summary =
   case List.maximum summary.versions of
     Just maxVersion ->
       let
         url =
-          "/packages/" ++ summary.name ++ "/" ++ Vsn.vsnToString maxVersion
+          versionUrl summary.name maxVersion
       in
-        [ h1 [] [ a [ href url ] [ text summary.name ] ]
-        , p [] [ text summary.summary ]
-        ]
+        div [class "pkg-summary"]
+          [ div []
+              [ h1 [] [ a [ href url ] [ text summary.name ] ]
+              , helpfulLinks summary
+              ]
+          , p [class "pkg-summary-desc"] [ text summary.summary ]
+          ]
+
 
     Nothing ->
-        [ h1 [] [ text summary.name ]
-        , p [] [ text summary.summary ]
+      div [class "pkg-summary"]
+        [ div [] [ h1 [] [ text summary.name ] ]
+        , p [class "pkg-summary-desc"] [ text summary.summary ]
         ]
 
+
+
+helpfulLinks : Summary.Summary -> Html
+helpfulLinks summary =
+  let
+    allInterestingVersions =
+      Vsn.filterInteresting summary.versions
+
+    len =
+      List.length allInterestingVersions
+
+    interestingVersions =
+      if len > 3 then
+          List.drop (len - 3) allInterestingVersions
+
+      else
+          allInterestingVersions
+
+    starter =
+      case interestingVersions of
+        (1,0,0) :: _ ->
+          []
+
+        _ ->
+          [ text "…" ]
+  in
+    span [ class "pkg-summary-hints" ] <| List.intersperse (text " ") <|
+      starter
+      ++ List.intersperse (text "…") (List.map (versionLink summary.name) interestingVersions)
+      ++  [ text "—"
+          , a [ href ("/packages/" ++ summary.name) ] [ text "Overview" ]
+          ]
+
+
+versionLink : String -> Vsn.Version -> Html
+versionLink packageName vsn =
+  a [ href (versionUrl packageName vsn) ] [ text (Vsn.vsnToString vsn) ]
+
+
+versionUrl : String -> Vsn.Version -> String
+versionUrl packageName vsn =
+  "/packages/" ++ packageName ++ "/" ++ Vsn.vsnToString vsn

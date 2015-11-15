@@ -187,3 +187,54 @@ pre {
   padding-bottom: 10px;
 }
 
+
+
+/* CATALOG */
+
+
+.catalog input {
+  width: 100%;
+  font-size: 2em;
+  text-align: center;
+  padding: 0.5em 0;
+  outline: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: 1px solid #eeeeee;
+  margin-bottom: 20px;
+}
+
+
+.pkg-summary {
+  width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+  padding: 20px 0;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.pkg-summary h1 {
+  margin: 0;
+  font-size: 1.5em;
+  display: inline-block;
+}
+
+.pkg-summary-desc {
+  margin: 0.5em 0;
+}
+
+.pkg-summary-hints {
+  float: right;
+  font-size: 1em;
+  padding-top: 0.5em;
+  color: #aaa;
+}
+
+.pkg-summary-hints a {
+  color: #aaa;
+}
+
+
+
