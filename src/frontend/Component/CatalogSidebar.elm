@@ -58,7 +58,7 @@ view addr model =
   div [class "catalog-sidebar"]
     [ h2 [] [ text "Resources" ]
     , ul []
-        [ li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Usage Guide" ] ]
+        [ li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
         , li [] [ a [ href "/help/design-guidelines" ] [ text "API Design Guidelines" ] ]
         , li [] [ a [ href "/help/documentation-format" ] [ text "Documentation Format" ] ]
         ]
