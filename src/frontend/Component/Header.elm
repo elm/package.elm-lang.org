@@ -115,7 +115,7 @@ unrollRoute : Route -> List Html
 unrollRoute route =
   case route of
     Help ->
-        []
+        [ text "help" ]
 
     Packages userRoute ->
         maybe unrollUserRoute userRoute
