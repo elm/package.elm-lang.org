@@ -2,7 +2,7 @@ module Component.Catalog where
 
 import Effects as Fx exposing (Effects)
 import Html exposing (..)
-import Html.Attributes exposing (class, href, placeholder, style, value)
+import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
 import Html.Events exposing (..)
 import Http
 import String
@@ -123,6 +123,7 @@ view addr model =
               [ placeholder "Search"
               , value query
               , on "input" targetValue (Signal.message addr << Query)
+              , autofocus True
               ]
               []
           , div [] (List.map viewSummary (searchFor query summaries))

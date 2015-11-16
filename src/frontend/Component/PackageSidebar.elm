@@ -128,6 +128,7 @@ view addr model =
               [ placeholder "Search"
               , value query
               , on "input" targetValue (Signal.message addr << Query)
+              , autofocus True
               ]
               []
           , viewSearchDict context query searchDict
