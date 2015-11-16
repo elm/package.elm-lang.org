@@ -105,7 +105,7 @@ view addr model =
   div [ class "entry-list" ] <|
     case model of
       Loading ->
-          [ p [] [text "Documentation is loading..."]
+          [ p [] [text "Loading..."]
           ]
 
       Failed httpError ->
