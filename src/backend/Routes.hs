@@ -70,7 +70,9 @@ serveModule name version =
       when (not exists) pass
 
       case Module.dehyphenate potentialName of
-        Nothing -> pass
+        Nothing ->
+            pass
+
         Just moduleName ->
             ServeFile.pkgDocs name version (Just moduleName)
 
