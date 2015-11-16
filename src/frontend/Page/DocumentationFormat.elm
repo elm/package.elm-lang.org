@@ -1,4 +1,36 @@
-module DocumentationFormat where
+module Page.DocumentationFormat where
+
+import Effects as Fx
+import StartApp
+import Task
+
+import Component.Blog as Blog
+
+
+
+-- WIRES
+
+
+app =
+  StartApp.start
+    { init = Blog.init content
+    , view = Blog.view
+    , update = Blog.update
+    , inputs = []
+    }
+
+
+main =
+  app.html
+
+
+port worker : Signal (Task.Task Fx.Never ())
+port worker =
+  app.tasks
+
+
+
+-- CONTENT
 
 
 content : String
