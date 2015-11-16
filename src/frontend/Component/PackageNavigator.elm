@@ -14,7 +14,7 @@ import Docs.Package as Docs
 import Docs.Entry as Entry
 import Page.Context as Ctx
 import Utils.Markdown as Markdown
-import Utils.Path as Path
+import Utils.Path as Path exposing ((</>))
 
 
 type Model
@@ -121,6 +121,8 @@ view addr model =
 
       Success {context, query, searchDict} ->
           [ moduleLink context Nothing
+          , br [] []
+          , githubLink context
           , h2 [] [ text "Module Docs" ]
           , input
               [ placeholder "Search"
@@ -162,6 +164,14 @@ viewModuleLinks context (name, values) =
     ]
 
 
+githubLink : Ctx.Context -> Html
+githubLink context =
+  a [ class "pkg-nav-module"
+    , href ("https://github.com" </> context.user </> context.project </> "tree" </> context.version)
+    ]
+    [ text "Browse source" ]
+
+
 moduleLink : Ctx.Context -> Maybe String -> Html
 moduleLink context name =
   let
@@ -173,7 +183,7 @@ moduleLink context name =
 
     visibleText =
       if context.moduleName == name then
-          span [ style [ "font-weight" => "bold" ] ] [ text visibleName ]
+          span [ style [ "font-weight" => "bold", "text-decoration" => "underline" ] ] [ text visibleName ]
 
       else
           text visibleName
