@@ -20,8 +20,13 @@ type VersionRoute =
     Version String (List String) (Maybe String)
 
 
-fromContext : Ctx.Context -> Route
-fromContext ctx =
+fromOverviewContext : Ctx.OverviewContext -> Route
+fromOverviewContext ctx =
+  Packages => User ctx.user => Package ctx.project Nothing
+
+
+fromVersionContext : Ctx.VersionContext -> Route
+fromVersionContext ctx =
   Packages => User ctx.user => Package ctx.project => Version ctx.version ctx.allVersions ctx.moduleName
 
 

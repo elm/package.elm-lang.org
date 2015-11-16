@@ -50,7 +50,7 @@ main =
           compileElmFiles
 
       httpServe (setPort (port cargs) defaultConfig) $
-          ifTop (ServeFile.filler "Elm Packages" (Module.Name ["Page","Catalog"]))
+          ifTop (ServeFile.elm "Elm Packages" ["Page","Catalog"])
           <|>
             route
             [ ("packages", Route.packages)
@@ -62,10 +62,10 @@ main =
             , ("new-packages", serveFile NewPackageList.newPackages)
             , ("assets", serveDirectoryWith directoryConfig "assets")
             , ("help/design-guidelines"
-              , ifTop $ ServeFile.filler "Design Guidelines" (Module.Name ["Page","DesignGuidelines"])
+              , ifTop $ ServeFile.elm "Design Guidelines" ["Page","DesignGuidelines"]
               )
             , ("help/documentation-format"
-              , ifTop $ ServeFile.filler "Documentation Format" (Module.Name ["Page","DocumentationFormat"])
+              , ifTop $ ServeFile.elm "Documentation Format" ["Page","DocumentationFormat"]
               )
             , ( BS.pack Path.artifactDirectory
               , serveDirectoryWith directoryConfig Path.artifactDirectory
@@ -73,7 +73,7 @@ main =
             ]
           <|>
             do  modifyResponse $ setResponseStatus 404 "Not found"
-                (ServeFile.filler "???" (Module.Name ["Page","NotFound"]))
+                (ServeFile.elm "???" ["Page","NotFound"])
 
 
 setupLogging :: IO ()
@@ -114,6 +114,7 @@ publicModules =
     , ["Page","DocumentationFormat"]
     , ["Page","NotFound"]
     , ["Page","Package"]
+    , ["Page","PackageOverview"]
     ]
 
 

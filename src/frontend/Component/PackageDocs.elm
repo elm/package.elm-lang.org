@@ -30,7 +30,7 @@ type Chunk
 -- INIT
 
 
-init : Ctx.Context -> (Model, Effects Action)
+init : Ctx.VersionContext -> (Model, Effects Action)
 init context =
   ( Loading
   , getContext context
@@ -77,7 +77,7 @@ update action model =
 -- EFFECTS
 
 
-getContext : Ctx.Context -> Effects Action
+getContext : Ctx.VersionContext -> Effects Action
 getContext context =
   case context.moduleName of
     Nothing ->

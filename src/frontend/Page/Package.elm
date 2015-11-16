@@ -17,7 +17,7 @@ import Route
 -- WIRES
 
 
-port context : Ctx.Context
+port context : Ctx.VersionContext
 
 
 app =
@@ -57,7 +57,7 @@ init : (Model, Effects Action)
 init =
   let
     (header, headerFx) =
-      Header.init (Route.fromContext context)
+      Header.init (Route.fromVersionContext context)
 
     (moduleDocs, moduleFx) =
       PDocs.init context

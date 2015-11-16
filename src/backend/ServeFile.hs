@@ -23,68 +23,80 @@ favicon =
     ! A.href "/assets/favicon.ico"
 
 
-filler :: String -> Module.Name -> Snap ()
-filler title name =
-    writeBuilder $
-    Blaze.renderHtmlBuilder $
-    docTypeHtml $ do
-      H.head $ do
-        meta ! charset "UTF-8"
-        favicon
-        H.title (toHtml title)
-        googleAnalytics
-        link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
-        link ! rel "stylesheet" ! href "/assets/style.css"
-        script ! src "/assets/highlight/highlight.pack.js" $ ""
-        script ! src (toValue ("/" ++ Path.artifact name)) $ ""
+makeHtml :: String -> [String] -> Snap (Maybe (String, [(String, String)])) -> Snap ()
+makeHtml title elmModuleName makePortInput =
+  let
+    elmModule =
+      Module.Name elmModuleName
+  in
+  do  maybePortInput <- makePortInput
+      writeBuilder $ Blaze.renderHtmlBuilder $ docTypeHtml $ do
+        H.head $ do
+          meta ! charset "UTF-8"
+          favicon
+          H.title (toHtml title)
+          googleAnalytics
+          link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
+          link ! rel "stylesheet" ! href "/assets/style.css"
+          script ! src "/assets/highlight/highlight.pack.js" $ ""
+          script ! src (toValue ("/" ++ Path.artifact elmModule)) $ ""
 
-      body $
-        script $ preEscapedToMarkup $
-          "Elm.fullscreen(Elm." ++ Module.nameToString name ++ ")"
+        body $
+          script $ preEscapedToMarkup $
+            case maybePortInput of
+              Nothing ->
+                "\nElm.fullscreen(Elm." ++ Module.nameToString elmModule ++ ")\n"
+
+              Just (portName, entries) ->
+                "\nvar content = { " ++ List.intercalate "," (List.map (\(k,v) -> "\n    " ++ k ++ ": " ++ v) entries) ++ "\n};\n"
+                ++ "var page = Elm.fullscreen(Elm." ++ Module.nameToString elmModule ++ ", { " ++ portName ++ ": content });\n"
+
+
+elm :: String -> [String] -> Snap ()
+elm title elmModuleName =
+  makeHtml title elmModuleName (return Nothing)
 
 
 pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Name -> Snap ()
-pkgDocs pkg@(Pkg.Name user name) version maybeName =
+pkgDocs pkg@(Pkg.Name user project) version maybeName =
   let
     versionString =
       Pkg.versionToString version
 
     maybeStringName =
       fmap Module.nameToString maybeName
+
+    title =
+      maybe "" (++" - ") maybeStringName ++ project ++ " " ++ versionString
   in
-  do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
-      let versionList =
-            maybe [] (List.map Pkg.versionToString) maybeVersions
-
-      writeBuilder $
-        Blaze.renderHtmlBuilder $
-        docTypeHtml $ do
-          H.head $ do
-            meta ! charset "UTF-8"
-            favicon
-            H.title (toHtml (maybe "" (++" - ") maybeStringName ++ name ++ " " ++ versionString))
-            googleAnalytics
-            link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
-            link ! rel "stylesheet" ! href "/assets/style.css"
-            script ! src "/assets/highlight/highlight.pack.js" $ ""
-            script ! src "/artifacts/Page-Package.js" $ ""
-
-          body $ script $ preEscapedToMarkup $
-              context
+    makeHtml title ["Page","Package"] $
+      do  allVersions <- getAllVersions pkg
+          return $
+              Just $ (,) "context" $
                 [ ("user", show user)
-                , ("project", show name)
+                , ("project", show project)
                 , ("version", show versionString)
-                , ("allVersions", show versionList)
+                , ("allVersions", show allVersions)
                 , ("moduleName", maybe "null" show maybeStringName)
                 ]
-              ++
-                "var page = Elm.fullscreen(Elm.Page.Package, { context: context });\n"
 
 
-context :: [(String, String)] -> String
-context pairs =
-  "\nvar context = { " ++ List.intercalate ", " (List.map (\(k,v) -> k ++ ": " ++ v) pairs) ++ " };\n"
+pkgOverview :: Pkg.Name -> Snap ()
+pkgOverview pkg@(Pkg.Name user project) =
+  makeHtml (user ++ "/" ++ project) ["Page","PackageOverview"] $
+    do  allVersions <- getAllVersions pkg
+        return $
+            Just $ (,) "context" $
+              [ ("user", show user)
+              , ("project", show project)
+              , ("versions", show allVersions)
+              ]
 
+
+getAllVersions :: Pkg.Name -> Snap [String]
+getAllVersions pkg =
+  do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
+      return $ maybe [] (List.map Pkg.versionToString) maybeVersions
 
 
 -- | Add analytics to a page.
