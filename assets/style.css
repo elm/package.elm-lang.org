@@ -40,6 +40,15 @@ pre {
 
 
 
+/* HOME */
+
+.home-summaries ul {
+  list-style-type: none;
+  padding-left: 1em;
+}
+
+
+
 /* HEADER */
 
 
@@ -59,19 +68,6 @@ pre {
 
 .header a:hover {
   color: #333333;
-}
-
-.logo {
-  font-size: 36px;
-  color: #333333;
-  padding-right: 30px;
-  display: inline-block;
-}
-
-.logo img {
-  width: 26px;
-  vertical-align: baseline;
-  padding-right: 8px;
 }
 
 .header-underbar {
@@ -136,6 +132,7 @@ pre {
 }
 
 
+
 /* PACKAGE NAVIGATION */
 
 
@@ -192,25 +189,25 @@ pre {
 /* CATALOG */
 
 
+.catalog {
+  width: 600px;
+  float: left;
+}
+
+
 .catalog input {
-  width: 100%;
-  font-size: 2em;
-  text-align: center;
-  padding: 0.5em 0;
+  width: 582px;
+  font-size: 1.5em;
+  padding: 10px;
   outline: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  border-bottom: 1px solid #eeeeee;
-  margin-bottom: 20px;
+  border: 1px solid #eeeeee;
+  border-radius: 16px;
+  margin-top: 40px;
+  margin-bottom: 10px;
 }
 
 
 .pkg-summary {
-  width: 700px;
-  margin-left: auto;
-  margin-right: auto;
-  display: block;
   padding: 20px 0;
   border-bottom: 1px solid #eeeeee;
 }
@@ -238,3 +235,32 @@ pre {
 
 
 
+/* CATALOG SIDEBAR */
+
+
+.catalog-sidebar {
+  width: 200px;
+  float: left;
+  display: block;
+  padding: 20px;
+  margin: 20px 20px 20px 40px;
+  border-left: 1px solid #eeeeee;
+}
+
+.catalog-sidebar h2 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}
+
+.catalog-sidebar ul {
+  list-style-type: none;
+  margin: 0;
+  padding-left: 20px;
+  padding-bottom: 10px;
+}
+
+.catalog-sidebar ul ul {
+  list-style-type: none;
+  margin: 0;
+  padding-left: 20px;
+}

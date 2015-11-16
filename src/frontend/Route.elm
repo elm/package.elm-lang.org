@@ -4,8 +4,7 @@ import Page.Context as Ctx
 
 
 type Route
-    = Home
-    | Help
+    = Help
     | Packages (Maybe UserRoute)
 
 

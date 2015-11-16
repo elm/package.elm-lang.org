@@ -31,7 +31,7 @@ import qualified ServeFile
 
 packages :: Snap ()
 packages =
-    ifTop (ServeFile.filler "Elm Packages" (Module.Name ["Page","Catalog"]))
+    ifTop (redirect' "/" 301)
     <|> route [ (":user/:name", package) ]
     <|> serveDirectory "packages"
 

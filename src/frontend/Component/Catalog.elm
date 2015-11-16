@@ -120,7 +120,7 @@ view addr model =
 
       Success {summaries, query} ->
           [ input
-              [ placeholder "Search for Package"
+              [ placeholder "Search"
               , value query
               , on "input" targetValue (Signal.message addr << Query)
               ]
@@ -131,27 +131,17 @@ view addr model =
 
 viewSummary : Summary.Summary -> Html
 viewSummary summary =
-  case List.maximum summary.versions of
-    Just maxVersion ->
-      let
-        url =
-          versionUrl summary.name maxVersion
-      in
-        div [class "pkg-summary"]
-          [ div []
-              [ h1 [] [ a [ href url ] [ text summary.name ] ]
-              , helpfulLinks summary
-              ]
-          , p [class "pkg-summary-desc"] [ text summary.summary ]
+  let
+    url =
+      "/packages/" ++ summary.name ++ "/latest"
+  in
+    div [class "pkg-summary"]
+      [ div []
+          [ h1 [] [ a [ href url ] [ text summary.name ] ]
+          , helpfulLinks summary
           ]
-
-
-    Nothing ->
-      div [class "pkg-summary"]
-        [ div [] [ h1 [] [ text summary.name ] ]
-        , p [class "pkg-summary-desc"] [ text summary.summary ]
-        ]
-
+      , p [class "pkg-summary-desc"] [ text summary.summary ]
+      ]
 
 
 helpfulLinks : Summary.Summary -> Html
@@ -188,9 +178,12 @@ helpfulLinks summary =
 
 versionLink : String -> Vsn.Version -> Html
 versionLink packageName vsn =
-  a [ href (versionUrl packageName vsn) ] [ text (Vsn.vsnToString vsn) ]
+  let
+    vsnString =
+      Vsn.vsnToString vsn
 
+    url =
+      "/packages/" ++ packageName ++ "/" ++ vsnString
+  in
+    a [ href url ] [ text vsnString ]
 
-versionUrl : String -> Vsn.Version -> String
-versionUrl packageName vsn =
-  "/packages/" ++ packageName ++ "/" ++ Vsn.vsnToString vsn

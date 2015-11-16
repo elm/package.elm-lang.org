@@ -7,6 +7,7 @@ import StartApp
 import Task
 
 import Component.Catalog as Catalog
+import Component.CatalogSidebar as Sidebar
 import Component.Header as Header
 import Route
 
@@ -40,6 +41,7 @@ port worker =
 type alias Model =
     { header : Header.Model
     , catalog : Catalog.Model
+    , sidebar : Sidebar.Model
     }
 
 
@@ -55,11 +57,15 @@ init =
 
     (catalog, catalogFx) =
       Catalog.init
+
+    (sidebar, sidebarFx) =
+      Sidebar.init
   in
-    ( Model header catalog
+    ( Model header catalog sidebar
     , Fx.batch
         [ headerFx
         , Fx.map UpdateCatalog catalogFx
+        , Fx.map UpdateSidebar sidebarFx
         ]
     )
 
@@ -70,6 +76,7 @@ init =
 
 type Action
     = UpdateCatalog Catalog.Action
+    | UpdateSidebar Sidebar.Action
 
 
 update : Action -> Model -> (Model, Effects Action)
@@ -84,6 +91,15 @@ update action model =
           , Fx.map UpdateCatalog fx
           )
 
+    UpdateSidebar act ->
+        let
+          (newSidebar, fx) =
+            Sidebar.update act model.sidebar
+        in
+          ( { model | sidebar = newSidebar }
+          , Fx.map UpdateSidebar fx
+          )
+
 
 
 -- VIEW
@@ -93,7 +109,10 @@ view : Signal.Address Action -> Model -> Html
 view addr model =
   div []
     [ Header.view addr model.header
-    , Catalog.view (Signal.forwardTo addr UpdateCatalog) model.catalog
+    , div [ class "center" ]
+        [ Catalog.view (Signal.forwardTo addr UpdateCatalog) model.catalog
+        , Sidebar.view (Signal.forwardTo addr UpdateSidebar) model.sidebar
+        ]
     ]
 
 

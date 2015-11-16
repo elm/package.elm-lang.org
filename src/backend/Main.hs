@@ -50,7 +50,7 @@ main =
           compileElmFiles
 
       httpServe (setPort (port cargs) defaultConfig) $
-          ifTop (ServeFile.filler "Elm Packages" (Module.Name ["Page","Home"]))
+          ifTop (ServeFile.filler "Elm Packages" (Module.Name ["Page","Catalog"]))
           <|>
             route
             [ ("packages", Route.packages)
@@ -112,7 +112,6 @@ publicModules =
     [ ["Page","Catalog"]
     , ["Page","DesignGuidelines"]
     , ["Page","DocumentationFormat"]
-    , ["Page","Home"]
     , ["Page","Module"]
     , ["Page","NotFound"]
     ]

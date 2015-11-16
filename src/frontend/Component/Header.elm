@@ -61,7 +61,7 @@ center color kids =
 
 headerLinks model =
   h1 [ class "header" ] <|
-    logo :: unrollRoute model.route
+    a [href "/"] [logo] :: unrollRoute model.route
 
 
 -- helpers
@@ -75,9 +75,29 @@ spacey token =
 
 
 logo =
-  a [ href "/", class "logo" ]
-    [ img [ src "/assets/elm_logo.svg" ] []
-    , text "elm"
+  div
+    [ style
+        [ "display" => "inline-block"
+        ]
+    ]
+    [ img
+        [ src "/assets/elm_logo.svg"
+        , style
+            [ "height" => "30px"
+            , "vertical-align" => "bottom"
+            , "padding-right" => "8px"
+            ]
+        ]
+        []
+    , img
+        [ src "/assets/logo-name.png"
+        , style
+            [ "height" => "30px"
+            , "vertical-align" => "bottom"
+            , "padding-right" => "24px"
+            ]
+        ]
+        []
     ]
 
 
@@ -91,15 +111,11 @@ headerLink url words =
 unrollRoute : Route -> List Html
 unrollRoute route =
   case route of
-    Home ->
-        []
-
     Help ->
         []
 
     Packages userRoute ->
-        headerLink "/packages" "packages"
-        :: maybe unrollUserRoute userRoute
+        maybe unrollUserRoute userRoute
 
 
 maybe : (a -> List Html) -> Maybe a -> List Html
@@ -114,8 +130,7 @@ maybe unroll maybeRoute =
 
 unrollUserRoute : UserRoute -> List Html
 unrollUserRoute (User user packageRoute) =
-    spacey "/"
-    :: headerLink ("https://github.com" </> user) user
+    headerLink ("https://github.com" </> user) user
     :: maybe (unrollPackageRoute user) packageRoute
 
 
