@@ -161,18 +161,22 @@ versionWarning model =
   let
     warning =
       case model.route of
-        Packages (Just (User user (Just (Package project (Just (Version vsn allVersions _)))))) ->
+        Packages (Just (User user (Just (Package project (Just (Version vsn allVersions maybeName)))))) ->
             case Version.realMax vsn allVersions of
               Nothing ->
                 []
 
               Just maxVersion ->
-                [ p [ class "version-warning" ]
-                    [ text "Warning! The latest version of this package is "
-                    , a [ href ("/packages/" ++ user ++ "/" ++ project ++ "/" ++ maxVersion) ]
-                        [ text maxVersion ]
-                    ]
-                ]
+                let
+                  moduleName =
+                    Maybe.withDefault "" (Maybe.map Path.hyphenate maybeName)
+                in
+                  [ p [ class "version-warning" ]
+                      [ text "Warning! The latest version of this package is "
+                      , a [ href ("/packages" </> user </> project </> maxVersion </> moduleName) ]
+                          [ text maxVersion ]
+                      ]
+                  ]
 
         _ ->
           []
