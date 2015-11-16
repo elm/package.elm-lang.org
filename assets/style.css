@@ -138,7 +138,6 @@ pre {
 
 .pkg-nav {
   width: 200px;
-  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
   float: left;
   display: block;
   padding: 20px;
@@ -152,7 +151,6 @@ pre {
 
 .pkg-nav input {
   width: 200px;
-  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
   font-size: 1em;
   padding: 4px;
   margin: 10px 0;
@@ -173,10 +171,12 @@ pre {
 }
 
 .pkg-nav-module {
+  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
   text-overflow: ellipsis;
 }
 
 .pkg-nav-value {
+  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
   text-overflow: ellipsis;
 }
 
