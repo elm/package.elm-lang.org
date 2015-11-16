@@ -1,4 +1,15 @@
-module Docs.Version (Version, decoder, realMax, filterInteresting, vsnToString) where
+module Docs.Version
+    ( Version
+    , Dictionary
+    , MinorPatch
+    , decoder
+    , filterInteresting
+    , realMax
+    , toDict
+    , fromStringList
+    , vsnToString
+    )
+    where
 
 import Dict
 import Json.Decode as Json exposing (..)
@@ -6,6 +17,10 @@ import String
 
 
 type alias Version = (Int, Int, Int)
+
+
+
+-- JSON DECODER
 
 
 decoder : Decoder Version
@@ -33,9 +48,18 @@ all list =
         Result.map2 (::) x (all xs)
 
 
+fromStringList : List String -> Result String (List Version)
+fromStringList versions =
+  all (List.map fromString versions)
+
+
+
+-- MAXIMUM
+
+
 realMax : String -> List String -> Maybe String
 realMax rawVsn allRawVsns =
-  case Result.map2 (,) (fromString rawVsn) (all (List.map fromString allRawVsns)) of
+  case Result.map2 (,) (fromString rawVsn) (fromStringList allRawVsns) of
     Ok (version, allVersions) ->
       let
         maxVersion =
@@ -51,30 +75,79 @@ realMax rawVsn allRawVsns =
         Nothing
 
 
+
+-- TO STRING
+
+
 vsnToString : Version -> String
 vsnToString (major, minor, patch) =
   toString major ++ "." ++ toString minor ++ "." ++ toString patch
 
 
+
+-- INTERESTING VERSIONS
+
+
 filterInteresting : List Version -> List Version
 filterInteresting versions =
+  List.map (uncurry toLatest) (Dict.toList (toDict versions))
+
+
+toLatest : Int -> MinorPatch -> Version
+toLatest major {latest} =
   let
-    maxes =
-      List.foldl updateMaxes Dict.empty versions
+    (minor, patch) =
+      latest
   in
-    List.map (\(major, (minor,patch)) -> (major, minor, patch)) (Dict.toList maxes)
+    (major, minor, patch)
 
 
-updateMaxes : Version -> Dict.Dict Int (Int,Int) -> Dict.Dict Int (Int,Int)
-updateMaxes (major, minor, patch) dict =
+
+-- TO DICTIONARY
+
+
+type alias Dictionary =
+  Dict.Dict Int MinorPatch
+
+
+
+type alias MinorPatch =
+  { latest : (Int, Int)
+  , others : List (Int, Int)
+  }
+
+
+toDict : List Version -> Dictionary
+toDict versions =
+  List.foldl toDictHelp Dict.empty versions
+
+
+toDictHelp : Version -> Dictionary -> Dictionary
+toDictHelp (major, minor, patch) dict =
   let
+    current =
+      (minor, patch)
+
     update maybeMinorPatch =
       case maybeMinorPatch of
         Nothing ->
-          Just (minor, patch)
+          Just (MinorPatch current [])
 
-        Just oldMinorPatch ->
-          Just (max oldMinorPatch (minor, patch))
+        Just {latest, others} ->
+          Just (MinorPatch (max latest current) (insert (min latest current) others))
   in
     Dict.update major update dict
 
+
+insert : comparable -> List comparable -> List comparable
+insert y list =
+  case list of
+    [] ->
+      [y]
+
+    x :: xs ->
+      if x < y then
+        x :: y :: xs
+
+      else
+        x :: insert y xs
