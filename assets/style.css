@@ -53,7 +53,7 @@ pre {
 
 
 .center {
-  max-width: 920px;
+  width: 920px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -93,13 +93,25 @@ pre {
 
 
 
+/* FOOTER */
+
+
+.footer {
+  text-align: center;
+  margin-top: 4em;
+  border-top: 1px solid #eeeeee;
+  padding: 2em 0;
+  color: #bbbbbb;
+}
+
+
 /* DOCUMENTATION */
 
 
 .entry-list {
   width: 600px;
-  float: left;
-  display: block;
+  display: inline-block;
+  vertical-align: top;
 }
 
 .entry-list-title {
@@ -138,8 +150,8 @@ pre {
 
 .pkg-nav {
   width: 200px;
-  float: left;
-  display: block;
+  display: inline-block;
+  vertical-align: top;
   padding: 20px;
   margin: 20px 20px 20px 40px;
   border-left: 1px solid #eeeeee;
@@ -191,12 +203,13 @@ pre {
 
 .catalog {
   width: 600px;
-  float: left;
+  display: inline-block;
+  vertical-align: top;
 }
 
 
 .catalog input {
-  width: 582px;
+  width: 578px;
   font-size: 1.5em;
   padding: 10px;
   outline: none;
@@ -226,11 +239,11 @@ pre {
   float: right;
   font-size: 1em;
   padding-top: 0.5em;
-  color: #bbb;
+  color: #bbbbbb;
 }
 
 .pkg-summary-hints a {
-  color: #bbb;
+  color: #bbbbbb;
 }
 
 
@@ -240,8 +253,8 @@ pre {
 
 .catalog-sidebar {
   width: 200px;
-  float: left;
-  display: block;
+  display: inline-block;
+  vertical-align: top;
   padding: 20px;
   margin: 20px 20px 20px 40px;
   border-left: 1px solid #eeeeee;

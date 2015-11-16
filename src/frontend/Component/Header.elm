@@ -41,13 +41,19 @@ update action model =
 (=>) = (,)
 
 
-view : Signal.Address a -> Model -> Html
-view _ model =
-  div
-    []
+view : Signal.Address a -> Model -> List Html -> Html
+view _ model contents =
+  div []
     [ center "#eeeeee" [ headerLinks model ]
     , center "#60B5CC" (versionWarning model)
+    , div [ class "center" ] contents
+    , div [class "footer"]
+        [ text "All code for this site is open source and written in Elm. "
+        , a [ href "https://github.com/elm-lang/package.elm-lang.org/" ] [ text "Check it out" ]
+        , text "! — © 2012-2015 Evan Czaplicki"
+        ]
     ]
+
 
 
 center color kids =

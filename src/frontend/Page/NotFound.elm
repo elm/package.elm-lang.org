@@ -3,24 +3,24 @@ module Page.NotFound where
 import Html exposing (..)
 import Html.Attributes exposing (style)
 
+import Component.Header as Header
+import Route
+
 
 (=>) = (,)
 
 
-main : Html
 main =
-  div
-    [ style
-        [ "width" => "100%"
-        , "height" => "100%"
-        , "display" => "flex"
-        , "flex-direction" => "column"
-        , "justify-content" => "center"
-        , "align-items" => "center"
-        , "background-color" => "#F5F5F5"
-        , "color" => "#9A9A9A"
+  Header.view (Signal.mailbox ()).address (Header.Model (Route.Packages Nothing))
+    [ div
+        [ style
+            [ "height" => "100%"
+            , "text-align" => "center"
+            , "color" => "#9A9A9A"
+            , "padding" => "6em 0"
+            ]
         ]
-    ]
-    [ div [ style ["font-size" => "12em"] ] [ text "404" ]
-    , div [ style ["font-size" => "3em"] ] [ text "Page not found" ]
+        [ div [ style ["font-size" => "12em"] ] [ text "404" ]
+        , div [ style ["font-size" => "3em"] ] [ text "Page not found" ]
+        ]
     ]

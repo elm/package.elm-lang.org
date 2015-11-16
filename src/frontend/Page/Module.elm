@@ -111,15 +111,9 @@ update action model =
 
 view : Signal.Address Action -> Model -> Html
 view addr model =
-  div []
-    [ Header.view addr model.header
-    , div [class "center"]
-        [ MDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
-        , PkgNav.view (Signal.forwardTo addr UpdateNav) model.pkgNav
-        ]
+  Header.view addr model.header
+    [ MDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
+    , PkgNav.view (Signal.forwardTo addr UpdateNav) model.pkgNav
     ]
-
-
-
 
 
