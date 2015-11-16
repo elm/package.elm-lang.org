@@ -14,7 +14,7 @@ h1, h2, h3, h4 {
   font-weight: normal;
 }
 
-p {
+p, li {
   line-height: 1.5em;
 }
 
