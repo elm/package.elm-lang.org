@@ -112,8 +112,8 @@ publicModules =
     [ ["Page","Catalog"]
     , ["Page","DesignGuidelines"]
     , ["Page","DocumentationFormat"]
-    , ["Page","Module"]
     , ["Page","NotFound"]
+    , ["Page","Package"]
     ]
 
 

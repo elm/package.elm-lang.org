@@ -1,4 +1,4 @@
-module Page.Module where
+module Page.Package where
 
 import Effects as Fx exposing (Effects)
 import Html exposing (..)
@@ -7,8 +7,8 @@ import StartApp
 import Task
 
 import Component.Header as Header
-import Component.ModuleDocs as MDocs
-import Component.PackageNavigator as PkgNav
+import Component.PackageDocs as PDocs
+import Component.PackageSidebar as PkgNav
 import Page.Context as Ctx
 import Route
 
@@ -44,7 +44,7 @@ port worker =
 
 type alias Model =
     { header : Header.Model
-    , moduleDocs : MDocs.Model
+    , moduleDocs : PDocs.Model
     , pkgNav : PkgNav.Model
     }
 
@@ -60,7 +60,7 @@ init =
       Header.init (Route.fromContext context)
 
     (moduleDocs, moduleFx) =
-      MDocs.init context
+      PDocs.init context
 
     (pkgNav, navFx) =
       PkgNav.init context
@@ -79,7 +79,7 @@ init =
 
 
 type Action
-    = UpdateDocs MDocs.Action
+    = UpdateDocs PDocs.Action
     | UpdateNav PkgNav.Action
 
 
@@ -89,7 +89,7 @@ update action model =
     UpdateDocs act ->
         let
           (newDocs, fx) =
-            MDocs.update act model.moduleDocs
+            PDocs.update act model.moduleDocs
         in
           ( { model | moduleDocs = newDocs }
           , Fx.map UpdateDocs fx
@@ -112,7 +112,7 @@ update action model =
 view : Signal.Address Action -> Model -> Html
 view addr model =
   Header.view addr model.header
-    [ MDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
+    [ PDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
     , PkgNav.view (Signal.forwardTo addr UpdateNav) model.pkgNav
     ]
 

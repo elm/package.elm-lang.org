@@ -67,7 +67,7 @@ pkgDocs pkg@(Pkg.Name user name) version maybeName =
             link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
             link ! rel "stylesheet" ! href "/assets/style.css"
             script ! src "/assets/highlight/highlight.pack.js" $ ""
-            script ! src "/artifacts/Page-Module.js" $ ""
+            script ! src "/artifacts/Page-Package.js" $ ""
 
           body $ script $ preEscapedToMarkup $
               context
@@ -78,7 +78,7 @@ pkgDocs pkg@(Pkg.Name user name) version maybeName =
                 , ("moduleName", maybe "null" show maybeStringName)
                 ]
               ++
-                "var page = Elm.fullscreen(Elm.Page.Module, { context: context });\n"
+                "var page = Elm.fullscreen(Elm.Page.Package, { context: context });\n"
 
 
 context :: [(String, String)] -> String

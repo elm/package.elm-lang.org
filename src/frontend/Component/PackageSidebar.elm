@@ -1,4 +1,4 @@
-module Component.PackageNavigator where
+module Component.PackageSidebar where
 
 import Dict
 import Effects as Fx exposing (Effects)

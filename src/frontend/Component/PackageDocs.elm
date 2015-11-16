@@ -1,4 +1,4 @@
-module Component.ModuleDocs where
+module Component.PackageDocs where
 
 import Dict
 import Effects as Fx exposing (Effects)
