@@ -6,6 +6,7 @@ import Html.Attributes exposing (..)
 
 import Docs.Version as Version
 import Route exposing (..)
+import Utils.Path as Path exposing ((</>))
 
 
 
@@ -65,10 +66,6 @@ headerLinks model =
 
 
 -- helpers
-
-(</>) a b =
-    a ++ "/" ++ b
-
 
 spacey token =
   span [ class "spacey-char" ] [ text token ]
@@ -142,9 +139,16 @@ unrollPackageRoute user (Package pkg versionRoute) =
 
 
 unrollVersionRoute : String -> String -> VersionRoute -> List Html
-unrollVersionRoute user pkg (Version vsn allVersions) =
+unrollVersionRoute user pkg (Version vsn _ moduleRoute) =
+  spacey "/"
+  :: headerLink ("/packages" </> user </> pkg </> vsn) vsn
+  :: maybe (unrollModuleeRoute user pkg vsn) moduleRoute
+
+
+unrollModuleeRoute : String -> String -> String -> String -> List Html
+unrollModuleeRoute user pkg vsn name =
   [ spacey "/"
-  , headerLink ("/packages" </> user </> pkg </> vsn) vsn
+  , headerLink ("/packages" </> user </> pkg </> vsn </> Path.hyphenate name) name
   ]
 
 
@@ -157,7 +161,7 @@ versionWarning model =
   let
     warning =
       case model.route of
-        Packages (Just (User user (Just (Package project (Just (Version vsn allVersions)))))) ->
+        Packages (Just (User user (Just (Package project (Just (Version vsn allVersions _)))))) ->
             case Version.realMax vsn allVersions of
               Nothing ->
                 []

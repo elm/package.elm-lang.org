@@ -17,12 +17,12 @@ type PackageRoute =
 
 
 type VersionRoute =
-    Version String (List String)
+    Version String (List String) (Maybe String)
 
 
 fromContext : Ctx.Context -> Route
 fromContext ctx =
-  Packages => User ctx.user => Package ctx.project => Version ctx.version ctx.allVersions
+  Packages => User ctx.user => Package ctx.project => Version ctx.version ctx.allVersions ctx.moduleName
 
 
 (=>) f a =

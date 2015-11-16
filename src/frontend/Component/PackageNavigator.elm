@@ -14,6 +14,7 @@ import Docs.Package as Docs
 import Docs.Entry as Entry
 import Page.Context as Ctx
 import Utils.Markdown as Markdown
+import Utils.Path as Path
 
 
 type Model
@@ -168,7 +169,7 @@ moduleLink context name =
       Maybe.withDefault "README" name
 
     url =
-      Ctx.pathTo context (Maybe.withDefault "" (Maybe.map hyphenate name))
+      Ctx.pathTo context (Maybe.withDefault "" (Maybe.map Path.hyphenate name))
 
     visibleText =
       if context.moduleName == name then
@@ -185,13 +186,8 @@ valueLink context moduleName valueName =
   li
     [ class "pkg-nav-value"
     ]
-    [ a [ href (Ctx.pathTo context (hyphenate moduleName) ++ "#" ++ valueName) ] [ text valueName ]
+    [ a [ href (Ctx.pathTo context (Path.hyphenate moduleName) ++ "#" ++ valueName) ] [ text valueName ]
     ]
-
-
-hyphenate : String -> String
-hyphenate string =
-  String.map (\c -> if c == '.' then '-' else c) string
 
 
 singleton : a -> List a

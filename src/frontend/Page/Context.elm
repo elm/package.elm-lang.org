@@ -3,6 +3,7 @@ module Page.Context where
 import Http
 import Task
 import Docs.Package as Docs
+import Utils.Path exposing ((</>))
 
 
 type alias Context =
@@ -12,10 +13,6 @@ type alias Context =
     , allVersions : List String
     , moduleName : Maybe String
     }
-
-
-(</>) a b =
-    a ++ "/" ++ b
 
 
 getReadme : Context -> Task.Task Http.Error String
