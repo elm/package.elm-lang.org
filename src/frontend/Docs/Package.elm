@@ -25,7 +25,7 @@ type alias Package =
 type alias Module =
     { name : String
     , comment : String
-    , entries : Dict.Dict String Entry.Model
+    , entries : Dict.Dict String (Entry.Model String)
     }
 
 
@@ -61,7 +61,7 @@ dictBy f list =
 -- ENTRY
 
 
-entry : Json.Decoder Entry.Info -> Json.Decoder Entry.Model
+entry : Json.Decoder (Entry.Info String) -> Json.Decoder (Entry.Model String)
 entry decodeInfo =
   Json.object3 Entry.Model
     ("name" := Json.string)
@@ -73,7 +73,7 @@ entry decodeInfo =
 -- VALUE INFO
 
 
-value : Json.Decoder Entry.Info
+value : Json.Decoder (Entry.Info String)
 value =
   Json.object2 Entry.Value
     ("type" := tipe)
@@ -91,14 +91,14 @@ fixity =
 -- UNION INFO
 
 
-union : Json.Decoder Entry.Info
+union : Json.Decoder (Entry.Info String)
 union =
   Json.object2 (\vars tags -> Entry.Union { vars = vars, tags = tags })
     ("args" := Json.list Json.string)
     ("cases" := Json.list tag)
 
 
-tag : Json.Decoder Entry.Tag
+tag : Json.Decoder (Entry.Tag String)
 tag =
   Json.tuple2 Entry.Tag Json.string (Json.list tipe)
 
@@ -107,7 +107,7 @@ tag =
 -- ALIAS INFO
 
 
-alias : Json.Decoder Entry.Info
+alias : Json.Decoder (Entry.Info String)
 alias =
   Json.object2 (\vars tipe -> Entry.Alias { vars = vars, tipe = tipe })
     ("args" := Json.list Json.string)
@@ -118,8 +118,8 @@ alias =
 -- TYPES
 
 
-tipe : Json.Decoder Type.Type
+tipe : Json.Decoder String
 tipe =
-  Json.map Type.parse Json.string
+  Json.string
 
 

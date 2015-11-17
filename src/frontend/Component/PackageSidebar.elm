@@ -21,7 +21,7 @@ type Model
     = Loading
     | Failed Http.Error
     | Success
-        { context : Ctx.Context
+        { context : Ctx.VersionContext
         , searchDict : SearchDict
         , query : String
         }
@@ -35,7 +35,7 @@ type alias SearchDict =
 -- INIT
 
 
-init : Ctx.Context -> (Model, Effects Action)
+init : Ctx.VersionContext -> (Model, Effects Action)
 init context =
   ( Loading
   , loadDocs context
@@ -48,7 +48,7 @@ init context =
 
 type Action
     = Fail Http.Error
-    | Load Ctx.Context SearchDict
+    | Load Ctx.VersionContext SearchDict
     | Query String
 
 
@@ -86,7 +86,7 @@ update action model =
 -- EFFECTS
 
 
-loadDocs : Ctx.Context -> Effects Action
+loadDocs : Ctx.VersionContext -> Effects Action
 loadDocs context =
   Ctx.getDocs context
     |> Task.map (Load context << makeSearchable)
@@ -135,7 +135,7 @@ view addr model =
           ]
 
 
-viewSearchDict : Ctx.Context -> String -> SearchDict -> Html
+viewSearchDict : Ctx.VersionContext -> String -> SearchDict -> Html
 viewSearchDict context query searchDict =
   if String.isEmpty query then
     ul [] (List.map (li [] << singleton << moduleLink context << Just) (Dict.keys searchDict))
@@ -156,7 +156,7 @@ viewSearchDict context query searchDict =
       ul [] (List.map (viewModuleLinks context) searchResults)
 
 
-viewModuleLinks : Ctx.Context -> (String, List String) -> Html
+viewModuleLinks : Ctx.VersionContext -> (String, List String) -> Html
 viewModuleLinks context (name, values) =
   li
     [ class "pkg-nav-search-chunk" ]
@@ -165,7 +165,7 @@ viewModuleLinks context (name, values) =
     ]
 
 
-githubLink : Ctx.Context -> Html
+githubLink : Ctx.VersionContext -> Html
 githubLink context =
   a [ class "pkg-nav-module"
     , href ("https://github.com" </> context.user </> context.project </> "tree" </> context.version)
@@ -173,7 +173,7 @@ githubLink context =
     [ text "Browse source" ]
 
 
-moduleLink : Ctx.Context -> Maybe String -> Html
+moduleLink : Ctx.VersionContext -> Maybe String -> Html
 moduleLink context name =
   let
     visibleName =
@@ -192,7 +192,7 @@ moduleLink context name =
     a [ class "pkg-nav-module", href url ] [ visibleText ]
 
 
-valueLink : Ctx.Context -> String -> String -> Html
+valueLink : Ctx.VersionContext -> String -> String -> Html
 valueLink context moduleName valueName =
   li
     [ class "pkg-nav-value"

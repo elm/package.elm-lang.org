@@ -9,9 +9,11 @@ import Regex
 import String
 import Task
 
-import Docs.Package as Docs
 import Docs.Entry as Entry
+import Docs.Package as Docs
+import Docs.Type as Type
 import Page.Context as Ctx
+import Parse.Type as Type
 import Utils.Markdown as Markdown
 
 
@@ -19,12 +21,13 @@ type Model
     = Loading
     | Failed Http.Error
     | Readme String
-    | Docs { name : String, chunks : List Chunk }
+    | RawDocs { name : String, chunks : List (Chunk String) }
+    | ParsedDocs { name : String, chunks : List (Chunk Type.Type) }
 
 
-type Chunk
+type Chunk tipe
     = Markdown String
-    | Entry Entry.Model
+    | Entry (Entry.Model tipe)
 
 
 -- INIT
@@ -43,6 +46,7 @@ init context =
 
 type Action
     = LoadDocs String Docs.Package
+    | LoadParsedDocs (List (Chunk Type.Type))
     | LoadReadme String
     | Fail Http.Error
 
@@ -63,12 +67,28 @@ update action model =
     LoadDocs moduleName docs ->
         case Dict.get moduleName docs of
           Just moduleDocs ->
-              ( Docs { name = moduleName, chunks = toChunks moduleDocs }
-              , Fx.none
-              )
+              let
+                chunks =
+                  toChunks moduleDocs
+              in
+                ( RawDocs { name = moduleName, chunks = chunks }
+                , delayedTypeParse chunks
+                )
 
           Nothing ->
               ( Failed (Http.UnexpectedPayload ("Could not find module '" ++ moduleName ++ "'"))
+              , Fx.none
+              )
+
+    LoadParsedDocs newChunks ->
+        case model of
+          RawDocs {name} ->
+              ( ParsedDocs { name = name, chunks = newChunks }
+              , Fx.none
+              )
+
+          _ ->
+              ( Failed (Http.UnexpectedPayload ("Something went wrong parsing types."))
               , Fx.none
               )
 
@@ -91,6 +111,33 @@ getContext context =
         |> Task.map (LoadDocs name)
         |> flip Task.onError (Task.succeed << Fail)
         |> Fx.task
+
+
+delayedTypeParse : List (Chunk String) -> Effects Action
+delayedTypeParse chunks =
+  Fx.task <|
+    Task.succeed () `Task.andThen` \_ ->
+        Task.succeed (LoadParsedDocs (List.map (chunkMap stringToType) chunks))
+
+
+chunkMap : (a -> b) -> Chunk a -> Chunk b
+chunkMap func chunk =
+  case chunk of
+    Markdown md ->
+      Markdown md
+
+    Entry entry ->
+      Entry (Entry.map func entry)
+
+
+stringToType : String -> Type.Type
+stringToType str =
+  case Type.parse str of
+    Ok tipe ->
+      tipe
+
+    Err _ ->
+      Type.Var str
 
 
 
@@ -117,19 +164,23 @@ view addr model =
           [ Markdown.block readme
           ]
 
-      Docs {name,chunks} ->
+      RawDocs {name,chunks} ->
           h1 [class "entry-list-title"] [text name]
-          :: List.map (viewChunk addr) chunks
+          :: List.map (viewChunk Entry.stringView) chunks
+
+      ParsedDocs {name,chunks} ->
+          h1 [class "entry-list-title"] [text name]
+          :: List.map (viewChunk Entry.typeView) chunks
 
 
-viewChunk : Signal.Address Action -> Chunk -> Html
-viewChunk addr chunk =
+viewChunk : (Entry.Model tipe -> Html) -> Chunk tipe -> Html
+viewChunk entryView chunk =
   case chunk of
     Markdown md ->
         span [class "markdown-entry"] [ Markdown.block md ]
 
     Entry entry ->
-        Entry.view addr entry
+        entryView entry
 
 
 
@@ -137,7 +188,7 @@ viewChunk addr chunk =
 -- MAKE CHUNKS
 
 
-toChunks : Docs.Module -> List Chunk
+toChunks : Docs.Module -> List (Chunk String)
 toChunks moduleDocs =
   case String.split "\n@docs " moduleDocs.comment of
     [] ->
@@ -148,12 +199,12 @@ toChunks moduleDocs =
         :: List.concatMap (subChunks moduleDocs) rest
 
 
-subChunks : Docs.Module -> String -> List Chunk
+subChunks : Docs.Module -> String -> List (Chunk String)
 subChunks moduleDocs postDocs =
     subChunksHelp moduleDocs (String.split "," postDocs)
 
 
-subChunksHelp : Docs.Module -> List String -> List Chunk
+subChunksHelp : Docs.Module -> List String -> List (Chunk String)
 subChunksHelp moduleDocs parts =
   case parts of
     [] ->
@@ -212,7 +263,7 @@ isValue str =
 
 
 
-toEntry : Docs.Module -> String -> Chunk
+toEntry : Docs.Module -> String -> Chunk String
 toEntry moduleDocs name =
   case Dict.get name moduleDocs.entries of
     Nothing ->

@@ -16,28 +16,28 @@ import Utils.Markdown as Markdown
 -- MODEL
 
 
-type alias Model =
+type alias Model tipe =
     { name : String
-    , info : Info
+    , info : Info tipe
     , docs : String
     }
 
 
-type Info
-    = Value Type (Maybe Fixity)
+type Info tipe
+    = Value tipe (Maybe Fixity)
     | Union
         { vars : List String
-        , tags : List Tag
+        , tags : List (Tag tipe)
         }
     | Alias
         { vars : List String
-        , tipe : Type
+        , tipe : tipe
         }
 
 
-type alias Tag =
+type alias Tag tipe =
     { tag : String
-    , args : List Type
+    , args : List tipe
     }
 
 
@@ -51,20 +51,72 @@ type alias Fixity =
 -- UPDATE
 
 
-update : a -> Model -> (Model, Effects a)
+update : a -> Model tipe -> (Model tipe, Effects a)
 update action model =
   (model, Fx.none)
 
 
 
--- VIEW
+-- MAP
+
+
+map : (a -> b) -> Model a -> Model b
+map func model =
+  let
+    newInfo =
+      case model.info of
+        Value tipe fixity ->
+          Value (func tipe) fixity
+
+        Union {vars,tags} ->
+          Union { vars = vars, tags = List.map (tagMap func) tags }
+
+        Alias {vars,tipe} ->
+          Alias { vars = vars, tipe = func tipe }
+  in
+    { model | info = newInfo }
+
+
+tagMap : (a -> b) -> Tag a -> Tag b
+tagMap func tag =
+  { tag | args = List.map func tag.args }
+
+
+
+-- STRING VIEW
+
+
+stringView : Model String -> Html
+stringView model =
+  let
+    annotation =
+      case model.info of
+        Value tipe _ ->
+            [ nameToLink model.name :: padded colon ++ [text tipe] ]
+
+        Union {vars,tags} ->
+            unionAnnotation (\t -> [text t]) model.name vars tags
+
+        Alias {vars,tipe} ->
+            [ aliasNameLine model.name vars
+            , [ text "    ", text tipe ]
+            ]
+  in
+    div [ class "docs-entry", id model.name ]
+      [ annotationBlock annotation
+      , div [class "docs-comment"] [Markdown.block model.docs]
+      ]
+
+
+
+-- TYPE VIEW
 
 
 (=>) = (,)
 
 
-view : Signal.Address a -> Model -> Html
-view _ model =
+typeView : Model Type -> Html
+typeView model =
   let
     annotation =
       case model.info of
@@ -72,7 +124,7 @@ view _ model =
             valueAnnotation model.name tipe
 
         Union {vars,tags} ->
-            unionAnnotation model.name vars tags
+            unionAnnotation (Type.toHtml Type.App) model.name vars tags
 
         Alias {vars,tipe} ->
             aliasAnnotation model.name vars tipe
@@ -99,7 +151,7 @@ nameToLink name =
       else
         name
   in
-    a [href ("#" ++ name)] [text humanName]
+    a [style ["font-weight" => "bold"], href ("#" ++ name)] [text humanName]
 
 
 operator : Regex.Regex
@@ -115,7 +167,11 @@ valueAnnotation : String -> Type -> List (List Html)
 valueAnnotation name tipe =
   case tipe of
     Type.Function args result ->
-        if Type.length Type.Other tipe > 120 then
+        let
+          foo =
+            Debug.log "LENGTH" (name, Type.length Type.Other tipe)
+        in
+        if String.length name + 3 + Type.length Type.Other tipe > 64 then
             [ nameToLink name ] :: longFunctionAnnotation args result
 
         else
@@ -143,8 +199,8 @@ longFunctionAnnotation args result =
 -- UNION ANNOTATIONS
 
 
-unionAnnotation : String -> List String -> List Tag -> List (List Html)
-unionAnnotation name vars tags =
+unionAnnotation : (tipe -> List Html) -> String -> List String -> List (Tag tipe) -> List (List Html)
+unionAnnotation tipeToHtml name vars tags =
   let
     nameLine =
       [ keyword "type"
@@ -156,14 +212,14 @@ unionAnnotation name vars tags =
     tagLines =
       List.map2 (::)
         (text "    = " :: List.repeat (List.length tags - 1) (text "    | "))
-        (List.map viewTag tags)
+        (List.map (viewTag tipeToHtml) tags)
   in
     nameLine :: tagLines
 
 
-viewTag : Tag -> List Html
-viewTag {tag,args} =
-  text tag :: List.concatMap ((::) space) (List.map (Type.toHtml Type.App) args)
+viewTag : (tipe -> List Html) -> Tag tipe -> List Html
+viewTag tipeToHtml {tag,args} =
+  text tag :: List.concatMap ((::) space) (List.map tipeToHtml args)
 
 
 
@@ -173,18 +229,6 @@ viewTag {tag,args} =
 aliasAnnotation : String -> List String -> Type -> List (List Html)
 aliasAnnotation name vars tipe =
   let
-    nameLine =
-      [ keyword "type"
-      , space
-      , keyword "alias"
-      , space
-      , nameToLink name
-      , text (String.concat (List.map ((++) " ") vars))
-      , space
-      , equals
-      , space
-      ]
-
     typeLines =
       case tipe of
         Type.Record fields ext ->
@@ -196,8 +240,8 @@ aliasAnnotation name vars tipe =
                       , text "    { " :: List.repeat (List.length fields) (text "    , ")
                       )
 
-                    Just extTipe ->
-                      ( [ text "    { " :: Type.toHtml Type.Other extTipe ++ [text " |"] ]
+                    Just extName ->
+                      ( [ [ text "    { ", text extName, text " |" ] ]
                       , text "      | " :: List.repeat (List.length fields) (text "      , ")
                       )
             in
@@ -208,5 +252,18 @@ aliasAnnotation name vars tipe =
         _ ->
             [ Type.toHtml Type.Other tipe ]
   in
-    nameLine :: typeLines
+    aliasNameLine name vars :: typeLines
 
+
+aliasNameLine : String -> List String -> List Html
+aliasNameLine name vars =
+  [ keyword "type"
+  , space
+  , keyword "alias"
+  , space
+  , nameToLink name
+  , text (String.concat (List.map ((++) " ") vars))
+  , space
+  , equals
+  , space
+  ]

@@ -17,7 +17,8 @@ type Type
     = Function (List Type) Type
     | Var String
     | Apply Name.Canonical (List Type)
-    | Record (List (String, Type)) (Maybe Type)
+    | Tuple (List Type)
+    | Record (List (String, Type)) (Maybe String)
 
 
 type alias Tag =
@@ -27,20 +28,10 @@ type alias Tag =
 
 
 
--- PARSE
-
-
-parse : String -> Type
-parse rawType =
-  Var "a"
-
-
-
 -- TYPE TO FLAT HTML
 
 
 type Context = Func | App | Other
-
 
 
 toHtml : Context -> Type -> List Html
@@ -62,6 +53,9 @@ toHtml context tipe =
     Var name ->
         [ text name ]
 
+    Apply name [] ->
+        [ Name.toLink name ]
+
     Apply name args ->
         let
           maybeAddParens =
@@ -75,6 +69,12 @@ toHtml context tipe =
         in
           maybeAddParens (Name.toLink name :: argsHtml)
 
+    Tuple args ->
+      List.map (toHtml Other) args
+        |> List.intersperse [text ", "]
+        |> List.concat
+        |> Code.addParens
+
     Record fields ext ->
         let
           fieldsHtml =
@@ -87,8 +87,8 @@ toHtml context tipe =
               Nothing ->
                 fieldsHtml
 
-              Just tipe ->
-                toHtml Other tipe ++ text " | " :: fieldsHtml
+              Just extName ->
+                text extName :: text " | " :: fieldsHtml
         in
           text "{ " :: recordInsides ++ [text " }"]
 
@@ -106,6 +106,7 @@ length : Context -> Type -> Int
 length context tipe =
   case tipe of
     Function args result ->
+        Debug.log "function" <|
         let
           parens =
             case context of
@@ -114,17 +115,18 @@ length context tipe =
               Other -> 0
 
           argLengths =
-            List.map (length Func) args
-
-          arrows =
-            4 * List.length args
+            List.map (\t -> 4 + length Func t) args
         in
-          parens + List.sum argLengths + arrows + length Func result
+          parens + List.sum argLengths + length Func result
 
     Var name ->
+        Debug.log name <|
         String.length name
 
-    Apply name args ->
+    Apply {name} [] ->
+        String.length name
+
+    Apply {name} args ->
         let
           parens =
             case context of
@@ -132,13 +134,13 @@ length context tipe =
               App -> 2
               Other -> 0
 
-          nameLength =
-            String.length name.home + 1 + String.length name.name
-
           argsLength =
             List.sum (List.map (\t -> 1 + length App t) args)
         in
-          nameLength + argsLength + parens
+          parens + String.length name + argsLength
+
+    Tuple args ->
+        List.sum (List.map (\t -> 2 + length Other t) args)
 
     Record fields ext ->
         let
@@ -153,9 +155,8 @@ length context tipe =
               Nothing ->
                 0
 
-              Just tipe ->
-                2 + length Other tipe
+              Just extName ->
+                2 + String.length extName
         in
           recordLength + extLength
-
 
