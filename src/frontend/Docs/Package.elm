@@ -10,7 +10,6 @@ import Dict
 import Json.Decode as Json exposing ((:=))
 
 import Docs.Name as Name
-import Docs.Type as Type
 import Docs.Entry as Entry
 
 
