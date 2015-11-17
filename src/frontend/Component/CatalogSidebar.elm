@@ -61,6 +61,7 @@ view addr model =
         [ li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
         , li [] [ a [ href "/help/design-guidelines" ] [ text "API Design Guidelines" ] ]
         , li [] [ a [ href "/help/documentation-format" ] [ text "Documentation Format" ] ]
+        , li [] [ a [ href "http://elm-lang.org" ] [ text "Elm Website" ] ]
         ]
     , h2 [] [ text "Popular Packages" ]
     , ul []
