@@ -1,8 +1,10 @@
 module Docs.Type where
 
+import Dict
 import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Set
 import String
 
 import Docs.Name as Name
@@ -34,8 +36,12 @@ type alias Tag =
 type Context = Func | App | Other
 
 
-toHtml : Context -> Type -> List Html
-toHtml context tipe =
+toHtml : Name.Dictionary -> Context -> Type -> List Html
+toHtml nameDict context tipe =
+  let
+    go ctx t =
+      toHtml nameDict ctx t
+  in
   case tipe of
     Function args result ->
         let
@@ -46,15 +52,15 @@ toHtml context tipe =
               Other -> identity
 
           argsHtml =
-            List.concatMap (\arg -> toHtml Func arg ++ padded arrow) args
+            List.concatMap (\arg -> go Func arg ++ padded arrow) args
         in
-          maybeAddParens (argsHtml ++ toHtml Func result)
+          maybeAddParens (argsHtml ++ go Func result)
 
     Var name ->
         [ text name ]
 
     Apply name [] ->
-        [ Name.toLink name ]
+        [ Name.toLink nameDict name ]
 
     Apply name args ->
         let
@@ -65,12 +71,12 @@ toHtml context tipe =
               Other -> identity
 
           argsHtml =
-            List.concatMap (\arg -> space :: toHtml App arg) args
+            List.concatMap (\arg -> space :: go App arg) args
         in
-          maybeAddParens (Name.toLink name :: argsHtml)
+          maybeAddParens (Name.toLink nameDict name :: argsHtml)
 
     Tuple args ->
-      List.map (toHtml Other) args
+      List.map (go Other) args
         |> List.intersperse [text ", "]
         |> List.concat
         |> Code.addParens
@@ -78,7 +84,7 @@ toHtml context tipe =
     Record fields ext ->
         let
           fieldsHtml =
-            List.map fieldToHtml fields
+            List.map (fieldToHtml nameDict) fields
               |> List.intersperse [text ", "]
               |> List.concat
 
@@ -93,9 +99,9 @@ toHtml context tipe =
           text "{ " :: recordInsides ++ [text " }"]
 
 
-fieldToHtml : (String, Type) -> List Html
-fieldToHtml (field, tipe) =
-  text field :: space :: colon :: space :: toHtml Other tipe
+fieldToHtml : Name.Dictionary -> (String, Type) -> List Html
+fieldToHtml nameDict (field, tipe) =
+  text field :: space :: colon :: space :: toHtml nameDict Other tipe
 
 
 

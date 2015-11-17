@@ -6,10 +6,12 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
 import Regex
+import Set
 import String
 import Task
 
 import Docs.Entry as Entry
+import Docs.Name as Name
 import Docs.Package as Docs
 import Docs.Type as Type
 import Page.Context as Ctx
@@ -17,12 +19,23 @@ import Parse.Type as Type
 import Utils.Markdown as Markdown
 
 
+
+-- MODEL
+
+
 type Model
     = Loading
     | Failed Http.Error
     | Readme String
-    | RawDocs { name : String, chunks : List (Chunk String) }
-    | ParsedDocs { name : String, chunks : List (Chunk Type.Type) }
+    | RawDocs (Info String)
+    | ParsedDocs (Info Type.Type)
+
+
+type alias Info tipe =
+  { name : String
+  , nameDict : Name.Dictionary
+  , chunks : List (Chunk tipe)
+  }
 
 
 type Chunk tipe
@@ -71,7 +84,7 @@ update action model =
                 chunks =
                   toChunks moduleDocs
               in
-                ( RawDocs { name = moduleName, chunks = chunks }
+                ( RawDocs (Info moduleName (toNameDict docs) chunks)
                 , delayedTypeParse chunks
                 )
 
@@ -82,8 +95,8 @@ update action model =
 
     LoadParsedDocs newChunks ->
         case model of
-          RawDocs {name} ->
-              ( ParsedDocs { name = name, chunks = newChunks }
+          RawDocs info ->
+              ( ParsedDocs { info | chunks = newChunks }
               , Fx.none
               )
 
@@ -91,6 +104,12 @@ update action model =
               ( Failed (Http.UnexpectedPayload ("Something went wrong parsing types."))
               , Fx.none
               )
+
+
+toNameDict : Docs.Package -> Name.Dictionary
+toNameDict pkg =
+  Dict.map (\_ modul -> Set.fromList (Dict.keys modul.entries)) pkg
+
 
 
 
@@ -168,9 +187,9 @@ view addr model =
           h1 [class "entry-list-title"] [text name]
           :: List.map (viewChunk Entry.stringView) chunks
 
-      ParsedDocs {name,chunks} ->
+      ParsedDocs {name,nameDict,chunks} ->
           h1 [class "entry-list-title"] [text name]
-          :: List.map (viewChunk Entry.typeView) chunks
+          :: List.map (viewChunk (Entry.typeView nameDict)) chunks
 
 
 viewChunk : (Entry.Model tipe -> Html) -> Chunk tipe -> Html

@@ -1,7 +1,9 @@
 module Docs.Name where
 
+import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Set
 import String
 
 
@@ -11,24 +13,20 @@ type alias Canonical =
     }
 
 
-toLink : Canonical -> Html
-toLink ({home,name} as canonical) =
-  if isPrim canonical then
-    text name
-
-  else
-    let
-      link =
-        String.map (\c -> if c == '.' then '-' else c) home ++ "#" ++ name
-    in
-      a [href link] [text name]
+type alias Dictionary =
+    Dict.Dict String (Set.Set String)
 
 
-isPrim : Canonical -> Bool
-isPrim {home,name} =
-  (&&) (home == "")
-    <| name == "Bool"
-    || name == "Char"
-    || name == "String"
-    || name == "Int"
-    || name == "Float"
+toLink : Dictionary -> Canonical -> Html
+toLink dict ({home,name} as canonical) =
+  case Maybe.map (Set.member name) (Dict.get home dict) of
+    Just True ->
+      let
+        link =
+          String.map (\c -> if c == '.' then '-' else c) home ++ "#" ++ name
+      in
+        a [href link] [text name]
+
+    _ ->
+      text name
+

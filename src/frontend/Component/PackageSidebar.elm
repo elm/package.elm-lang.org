@@ -89,13 +89,13 @@ update action model =
 loadDocs : Ctx.VersionContext -> Effects Action
 loadDocs context =
   Ctx.getDocs context
-    |> Task.map (Load context << makeSearchable)
+    |> Task.map (Load context << toSearchDict)
     |> flip Task.onError (Task.succeed << Fail)
     |> Fx.task
 
 
-makeSearchable : Docs.Package -> SearchDict
-makeSearchable pkg =
+toSearchDict : Docs.Package -> SearchDict
+toSearchDict pkg =
   Dict.map (\_ modul -> Dict.keys modul.entries) pkg
 
 
