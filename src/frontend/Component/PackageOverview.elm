@@ -40,9 +40,16 @@ init context =
       Debug.crash <| "One of the versions in " ++ toString context.versions ++ " has a problem: " ++ msg
 
     Ok allVersions ->
-      ( Model context (Vsn.toDict allVersions) False
-      , Fx.none
-      )
+      let
+        vsnDict =
+          Vsn.toDict allVersions
+
+        total =
+          List.sum (List.map (\{others} -> 1 + List.length others) (Dict.values vsnDict))
+      in
+        ( Model context vsnDict (total < 10)
+        , Fx.none
+        )
 
 
 
