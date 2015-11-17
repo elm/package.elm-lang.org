@@ -246,7 +246,7 @@ aliasAnnotation name vars tipe =
               ++ [[text "    }"]]
 
         _ ->
-            [ Type.toHtml Type.Other tipe ]
+            [ text "    " :: Type.toHtml Type.Other tipe ]
   in
     aliasNameLine name vars :: typeLines
 
