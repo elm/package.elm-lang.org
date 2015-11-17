@@ -173,15 +173,29 @@ verifyWhitelist allowNatives name =
 
 whitelistError :: Pkg.Name -> String
 whitelistError name =
-    "You are trying to publish a project that has native modules. For now,\n\
-    \any modules that use Native code must go through a formal review process to\n\
-    \make sure the exposed API is pure and the Native code is absolutely\n\
-    \necessary. Please open an issue with the title:\n\n"
-    ++ "    \"Native review for " ++ Pkg.toString name ++ "\"\n\n"
-    ++ "to begin the review process at the following address.\n"
-    ++ "<https://github.com/elm-lang/package.elm-lang.org/issues>\n\n"
-    ++ "The issue should link to the relevant repository and provide sufficient\n"
-    ++ "context for evaluation."
+  "You are trying to publish a project that has native modules, but this is not\n\
+  \permitted for now.\n\
+  \\n\
+  \Writing native modules is very important because it will let the Elm community\n\
+  \cover the whole web platform with nice community-driven packages. That said,\n\
+  \it introduces many ways to break the guarantees provided by Elm, so it is very\n\
+  \important that these packages are written in a reliable way.\n\
+  \\n\
+  \Essentially, it is clear that this is very important, but also clear that we do\n\
+  \not have a good mechanism for making sure everyone can write reliable native\n\
+  \modules. This is one of the big issues getting focused on in upcoming releases.\n\
+  \\n\
+  \For now, there is review process to expidite certain things, but it is badly\n\
+  \backed up. If you really cannot wait a few months before publishing, please\n\
+  \open an issue with the title:\n\
+  \\n\
+  \    \"Native review for " ++ Pkg.toString name ++ "\"\n\
+  \\n\
+  \at <https://github.com/elm-lang/package.elm-lang.org/issues>. The issue should\n\
+  \link to the relevant repository and provide sufficient context for evaluation.\n\
+  \But keep in mind that the review process is significantly backed up! The\n\
+  \priority is on making reviews unnecessary, and in the meantime, the fewer\n\
+  \special exceptions the better."
 
 
 -- UPLOADING FILES
