@@ -167,10 +167,6 @@ valueAnnotation : String -> Type -> List (List Html)
 valueAnnotation name tipe =
   case tipe of
     Type.Function args result ->
-        let
-          foo =
-            Debug.log "LENGTH" (name, Type.length Type.Other tipe)
-        in
         if String.length name + 3 + Type.length Type.Other tipe > 64 then
             [ nameToLink name ] :: longFunctionAnnotation args result
 

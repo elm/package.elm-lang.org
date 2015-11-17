@@ -106,7 +106,6 @@ length : Context -> Type -> Int
 length context tipe =
   case tipe of
     Function args result ->
-        Debug.log "function" <|
         let
           parens =
             case context of
@@ -120,7 +119,6 @@ length context tipe =
           parens + List.sum argLengths + length Func result
 
     Var name ->
-        Debug.log name <|
         String.length name
 
     Apply {name} [] ->
