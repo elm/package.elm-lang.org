@@ -146,8 +146,8 @@ insert y list =
       [y]
 
     x :: xs ->
-      if x < y then
-        x :: y :: xs
+      if y > x then
+        x :: insert y xs
 
       else
-        x :: insert y xs
+        y :: list
