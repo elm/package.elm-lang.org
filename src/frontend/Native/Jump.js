@@ -12,7 +12,16 @@ Elm.Native.Jump.make = function(localRuntime)
 	var Task = Elm.Native.Task.make(localRuntime);
 
 	var jump = Task.asyncFunction(function(callback) {
-		window.location = window.location.hash;
+		var hash = window.location.hash;
+		if (hash.length > 0 && hash[0] === '#')
+		{
+			var id = hash.slice(1);
+			var target = document.getElementById(id);
+			if (typeof target.scrollIntoView === 'function')
+			{
+				target.scrollIntoView(true);
+			}
+		}
 		return callback(Task.succeed({ ctor: '_Tuple0' }));
 	});
 
