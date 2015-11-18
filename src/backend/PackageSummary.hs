@@ -25,6 +25,11 @@ allPackages =
     "all-packages.json"
 
 
+allPackagesOld :: String
+allPackagesOld =
+    "all-packages-old.json"
+
+
 -- ADD A SUMMARY
 
 add :: Desc.Description -> IO ()
@@ -43,8 +48,12 @@ insert summary summaries =
 
       currentSummary : rest ->
           case compare (name summary) (name currentSummary) of
-            GT -> currentSummary : insert summary rest
-            LT -> summary : summaries
+            GT ->
+                currentSummary : insert summary rest
+
+            LT ->
+                summary : summaries
+
             EQ ->
                 let vs = versions summary ++ versions currentSummary
                 in
