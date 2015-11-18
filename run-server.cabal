@@ -27,7 +27,7 @@ source-repository head
 
 Executable run-server
   hs-source-dirs:
-    backend
+    src/backend
 
   Main-is:
     Main.hs
@@ -53,23 +53,3 @@ Executable run-server
     snap-server,
     text,
     unordered-containers
-
-
-Executable upgrade-docs
-  hs-source-dirs:
-    .
-
-  Main-is:
-    upgrade-docs.hs
-
-  ghc-options:
-    -threaded -O2 -W -rtsopts
-
-  Build-depends:
-    aeson,
-    base >=4.2 && <5,
-    bytestring,
-    directory,
-    elm-compiler,
-    filepath,
-    text

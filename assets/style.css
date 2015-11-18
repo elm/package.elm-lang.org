@@ -1,0 +1,290 @@
+@import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700,400italic,700italic|Source+Code+Pro);
+
+html, head, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande', 'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
+  color: #293c4b;
+}
+
+h1, h2, h3, h4 {
+  font-weight: normal;
+}
+
+p, li {
+  line-height: 1.5em;
+}
+
+a {
+  color: #1184CE;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+  color: rgb(234,21,122);
+}
+
+pre {
+  margin: 0;
+  padding: 10px;
+  background-color: rgb(254,254,254);
+  border-style: solid;
+  border-width: 1px;
+  border-color: rgb(245,245,245);
+  border-radius: 6px;
+  overflow-x: scroll;
+}
+
+
+
+/* HOME */
+
+.home-summaries ul {
+  list-style-type: none;
+  padding-left: 1em;
+}
+
+
+
+/* HEADER */
+
+
+.center {
+  width: 920px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.header {
+  padding: 10px 0;
+  color: #333333;
+  font-size: 24px;
+  margin: 0;
+  text-overflow: ellipsis;
+}
+
+.header a:hover {
+  color: #333333;
+}
+
+.header-underbar {
+  margin: 0;
+  padding: 1px 0;
+}
+
+.version-warning {
+  text-align: center;
+  margin: 0;
+  padding: 4px 0;
+  color: white;
+}
+
+.version-warning a {
+  color: white;
+  text-decoration: underline;
+}
+
+.spacey-char {
+  margin: 0 10px;
+}
+
+
+
+/* FOOTER */
+
+
+.footer {
+  text-align: center;
+  margin-top: 4em;
+  border-top: 1px solid #eeeeee;
+  padding: 2em 0;
+  color: #bbbbbb;
+}
+
+
+.grey-link {
+  color: #bbbbbb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.grey-link:hover {
+  color: #bbbbbb;
+}
+
+
+/* DOCUMENTATION */
+
+
+.entry-list {
+  width: 600px;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.entry-list-title {
+  font-size: 3em;
+}
+
+.markdown-entry h1 {
+  margin-top: 2em;
+  margin-bottom: 0.5px
+}
+
+.docs-entry {
+  border-top: 1px solid #eeeeee;
+  margin-top: 1em;
+  margin-bottom: 2em;
+}
+
+
+.docs-annotation {
+  white-space: pre;
+  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+
+.docs-comment {
+  overflow: hidden;
+  padding-left: 3em;
+}
+
+
+
+/* PACKAGE NAVIGATION */
+
+
+.pkg-nav {
+  width: 200px;
+  display: inline-block;
+  vertical-align: top;
+  padding: 20px;
+  margin: 20px 20px 20px 40px;
+  border-left: 1px solid #eeeeee;
+}
+
+.pkg-nav h2 {
+  margin-bottom: 0;
+}
+
+.pkg-nav input {
+  width: 200px;
+  font-size: 1em;
+  padding: 4px;
+  margin: 10px 0;
+  border: 1px solid #eeeeee;
+  border-radius: 6px;
+}
+
+.pkg-nav ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pkg-nav ul ul {
+  list-style-type: none;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.pkg-nav-module {
+  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
+  text-overflow: ellipsis;
+}
+
+.pkg-nav-value {
+  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
+  text-overflow: ellipsis;
+}
+
+.pkg-nav-search-chunk {
+  padding-bottom: 10px;
+}
+
+
+
+/* CATALOG */
+
+
+.catalog {
+  width: 600px;
+  display: inline-block;
+  vertical-align: top;
+}
+
+
+.catalog input {
+  width: 578px;
+  font-size: 1.5em;
+  padding: 10px;
+  outline: none;
+  border: 1px solid #eeeeee;
+  border-radius: 8px;
+  margin-top: 40px;
+  margin-bottom: 10px;
+}
+
+
+.pkg-summary {
+  padding: 20px 0;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.pkg-summary h1 {
+  margin: 0;
+  font-size: 1.5em;
+  display: inline-block;
+}
+
+.pkg-summary-desc {
+  margin: 0.5em 0;
+}
+
+.pkg-summary-hints {
+  float: right;
+  font-size: 1em;
+  padding-top: 0.5em;
+  color: #bbbbbb;
+}
+
+.pkg-summary-hints a {
+  color: #bbbbbb;
+}
+
+
+
+/* CATALOG SIDEBAR */
+
+
+.catalog-sidebar {
+  width: 200px;
+  display: inline-block;
+  vertical-align: top;
+  padding: 20px;
+  margin: 20px 20px 20px 40px;
+  border-left: 1px solid #eeeeee;
+}
+
+.catalog-sidebar h2 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}
+
+.catalog-sidebar ul {
+  list-style-type: none;
+  margin: 0;
+  padding-left: 20px;
+  padding-bottom: 10px;
+}
+
+.catalog-sidebar ul ul {
+  list-style-type: none;
+  margin: 0;
+  padding-left: 20px;
+}
