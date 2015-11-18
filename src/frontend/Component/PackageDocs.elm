@@ -14,6 +14,7 @@ import Docs.Entry as Entry
 import Docs.Name as Name
 import Docs.Package as Docs
 import Docs.Type as Type
+import Native.Jump
 import Page.Context as Ctx
 import Parse.Type as Type
 import Utils.Markdown as Markdown
@@ -62,11 +63,17 @@ type Action
     | LoadParsedDocs (List (Chunk Type.Type))
     | LoadReadme String
     | Fail Http.Error
+    | NoOp
 
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
+    NoOp ->
+        ( model
+        , Fx.none
+        )
+
     Fail httpError ->
         ( Failed httpError
         , Fx.none
@@ -97,7 +104,7 @@ update action model =
         case model of
           RawDocs info ->
               ( ParsedDocs { info | chunks = newChunks }
-              , Fx.none
+              , jumpToHash
               )
 
           _ ->
@@ -109,7 +116,6 @@ update action model =
 toNameDict : Docs.Package -> Name.Dictionary
 toNameDict pkg =
   Dict.map (\_ modul -> Set.fromList (Dict.keys modul.entries)) pkg
-
 
 
 
@@ -157,6 +163,13 @@ stringToType str =
 
     Err _ ->
       Type.Var str
+
+
+jumpToHash : Effects Action
+jumpToHash =
+  Native.Jump.jump
+    |> Task.map (always NoOp)
+    |> Fx.task
 
 
 
