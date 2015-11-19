@@ -35,7 +35,7 @@ pre {
   border-width: 1px;
   border-color: rgb(245,245,245);
   border-radius: 6px;
-  overflow-x: scroll;
+  overflow-x: auto;
 }
 
 
