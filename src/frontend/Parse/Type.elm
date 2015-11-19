@@ -72,7 +72,13 @@ nameHelp seen =
 apply : Parser Type
 apply =
   lazy <| \_ ->
-    map2 Apply name (zeroOrMore (ignore1 spaces tipeTerm))
+    map2 Apply name (zeroOrMore (ignore1 spaces applyTerm))
+
+
+applyTerm : Parser Type
+applyTerm =
+  lazy <| \_ ->
+    oneOf [ var, map (\n -> Apply n []) name, record, parenTipe ]
 
 
 
