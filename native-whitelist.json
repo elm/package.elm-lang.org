@@ -14,6 +14,7 @@
     "maxsnew/lazy",
     "mgold/elm-socketio",
     "michaelbjames/elm-benchmark",
+    "NoRedInk/elm-rails",
     "seliopou/elm-d3",
     "TheSeamau5/elm-history",
     "ThomasWeiser/elmfire"
