@@ -23,6 +23,11 @@ favicon =
     ! A.href "/assets/favicon.ico"
 
 
+cacheBuster :: String -> AttributeValue
+cacheBuster url =
+  toValue (url ++ "?1")
+
+
 makeHtml :: String -> [String] -> Snap (Maybe (String, [(String, String)])) -> Snap ()
 makeHtml title elmModuleName makePortInput =
   let
@@ -36,10 +41,10 @@ makeHtml title elmModuleName makePortInput =
           favicon
           H.title (toHtml title)
           googleAnalytics
-          link ! rel "stylesheet" ! href "/assets/highlight/styles/default.css"
-          link ! rel "stylesheet" ! href "/assets/style.css"
-          script ! src "/assets/highlight/highlight.pack.js" $ ""
-          script ! src (toValue ("/" ++ Path.artifact elmModule)) $ ""
+          link ! rel "stylesheet" ! href (cacheBuster "/assets/highlight/styles/default.css")
+          link ! rel "stylesheet" ! href (cacheBuster "/assets/style.css")
+          script ! src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
+          script ! src (cacheBuster ("/" ++ Path.artifact elmModule)) $ ""
 
         body $
           script $ preEscapedToMarkup $
