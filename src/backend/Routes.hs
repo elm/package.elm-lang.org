@@ -126,9 +126,8 @@ register =
       description <- Desc.read (directory </> Path.description)
 
       result <-
-          liftIO $ runExceptT $ do
+          liftIO $ runExceptT $
             verifyWhitelist (Desc.natives description) (Desc.name description)
-            splitDocs directory
 
       case result of
         Right () ->
@@ -249,21 +248,6 @@ writePartError part =
 
       Left exception ->
           writeText (policyViolationExceptionReason exception)
-
-
-splitDocs :: FilePath -> ExceptT String IO ()
-splitDocs directory =
-  do  json <- liftIO (LBS.readFile (directory </> documentationPath))
-      case Json.decode json of
-        Nothing -> throwError "The uploaded documentation is invalid."
-        Just docs ->
-          liftIO $
-            forM_ (docs :: [Docs.Documentation]) $ \doc ->
-              do  let name = Module.hyphenate (Docs.moduleName doc)
-                  let docPath = directory </> "docs" </> name <.> "json"
-                  createDirectoryIfMissing True (directory </> "docs")
-                  LBS.writeFile docPath (Json.encode doc)
-
 
 
 -- FETCH ALL AVAILABLE VERSIONS
