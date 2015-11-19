@@ -2,11 +2,9 @@
 module Routes where
 
 import Control.Applicative
-import Control.Monad.Except (ExceptT, forM_, runExceptT, liftIO, throwError, when)
-import qualified Data.Aeson as Json
+import Control.Monad.Except (ExceptT, runExceptT, liftIO, throwError, when)
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Either as Either
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -18,7 +16,6 @@ import System.Directory
 import System.FilePath
 
 import qualified Elm.Compiler.Module as Module
-import qualified Elm.Docs as Docs
 import qualified Elm.Package as Pkg
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Paths as Path
@@ -126,9 +123,8 @@ register =
       description <- Desc.read (directory </> Path.description)
 
       result <-
-          liftIO $ runExceptT $ do
+          liftIO $ runExceptT $
             verifyWhitelist (Desc.natives description) (Desc.name description)
-            splitDocs directory
 
       case result of
         Right () ->
@@ -249,21 +245,6 @@ writePartError part =
 
       Left exception ->
           writeText (policyViolationExceptionReason exception)
-
-
-splitDocs :: FilePath -> ExceptT String IO ()
-splitDocs directory =
-  do  json <- liftIO (LBS.readFile (directory </> documentationPath))
-      case Json.decode json of
-        Nothing -> throwError "The uploaded documentation is invalid."
-        Just docs ->
-          liftIO $
-            forM_ (docs :: [Docs.Documentation]) $ \doc ->
-              do  let name = Module.hyphenate (Docs.moduleName doc)
-                  let docPath = directory </> "docs" </> name <.> "json"
-                  createDirectoryIfMissing True (directory </> "docs")
-                  LBS.writeFile docPath (Json.encode doc)
-
 
 
 -- FETCH ALL AVAILABLE VERSIONS
