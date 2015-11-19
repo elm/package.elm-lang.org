@@ -80,7 +80,9 @@ spacey token =
 logo =
   div
     [ style
-        [ "display" => "inline-block"
+        [ "display" => "-webkit-display"
+        , "display" => "-ms-flexbox"
+        , "display" => "flex"
         ]
     ]
     [ img
@@ -92,15 +94,25 @@ logo =
             ]
         ]
         []
-    , img
-        [ src "/assets/logo-name.png"
-        , style
-            [ "height" => "30px"
-            , "vertical-align" => "bottom"
-            , "padding-right" => "24px"
-            ]
+    , div
+        [ style
+          [ "color" => "black"
+          ]
         ]
-        []
+        [ div
+            [ style
+              [ "line-height" => "20px"
+              ]
+            ]
+            [ text "elm" ]
+        , div
+            [ style
+              [ "line-height" => "10px"
+              , "font-size" => "0.5em"
+              ]
+            ]
+            [ text "packages" ]
+        ]
     ]
 
 
