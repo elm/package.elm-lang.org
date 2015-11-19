@@ -2,11 +2,9 @@
 module Routes where
 
 import Control.Applicative
-import Control.Monad.Except (ExceptT, forM_, runExceptT, liftIO, throwError, when)
-import qualified Data.Aeson as Json
+import Control.Monad.Except (ExceptT, runExceptT, liftIO, throwError, when)
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Either as Either
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -18,7 +16,6 @@ import System.Directory
 import System.FilePath
 
 import qualified Elm.Compiler.Module as Module
-import qualified Elm.Docs as Docs
 import qualified Elm.Package as Pkg
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Paths as Path
