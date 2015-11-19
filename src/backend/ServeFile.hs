@@ -4,7 +4,9 @@ module ServeFile where
 
 import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
+import System.IO.Unsafe (unsafePerformIO)
 import Text.Blaze.Html5 as H
 import Text.Blaze.Html5.Attributes as A
 import qualified Text.Blaze.Html.Renderer.Utf8 as Blaze
@@ -25,7 +27,12 @@ favicon =
 
 cacheBuster :: String -> AttributeValue
 cacheBuster url =
-  toValue (url ++ "?1")
+  toValue (url ++ "?" ++ uniqueToken)
+
+
+uniqueToken :: String
+uniqueToken =
+  unsafePerformIO (show <$> round <$> getPOSIXTime)
 
 
 makeHtml :: String -> [String] -> Snap (Maybe (String, [(String, String)])) -> Snap ()

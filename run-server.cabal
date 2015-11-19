@@ -52,4 +52,5 @@ Executable run-server
     snap-core,
     snap-server,
     text,
+    time,
     unordered-containers
