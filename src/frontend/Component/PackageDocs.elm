@@ -233,7 +233,12 @@ toChunks moduleDocs =
 
 subChunks : Docs.Module -> String -> List (Chunk String)
 subChunks moduleDocs postDocs =
-    subChunksHelp moduleDocs (String.split "," postDocs)
+    case Regex.split (Regex.AtMost 1) (Regex.regex "\n") postDocs of
+      [] ->
+        Debug.crash "Expected a newline between @docs statements!"
+
+      firstChunk :: rest ->
+        (subChunksHelp moduleDocs (String.split "," firstChunk)) ++ List.map Markdown rest
 
 
 subChunksHelp : Docs.Module -> List String -> List (Chunk String)
