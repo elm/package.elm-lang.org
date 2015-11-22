@@ -3,8 +3,8 @@ module NewPackageList (newPackages, addIfNew) where
 
 import qualified Data.Aeson as Json
 import qualified Data.Aeson.Encode.Pretty as Json
-import qualified Data.List as List
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Set as Set
 import qualified System.Directory as Dir
 import System.IO
 
@@ -23,6 +23,7 @@ addIfNew desc =
   case C.isSatisfied (Desc.elmVersion desc) Compiler.version of
     False ->
         return ()
+
     True ->
         do  let name = Desc.name desc
             exists <- Dir.doesFileExist newPackages
@@ -38,4 +39,4 @@ addIfNew desc =
                               error "new-package.json is corrupted! do not modify them manually."
 
                           Just names ->
-                              LBS.writeFile newPackages (Json.encodePretty (List.insert name names))
+                              LBS.writeFile newPackages (Json.encodePretty (Set.insert name names))
