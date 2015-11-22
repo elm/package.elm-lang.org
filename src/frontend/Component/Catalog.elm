@@ -93,12 +93,19 @@ searchFor : String -> List Summary.Summary -> List Summary.Summary
 searchFor query summaries =
   let
     lowerQuery =
-      String.toLower query
+      String.toLower query |> String.words
 
     contains {name,summary} =
-      String.contains lowerQuery (String.toLower name)
-      ||
-      String.contains lowerQuery (String.toLower summary)
+      let
+        lowerName = String.toLower name
+        lowerSummary = String.toLower summary
+      in
+        List.all
+          (\word ->
+            String.contains word lowerName
+            ||
+            String.contains word lowerSummary)
+          lowerQuery
   in
     List.filter contains summaries
 
