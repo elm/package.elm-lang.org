@@ -92,15 +92,24 @@ update action model =
 searchFor : String -> List Summary.Summary -> List Summary.Summary
 searchFor query summaries =
   let
-    lowerQuery =
-      String.toLower query
+    queryTerms =
+      String.words (String.toLower query)
 
-    contains {name,summary} =
-      String.contains lowerQuery (String.toLower name)
-      ||
-      String.contains lowerQuery (String.toLower summary)
+    matchesQueryTerms {name,summary} =
+      let
+        lowerName =
+          String.toLower name
+
+        lowerSummary =
+          String.toLower summary
+
+        findTerm term =
+          String.contains term lowerName
+          || String.contains term lowerSummary
+      in
+        List.all findTerm queryTerms
   in
-    List.filter contains summaries
+    List.filter matchesQueryTerms summaries
 
 
 
