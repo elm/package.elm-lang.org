@@ -28,7 +28,8 @@ type Model
 
 
 type alias SearchDict =
-    Dict.Dict String (List String)
+    Dict.Dict String (List (String, String))
+    -- moduleName => List (displayName, linkName)
 
 
 
@@ -96,7 +97,16 @@ loadDocs context =
 
 toSearchDict : Docs.Package -> SearchDict
 toSearchDict pkg =
-  Dict.map (\_ modul -> Dict.keys modul.entries) pkg
+  Dict.map (\_ modul ->
+    let entryNames = Dict.keys modul.entries
+        tagNames =
+          Dict.values modul.entries |> List.concatMap
+            (\entry ->
+              case entry.info of
+                Entry.Union {tags} -> List.map (\tag -> (tag.tag, entry.name)) tags
+                _ -> [])
+          |> List.filter (uncurry (/=))
+    in tagNames ++ List.map2 (,) entryNames entryNames) pkg
 
 
 
@@ -148,14 +158,14 @@ viewSearchDict context query searchDict =
         String.contains lowerQuery (String.toLower value)
 
       searchResults =
-        Dict.map (\_ values -> List.filter containsQuery values) searchDict
+        Dict.map (\_ values -> List.filter (fst>>containsQuery) values) searchDict
           |> Dict.filter (\_ values -> not (List.isEmpty values))
           |> Dict.toList
     in
       ul [] (List.map (viewModuleLinks context) searchResults)
 
 
-viewModuleLinks : Ctx.VersionContext -> (String, List String) -> Html
+viewModuleLinks : Ctx.VersionContext -> (String, List (String, String)) -> Html
 viewModuleLinks context (name, values) =
   li
     [ class "pkg-nav-search-chunk" ]
@@ -191,12 +201,12 @@ moduleLink context name =
     a [ class "pkg-nav-module", href url ] [ visibleText ]
 
 
-valueLink : Ctx.VersionContext -> String -> String -> Html
-valueLink context moduleName valueName =
+valueLink : Ctx.VersionContext -> String -> (String, String) -> Html
+valueLink context moduleName (displayName, linkName) =
   li
     [ class "pkg-nav-value"
     ]
-    [ a [ href (Ctx.pathTo context (Path.hyphenate moduleName) ++ "#" ++ valueName) ] [ text valueName ]
+    [ a [ href (Ctx.pathTo context (Path.hyphenate moduleName) ++ "#" ++ linkName) ] [ text displayName ]
     ]
 
 
