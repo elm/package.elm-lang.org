@@ -5,6 +5,8 @@ import Html exposing (..)
 import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
 import Html.Events exposing (..)
 import Http
+import Json.Decode as Json
+import Set
 import String
 import Task
 
@@ -21,7 +23,11 @@ import Utils.Markdown as Markdown
 type Model
     = Loading
     | Failed Http.Error
-    | Success { summaries : List Summary.Summary, query : String }
+    | Success
+        { summaries : List Summary.Summary
+        , oldSummaries : List Summary.Summary
+        , query : String
+        }
 
 
 
@@ -31,7 +37,7 @@ type Model
 init : (Model, Effects Action)
 init =
   ( Loading
-  , getSummaries
+  , getPackageInfo
   )
 
 
@@ -41,7 +47,7 @@ init =
 
 type Action
     = Fail Http.Error
-    | Load (List Summary.Summary)
+    | Load (List Summary.Summary, List String)
     | Query String
 
 
@@ -53,8 +59,19 @@ update action model =
         , Fx.none
         )
 
-    Load summaries ->
-        ( Success { summaries = summaries, query = "" }
+    Load (allSummaries, updatedPkgs) ->
+      let
+        updatedSet =
+          Set.fromList updatedPkgs
+
+        (summaries, oldSummaries) =
+          List.partition (\{name} -> Set.member name updatedSet) allSummaries
+      in
+        ( Success
+            { summaries = summaries
+            , oldSummaries = oldSummaries
+            , query = ""
+            }
         , Fx.none
         )
 
@@ -90,12 +107,19 @@ searchFor query summaries =
 -- EFFECTS
 
 
-getSummaries : Effects Action
-getSummaries =
-  Http.get Summary.decoder "/all-packages"
-    |> Task.map Load
-    |> flip Task.onError (Task.succeed << Fail)
-    |> Fx.task
+getPackageInfo : Effects Action
+getPackageInfo =
+  let
+    getAll =
+      Http.get Summary.decoder "/all-packages"
+
+    getNew =
+      Http.get (Json.list Json.string) "/new-packages"
+  in
+    Task.map2 (,) getAll getNew
+      |> Task.map Load
+      |> flip Task.onError (Task.succeed << Fail)
+      |> Fx.task
 
 
 
@@ -118,7 +142,7 @@ view addr model =
           , p [] [text (toString httpError)]
           ]
 
-      Success {summaries, query} ->
+      Success {summaries, oldSummaries, query} ->
           [ input
               [ placeholder "Search"
               , value query
@@ -127,7 +151,12 @@ view addr model =
               ]
               []
           , div [] (List.map viewSummary (searchFor query summaries))
+          , viewOldSummaries (searchFor query oldSummaries)
           ]
+
+
+
+-- VIEW SUMMARY
 
 
 viewSummary : Summary.Summary -> Html
@@ -188,3 +217,29 @@ versionLink packageName vsn =
   in
     a [ href url ] [ text vsnString ]
 
+
+-- VIEW OLD SUMMARIES
+
+
+viewOldSummaries : List Summary.Summary -> Html
+viewOldSummaries oldSummaries =
+  div [ style [ "opacity" => "0.5" ] ] <|
+    if List.isEmpty oldSummaries then
+      []
+
+    else
+      oldMessage :: List.map viewSummary oldSummaries
+
+
+oldMessage : Html
+oldMessage =
+  p [ style
+        [ "color" => "#EA157A"
+        , "text-align" => "center"
+        , "padding" => "1em"
+        , "margin" => "0"
+        , "background-color" => "#eeeeee"
+        ]
+    ]
+    [ text "The following packages have not been updated for 0.16 yet!"
+    ]
