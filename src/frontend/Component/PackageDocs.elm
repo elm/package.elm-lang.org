@@ -238,7 +238,32 @@ subChunks moduleDocs postDocs =
         Debug.crash "Expected a newline between @docs statements!"
 
       firstChunk :: rest ->
-        (subChunksHelp moduleDocs (String.split "," firstChunk)) ++ List.map Markdown rest
+        let
+          handleRest =
+            if String.endsWith "," (String.trimRight firstChunk)
+            then multiLineDocsChunk moduleDocs
+            else List.map Markdown
+        in
+          subChunksHelp moduleDocs (String.split "," firstChunk) ++ handleRest rest
+
+
+multiLineDocsChunk : Docs.Module -> List String -> List (Chunk String)
+multiLineDocsChunk moduleDocs docsToParse =
+  let
+    errMsg =
+      "Found an @docs listing that ended with a comma, but found no more docs on the next line!"
+  in
+    case docsToParse of
+      [] ->
+        Debug.crash errMsg
+
+      [rest] ->
+        if String.startsWith "\n" rest || String.startsWith "#" rest
+        then Debug.crash errMsg
+        else subChunks moduleDocs rest
+
+      _ ->
+        Debug.crash "This shouldn't happen: the Regex was only supposed to take one line"
 
 
 subChunksHelp : Docs.Module -> List String -> List (Chunk String)
