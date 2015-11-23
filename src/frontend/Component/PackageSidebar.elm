@@ -7,6 +7,7 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
 import Regex
+import Set
 import String
 import Task
 
@@ -28,9 +29,13 @@ type Model
 
 
 type alias SearchDict =
-    Dict.Dict String (List (String, String))
-    -- moduleName => List (displayName, linkName)
+    Dict.Dict String (List LinkInfo)
 
+
+type alias LinkInfo =
+    { name : String
+    , owner : String
+    }
 
 
 -- INIT
@@ -97,16 +102,44 @@ loadDocs context =
 
 toSearchDict : Docs.Package -> SearchDict
 toSearchDict pkg =
-  Dict.map (\_ modul ->
-    let entryNames = Dict.keys modul.entries
-        tagNames =
-          Dict.values modul.entries |> List.concatMap
-            (\entry ->
-              case entry.info of
-                Entry.Union {tags} -> List.map (\tag -> (tag.tag, entry.name)) tags
-                _ -> [])
-          |> List.filter (uncurry (/=))
-    in tagNames ++ List.map2 (,) entryNames entryNames) pkg
+  Dict.map toLinkInfo pkg
+
+
+toLinkInfo : String -> Docs.Module -> List LinkInfo
+toLinkInfo _ modul =
+  let
+    entryNames =
+      Dict.keys modul.entries
+
+    nameSet =
+      Set.fromList entryNames
+
+    tagInfo =
+      Dict.values modul.entries
+        |> List.concatMap (gatherTagInfo nameSet)
+
+    topLevelInfo =
+      List.map (\name -> LinkInfo name name) entryNames
+  in
+    tagInfo ++ topLevelInfo
+
+
+gatherTagInfo : Set.Set String -> Entry.Model t -> List { name : String, owner : String }
+gatherTagInfo topLevelNames entry =
+  let
+    toNamePair {tag} =
+      if Set.member tag topLevelNames then
+        Nothing
+
+      else
+        Just (LinkInfo tag entry.name)
+  in
+    case entry.info of
+      Entry.Union {tags} ->
+        List.filterMap toNamePair tags
+
+      _ ->
+        []
 
 
 
@@ -158,14 +191,15 @@ viewSearchDict context query searchDict =
         String.contains lowerQuery (String.toLower value)
 
       searchResults =
-        Dict.map (\_ values -> List.filter (fst>>containsQuery) values) searchDict
+        searchDict
+          |> Dict.map (\_ values -> List.filter (.name >> containsQuery) values)
           |> Dict.filter (\_ values -> not (List.isEmpty values))
           |> Dict.toList
     in
       ul [] (List.map (viewModuleLinks context) searchResults)
 
 
-viewModuleLinks : Ctx.VersionContext -> (String, List (String, String)) -> Html
+viewModuleLinks : Ctx.VersionContext -> (String, List LinkInfo) -> Html
 viewModuleLinks context (name, values) =
   li
     [ class "pkg-nav-search-chunk" ]
@@ -201,13 +235,17 @@ moduleLink context name =
     a [ class "pkg-nav-module", href url ] [ visibleText ]
 
 
-valueLink : Ctx.VersionContext -> String -> (String, String) -> Html
-valueLink context moduleName (displayName, linkName) =
-  li
-    [ class "pkg-nav-value"
-    ]
-    [ a [ href (Ctx.pathTo context (Path.hyphenate moduleName) ++ "#" ++ linkName) ] [ text displayName ]
-    ]
+valueLink : Ctx.VersionContext -> String -> LinkInfo -> Html
+valueLink context moduleName {name, owner} =
+  let
+    url =
+      Ctx.pathTo context (Path.hyphenate moduleName) ++ "#" ++ owner
+  in
+    li
+      [ class "pkg-nav-value"
+      ]
+      [ a [ href url ] [ text name ]
+      ]
 
 
 singleton : a -> List a
