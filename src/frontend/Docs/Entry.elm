@@ -25,19 +25,25 @@ type alias Model tipe =
 
 type Info tipe
     = Value tipe (Maybe Fixity)
-    | Union
-        { vars : List String
-        , tags : List (Tag tipe)
-        }
-    | Alias
-        { vars : List String
-        , tipe : tipe
-        }
+    | Union (UnionInfo tipe)
+    | Alias (AliasInfo tipe)
+
+
+type alias UnionInfo tipe =
+    { vars : List String
+    , tags : List (Tag tipe)
+    }
 
 
 type alias Tag tipe =
     { tag : String
     , args : List tipe
+    }
+
+
+type alias AliasInfo tipe =
+    { vars : List String
+    , tipe : tipe
     }
 
 
@@ -69,10 +75,10 @@ map func model =
           Value (func tipe) fixity
 
         Union {vars,tags} ->
-          Union { vars = vars, tags = List.map (tagMap func) tags }
+          Union (UnionInfo vars (List.map (tagMap func) tags))
 
         Alias {vars,tipe} ->
-          Alias { vars = vars, tipe = func tipe }
+          Alias (AliasInfo vars (func tipe))
   in
     { model | info = newInfo }
 

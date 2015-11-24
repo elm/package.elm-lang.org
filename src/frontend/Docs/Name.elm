@@ -30,3 +30,7 @@ toLink dict ({home,name} as canonical) =
     _ ->
       text name
 
+
+nameToString : Canonical -> String
+nameToString {home, name} =
+  home ++ "." ++ name

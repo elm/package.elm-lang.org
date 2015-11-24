@@ -100,12 +100,12 @@ loadDocs context =
     |> Fx.task
 
 
-toSearchDict : Docs.Package -> SearchDict
+toSearchDict : Docs.Package t -> SearchDict
 toSearchDict pkg =
   Dict.map toLinkInfo pkg
 
 
-toLinkInfo : String -> Docs.Module -> List LinkInfo
+toLinkInfo : String -> Docs.Module t -> List LinkInfo
 toLinkInfo _ modul =
   let
     entryNames =

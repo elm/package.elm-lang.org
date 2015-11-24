@@ -10,8 +10,9 @@ import Regex
 import String
 import Task
 
-import Docs.Package as Docs
+import Docs.Diff as Diff
 import Docs.Entry as Entry
+import Docs.Package as Docs
 import Docs.Version as Vsn
 import Page.Context as Ctx
 import Utils.Markdown as Markdown

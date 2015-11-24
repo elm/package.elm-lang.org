@@ -27,7 +27,7 @@ getReadme context =
   Http.getString (pathTo context "README.md")
 
 
-getDocs : VersionContext -> Task.Task Http.Error Docs.Package
+getDocs : VersionContext -> Task.Task Http.Error (Docs.Package String)
 getDocs context =
   Http.get Docs.decodePackage (pathTo context "documentation.json")
 
