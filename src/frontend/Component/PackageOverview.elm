@@ -12,6 +12,7 @@ import Task
 
 import Docs.Diff as Diff
 import Docs.Entry as Entry
+import Docs.History as History
 import Docs.Package as Docs
 import Docs.Version as Vsn
 import Page.Context as Ctx
@@ -27,6 +28,7 @@ type alias Model =
   { context : Ctx.OverviewContext
   , versionDict : Vsn.Dictionary
   , versionsAreExpanded : Bool
+  , history : History.History
   }
 
 
@@ -48,7 +50,7 @@ init context =
         total =
           List.sum (List.map (\{others} -> 1 + List.length others) (Dict.values vsnDict))
       in
-        ( Model context vsnDict (total < 10)
+        ( Model context vsnDict (total < 10) History.dummy
         , Fx.none
         )
 
@@ -78,13 +80,18 @@ update action model =
 
 
 view : Signal.Address Action -> Model -> Html
-view addr {context, versionDict, versionsAreExpanded} =
+view addr {context, versionDict, versionsAreExpanded, history} =
   div [ class "pkg-overview" ]
     [ h1 [] [text "Published Versions"]
     , p [] <|
         viewVersions context.user context.project versionsAreExpanded versionDict
         ++ expando addr versionsAreExpanded
+    , History.view addr history
     ]
+
+
+
+-- JUMP TO VERSIONS
 
 
 expando : Signal.Address Action -> Bool -> List Html
@@ -130,3 +137,5 @@ minorPatchToLink user project isBold major (minor, patch) =
         text version
   in
     a [href ("/packages" </> user </> project </> version)] [versionText]
+
+
