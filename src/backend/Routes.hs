@@ -94,6 +94,14 @@ redirectToLatest name =
               redirect (BS.append (BS.pack url) (rqPathInfo request))
 
 
+previewDocumentation :: Snap ()
+previewDocumentation =
+  ServeFile.makeHtml "Preview Documentation" ["Page","PreviewDocumentation"] $
+    do return $
+        Just $ (,) "fileReader" $
+          [ ("fileText", show "") ]
+
+
 -- DIRECTORIES
 
 packageDirectory :: FilePath

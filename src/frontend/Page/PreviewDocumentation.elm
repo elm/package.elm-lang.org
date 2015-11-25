@@ -1,17 +1,21 @@
 module Page.PreviewDocumentation where
 
 import Html exposing (..)
+import Html.Attributes exposing (..)
 import Dict
 
 import Graphics.Element as Element
 import Json.Decode as Json exposing ((:=))
 --import Html.Attributes exposing (..)
 
+import Route
 import Component.Header as Header
 import Component.PackageDocs as PDocs
 import Component.PackageSidebar as PkgNav
 import Docs.Package as Docs
 
+
+port fileReader : Signal { fileText : String }
 
 
 dummySignal : Signal.Mailbox PDocs.Action
@@ -19,10 +23,33 @@ dummySignal =
   Signal.mailbox PDocs.NoOp
 
 
+headModel =
+  {route = Route.Help}
+
+
 -- main : Html
 main =
+  Signal.map view model
+
+
+view model =
+  Header.view dummySignal.address headModel
+    [ node "script" [ src "/assets/js/jsonLoader.js" ] []
+    , div []
+      [ h1 [] [ text "Preview your documentation" ]
+      , input [ type' "file", id "fileLoader" ] []
+      , hr [] []
+      ]
+    , PDocs.view dummySignal.address model
+    ]
   --Element.show rawDocs
-  PDocs.view dummySignal.address rawDocs
+  --PDocs.view dummySignal.address rawDocs
+
+
+model =
+  fileReader
+  |> Signal.map (rawDocs << .fileText)
+
 
 
 
@@ -40,7 +67,7 @@ readme : PDocs.Model
 readme = PDocs.Readme ("# Elm Collision\n\nDetect collision/intersection of geometry in a defined coordinate space, AKA: tell me when objects are touching or overlapping\n\n![elm-collision demo](https://raw.githubusercontent.com/burabure/elm-collision/master/elm-collision.gif)\n\nThis library is useful for games, interactive apps, dynamic element composition and other cases where you need very efficient detection of overlapping objects\n\n\n### Get Started\n\n- Read the [the documentation][docs].\n- Try and read the code of [the examples][examples].\n\n[docs]: http://package.elm-lang.org/packages/BuraBure/elm-collision/latest/\n[examp…:\nhttp://github.com/burabure/elm-collision/tree/master/examples/\n\n\n### Contributing\n\nDo you have a suggestion, algorithm or formula that you'd like to add to this library?, I'd love to take a look at it and help you get it working with the library, just post an issue or send a pull request =D\n")
 
 
-rawDocs =
+rawDocs doc =
   let
     json = Result.withDefault Dict.empty (Json.decodeString Docs.decodePackage doc)
     moduleName = "Collision2D"
