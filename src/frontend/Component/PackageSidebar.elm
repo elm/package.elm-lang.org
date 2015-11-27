@@ -193,7 +193,7 @@ viewSearchDict context query searchDict =
       searchResults =
         searchDict
           |> Dict.map (\_ values -> List.filter (.name >> containsQuery) values)
-          |> Dict.filter (\_ values -> not (List.isEmpty values))
+          |> Dict.filter (\key values -> not (List.isEmpty values) || containsQuery key)
           |> Dict.toList
     in
       ul [] (List.map (viewModuleLinks context) searchResults)
