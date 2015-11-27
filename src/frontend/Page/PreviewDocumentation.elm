@@ -3,15 +3,13 @@ module Page.PreviewDocumentation where
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Dict
-
-import Graphics.Element as Element
 import Json.Decode as Json exposing ((:=))
 --import Html.Attributes exposing (..)
 
 import Route
 import Component.Header as Header
 import Component.PackageDocs as PDocs
-import Component.PackageSidebar as PkgNav
+--import Component.PackageSidebar as PkgNav
 import Docs.Package as Docs
 
 
@@ -57,20 +55,18 @@ models =
 -- MODEL
 
 type alias Model =
-  { currentModuleDoc : PDocs.Model
+  { header : Header.Model
+  , currentModuleDoc : PDocs.Model
   , moduleDocs : Dict.Dict String Docs.Module
   }
 
 
 initialModel : Model
 initialModel =
-  { currentModuleDoc = PDocs.Loading
+  { header = Header.Model Route.Tools
+  , currentModuleDoc = PDocs.Loading
   , moduleDocs = Dict.empty
   }
-
-
-headModel =
-  { route = Route.Tools }
 
 
 
@@ -102,7 +98,7 @@ update action model =
 
 view : Signal.Address Action -> Model -> Html
 view address model =
-  Header.view dummySignal.address headModel
+  Header.view dummySignal.address model.header
     [ node "script" [ src "/assets/js/jsonLoader.js" ] []
     , div []
       [ h1 [] [ text "Preview your documentation" ]
@@ -117,7 +113,7 @@ view address model =
 
 -- FUNCTIONS
 
---loadDocs : String -> Model
+loadDocs : String -> Dict.Dict String Docs.Module
 loadDocs fileText =
   getModules fileText
 
