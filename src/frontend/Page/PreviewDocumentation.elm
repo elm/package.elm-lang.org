@@ -2,14 +2,13 @@ module Page.PreviewDocumentation where
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Dict
 import Json.Decode as Json exposing ((:=))
---import Html.Attributes exposing (..)
 
 import Route
 import Component.Header as Header
 import Component.PackageDocs as PDocs
---import Component.PackageSidebar as PkgNav
 import Docs.Package as Docs
 
 
@@ -76,6 +75,7 @@ initialModel =
 type Action
   = NoOp
   | LoadDocs String
+  | ShowModule String
 
 
 update : Action -> Model -> Model
@@ -92,6 +92,9 @@ update action model =
           | currentModuleDoc = rawDocs (firstModuleName docs) docs
           , moduleDocs = docs
         }
+
+    ShowModule moduleName ->
+      { model | currentModuleDoc = rawDocs moduleName model.moduleDocs }
 
 
 
@@ -135,8 +138,16 @@ moduleLinks modulesNames =
 
 moduleLink : String -> Html
 moduleLink moduleName =
-  a [ class "pkg-nav-module", href "#" ] [ text moduleName ]
+  let
+    address =
+      actionsInbox.address
 
+  in
+    a
+      [ onClick address (ShowModule moduleName)
+      , class "pkg-nav-module", href "#"
+      ]
+      [ text moduleName ]
 
 
 
