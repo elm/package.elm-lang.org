@@ -94,7 +94,9 @@ update action model =
         }
 
     ShowModule moduleName ->
-      { model | currentModuleDoc = rawDocs moduleName model.moduleDocs }
+      { model
+        | currentModuleDoc = rawDocs moduleName model.moduleDocs
+      }
 
 
 
@@ -115,39 +117,36 @@ view address model =
         , hr [] []
         ]
       , PDocs.view dummySignal.address model.currentModuleDoc
-      , viewSidebar modulesNames
+      , viewSidebar address modulesNames
       ]
 
 
-viewSidebar : List String -> Html
-viewSidebar modulesNames =
-  div [class "pkg-nav"]
-    [ ul [ class "pkg-nav-value" ] (moduleLinks modulesNames)
+viewSidebar : Signal.Address Action -> List String -> Html
+viewSidebar address modulesNames =
+  div [ class "pkg-nav" ]
+    [ ul
+      [ class "pkg-nav-value" ]
+      (moduleLinks address modulesNames)
     ]
 
 
-moduleLinks : List String -> List Html
-moduleLinks modulesNames =
+moduleLinks : Signal.Address Action -> List String -> List Html
+moduleLinks address modulesNames =
   let
     moduleItem moduleName =
-      li [] [ moduleLink moduleName ]
+      li [] [ moduleLink address moduleName ]
 
   in
     List.map moduleItem modulesNames
 
 
-moduleLink : String -> Html
-moduleLink moduleName =
-  let
-    address =
-      actionsInbox.address
-
-  in
-    a
-      [ onClick address (ShowModule moduleName)
-      , class "pkg-nav-module", href "#"
-      ]
-      [ text moduleName ]
+moduleLink : Signal.Address Action -> String -> Html
+moduleLink address moduleName =
+  a
+    [ onClick address (ShowModule moduleName)
+    , class "pkg-nav-module", href "#"
+    ]
+    [ text moduleName ]
 
 
 
