@@ -27,14 +27,9 @@ main =
   Signal.map (view actionsInbox.address) models
 
 
-dummySignal : Signal.Mailbox PDocs.Action
-dummySignal =
-  Signal.mailbox PDocs.NoOp
-
-
-actionsInbox : Signal.Mailbox Action
-actionsInbox =
-  Signal.mailbox NoOp
+models : Signal Model
+models =
+  Signal.foldp update initialModel actions
 
 
 actions : Signal Action
@@ -42,14 +37,20 @@ actions =
   Signal.merge actionsInbox.signal loadedJsons
 
 
+actionsInbox : Signal.Mailbox Action
+actionsInbox =
+  Signal.mailbox NoOp
+
+
 loadedJsons : Signal Action
 loadedJsons =
   Signal.map (LoadDocs << .fileText) fileReader
 
 
-models : Signal Model
-models =
-  Signal.foldp update initialModel actions
+dummySignal : Signal.Mailbox PDocs.Action
+dummySignal =
+  Signal.mailbox PDocs.NoOp
+
 
 
 -- MODEL
@@ -98,20 +99,48 @@ update action model =
 
 view : Signal.Address Action -> Model -> Html
 view address model =
-  Header.view dummySignal.address model.header
-    [ node "script" [ src "/assets/js/jsonLoader.js" ] []
-    , div []
-      [ h1 [] [ text "Preview your documentation" ]
-      , input [ type' "file", id "fileLoader" ] []
-      , hr [] []
+  let
+    modulesNames =
+      Dict.keys model.moduleDocs
+
+  in
+    Header.view dummySignal.address model.header
+      [ node "script" [ src "/assets/js/jsonLoader.js" ] []
+      , div []
+        [ h1 [] [ text "Preview your documentation" ]
+        , input [ type' "file", id "fileLoader" ] []
+        , hr [] []
+        ]
+      , PDocs.view dummySignal.address model.currentModuleDoc
+      , viewSidebar modulesNames
       ]
-    , PDocs.view dummySignal.address model.currentModuleDoc
+
+
+viewSidebar : List String -> Html
+viewSidebar modulesNames =
+  div [class "pkg-nav"]
+    [ ul [ class "pkg-nav-value" ] (moduleLinks modulesNames)
     ]
-  --Element.show rawDocs
-  --PDocs.view dummySignal.address rawDocs
 
 
--- FUNCTIONS
+moduleLinks : List String -> List Html
+moduleLinks modulesNames =
+  let
+    moduleItem moduleName =
+      li [] [ moduleLink moduleName ]
+
+  in
+    List.map moduleItem modulesNames
+
+
+moduleLink : String -> Html
+moduleLink moduleName =
+  a [ class "pkg-nav-module", href "#" ] [ text moduleName ]
+
+
+
+
+-- DOCS FUCTIONS
 
 loadDocs : String -> Dict.Dict String Docs.Module
 loadDocs fileText =
