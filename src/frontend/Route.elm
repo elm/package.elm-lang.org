@@ -5,6 +5,7 @@ import Page.Context as Ctx
 
 type Route
     = Help
+    | Tools
     | Packages (Maybe UserRoute)
 
 
