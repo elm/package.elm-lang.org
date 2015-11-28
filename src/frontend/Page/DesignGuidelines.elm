@@ -96,6 +96,8 @@ Finally, think hard about the order that the functions appear in and what kind
 of title each section gets. People will read documentation linearly when learning
 a library, so give them some structure!
 
+You can preview how your package documentation is going to look in the site [here](/tools/preview-documentation).
+
 ## The data structure is always the last argument
 
 Function composition works better when the data structure is the last argument:
