@@ -15,7 +15,7 @@ import Docs.Package as Docs
 
 -- PORTS
 
-port fileReader : Signal { fileText : String }
+port fileReader : Signal (Maybe { fileText : String })
 
 
 
@@ -43,7 +43,17 @@ actionsInbox =
 
 loadedJsons : Signal Action
 loadedJsons =
-  Signal.map (LoadDocs << .fileText) fileReader
+  let
+    loadFile readFile =
+      case readFile of
+        Just jsonFile ->
+          LoadDocs (jsonFile.fileText)
+
+        Nothing ->
+          WrongFile
+
+  in
+    Signal.map loadFile fileReader
 
 
 dummySignal : Signal.Mailbox PDocs.Action
@@ -58,6 +68,7 @@ type alias Model =
   { header : Header.Model
   , currentModuleDoc : PDocs.Model
   , moduleDocs : Dict.Dict String Docs.Module
+  , fileError : Bool
   }
 
 
@@ -66,6 +77,7 @@ initialModel =
   { header = Header.Model Route.Tools
   , currentModuleDoc = PDocs.Loading
   , moduleDocs = Dict.empty
+  , fileError = False
   }
 
 
@@ -74,6 +86,7 @@ initialModel =
 
 type Action
   = NoOp
+  | WrongFile
   | LoadDocs String
   | ShowModule String
 
@@ -91,11 +104,17 @@ update action model =
         { model
           | currentModuleDoc = rawDocs (firstModuleName docs) docs
           , moduleDocs = docs
+          , fileError = False
         }
 
     ShowModule moduleName ->
       { model
         | currentModuleDoc = rawDocs moduleName model.moduleDocs
+      }
+
+    WrongFile ->
+      { model
+        | fileError = True
       }
 
 
@@ -104,21 +123,46 @@ update action model =
 
 view : Signal.Address Action -> Model -> Html
 view address model =
+  Header.view dummySignal.address model.header
+    [ node "script" [ src "/assets/js/jsonLoader.js" ] []
+    , div []
+      [ h1 [] [ text "Preview your documentation" ]
+      , input [ type' "file", id "fileLoader" ] []
+      , hr [] []
+      ]
+    , moduleView address model
+    ]
+
+
+moduleView : Signal.Address Action -> Model -> Html
+moduleView address model =
   let
     modulesNames =
       Dict.keys model.moduleDocs
 
+    instructions =
+      [ h2 [] [ text "How to use this:"]
+      , text instructionsText ]
   in
-    Header.view dummySignal.address model.header
-      [ node "script" [ src "/assets/js/jsonLoader.js" ] []
-      , div []
-        [ h1 [] [ text "Preview your documentation" ]
-        , input [ type' "file", id "fileLoader" ] []
-        , hr [] []
-        ]
-      , PDocs.view dummySignal.address model.currentModuleDoc
-      , viewSidebar address modulesNames
-      ]
+    div [] <|
+      if model.fileError then
+        [ h3
+          [ style [ ("color", "red") ] ]
+          [ text "Wrong File. Make sure you're loading a .json file" ]
+        ] ++ instructions
+      else
+        case model.currentModuleDoc of
+          (PDocs.Loading) ->
+              instructions
+
+          (PDocs.RawDocs _) ->
+              [ PDocs.view dummySignal.address model.currentModuleDoc
+              , viewSidebar address modulesNames
+              ]
+
+          (PDocs.ParsedDocs _) -> []
+          (PDocs.Readme _) -> []  -- We can add this later maybe
+          (PDocs.Failed _) -> []
 
 
 viewSidebar : Signal.Address Action -> List String -> Html
@@ -150,7 +194,7 @@ moduleLink address moduleName =
 
 
 
--- DOCS FUCTIONS
+-- DOCS FUNCTIONS
 
 loadDocs : String -> Dict.Dict String Docs.Module
 loadDocs fileText =
@@ -185,7 +229,10 @@ rawDocs moduleName docs =
 
 
 
--- MOCKS
+-- INSTRUCTIONS
 
-readme : PDocs.Model
-readme = PDocs.Readme ("# Elm Collision\n\nDetect collision/intersection of geometry in a defined coordinate space, AKA: tell me when objects are touching or overlapping\n\n![elm-collision demo](https://raw.githubusercontent.com/burabure/elm-collision/master/elm-collision.gif)\n\nThis library is useful for games, interactive apps, dynamic element composition and other cases where you need very efficient detection of overlapping objects\n\n\n### Get Started\n\n- Read the [the documentation][docs].\n- Try and read the code of [the examples][examples].\n\n[docs]: http://package.elm-lang.org/packages/BuraBure/elm-collision/latest/\n[examp…:\nhttp://github.com/burabure/elm-collision/tree/master/examples/\n\n\n### Contributing\n\nDo you have a suggestion, algorithm or formula that you'd like to add to this library?, I'd love to take a look at it and help you get it working with the library, just post an issue or send a pull request =D\n")
+instructionsText : String
+instructionsText = """
+Hola a todos
+como estan
+"""
