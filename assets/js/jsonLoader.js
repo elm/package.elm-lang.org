@@ -4,7 +4,7 @@ function handleFileSelect(evt) {
   // for some reason type doesn't work on json files,
   // so this is the next best thing.
   if (!/.*\.json$/.test(file.name)) {
-    return page.ports.fileReader.send(null);;
+    return page.ports.fileReader.send(null);
    }
 
   var reader = new FileReader();

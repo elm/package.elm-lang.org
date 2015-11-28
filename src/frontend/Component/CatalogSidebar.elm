@@ -57,10 +57,11 @@ view : Signal.Address Action -> Model -> Html
 view addr model =
   div [class "catalog-sidebar"]
     [ h2 [] [ text "Resources" ]
-    , ul []
+    , ul [ class "resources" ]
         [ li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
         , li [] [ a [ href "/help/design-guidelines" ] [ text "API Design Guidelines" ] ]
         , li [] [ a [ href "/help/documentation-format" ] [ text "Documentation Format" ] ]
+        , li [] [ a [ href "/tools/preview-documentation" ] [ text "Preview your Documentation" ] ]
         , li [] [ a [ href "http://elm-lang.org" ] [ text "Elm Website" ] ]
         ]
     , h2 [] [ text "Popular Packages" ]
