@@ -103,14 +103,14 @@ update action model =
         docs = loadDocs fileText
       in
         { model
-          | currentModuleDoc = rawDocs (firstModuleName docs) docs
+          | currentModuleDoc = parseDocs (firstModuleName docs) docs
           , moduleDocs = docs
           , fileError = False
         }
 
     ShowModule moduleName ->
       { model
-        | currentModuleDoc = rawDocs moduleName model.moduleDocs
+        | currentModuleDoc = parseDocs moduleName model.moduleDocs
       }
 
     WrongFile ->
@@ -146,6 +146,11 @@ moduleView address model =
       , Markdown.block instructionsMd
       ]
 
+    docsView =
+      [ PDocs.view dummySignal.address model.currentModuleDoc
+      , viewSidebar address modulesNames
+      ]
+
   in
     div [] <|
       if model.fileError then
@@ -159,11 +164,11 @@ moduleView address model =
               instructions
 
           (PDocs.RawDocs _) ->
-              [ PDocs.view dummySignal.address model.currentModuleDoc
-              , viewSidebar address modulesNames
-              ]
+            docsView
 
-          (PDocs.ParsedDocs _) -> []
+          (PDocs.ParsedDocs _) ->
+            docsView
+
           (PDocs.Readme _) -> []  -- We can add this later maybe
           (PDocs.Failed _) -> []
 
@@ -217,15 +222,18 @@ getModules docs =
   |> Result.withDefault Dict.empty
 
 
-rawDocs : String -> Dict.Dict String Docs.Module -> PDocs.Model
-rawDocs moduleName docs =
+parseDocs : String -> Dict.Dict String Docs.Module -> PDocs.Model
+parseDocs moduleName docs =
   case Dict.get moduleName docs of
     Just moduleDocs ->
       let
         chunks =
           PDocs.toChunks moduleDocs
+
+        parseRawDocs info =
+          PDocs.ParsedDocs { info | chunks = (List.map (PDocs.chunkMap PDocs.stringToType) chunks) }
       in
-        PDocs.RawDocs (PDocs.Info moduleName (PDocs.toNameDict docs) chunks)
+        parseRawDocs (PDocs.Info moduleName (PDocs.toNameDict docs) chunks)
 
     Nothing ->
       PDocs.Loading
