@@ -20,7 +20,7 @@ import Utils.Path as Path
 type Model
     = AwaitingFile
     | BadFile (Maybe String)
-    | GoodFile (Dict.Dict String Docs.Module) PDocs.Model
+    | GoodFile (Dict.Dict String (Docs.Module String)) PDocs.Model
 
 
 init : (Model, Fx.Effects Action)
@@ -37,7 +37,7 @@ init =
 type Action
     = NoOp
     | Fail (Maybe String)
-    | LoadDocs (Dict.Dict String Docs.Module)
+    | LoadDocs (Dict.Dict String (Docs.Module String))
     | SwitchTo String
 
 
@@ -142,16 +142,14 @@ moduleLink address moduleName =
 -- DOCS FUNCTIONS
 
 
-docsForModule : String -> Dict.Dict String Docs.Module -> PDocs.Model
+docsForModule : String -> Dict.Dict String (Docs.Module String) -> PDocs.Model
 docsForModule moduleName docs =
   case Dict.get moduleName docs of
     Just moduleDocs ->
-      let
-        chunks =
-          PDocs.toChunks moduleDocs
-            |> List.map (PDocs.chunkMap PDocs.stringToType)
-      in
-        PDocs.ParsedDocs (PDocs.Info moduleName (PDocs.toNameDict docs) chunks)
+      PDocs.toChunks moduleDocs
+        |> List.map (PDocs.chunkMap PDocs.stringToType)
+        |> PDocs.Info moduleName (PDocs.toNameDict docs)
+        |> PDocs.ParsedDocs
 
     Nothing ->
       PDocs.Loading

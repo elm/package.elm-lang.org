@@ -59,7 +59,7 @@ init context =
 
 
 type Action
-    = LoadDocs String Docs.Package
+    = LoadDocs String (Docs.Package String)
     | LoadParsedDocs (List (Chunk Type.Type))
     | LoadReadme String
     | Fail Http.Error
@@ -113,7 +113,7 @@ update action model =
               )
 
 
-toNameDict : Docs.Package -> Name.Dictionary
+toNameDict : Docs.Package String -> Name.Dictionary
 toNameDict pkg =
   Dict.map (\_ modul -> Set.fromList (Dict.keys modul.entries)) pkg
 
@@ -220,7 +220,7 @@ viewChunk entryView chunk =
 -- MAKE CHUNKS
 
 
-toChunks : Docs.Module -> List (Chunk String)
+toChunks : Docs.Module String -> List (Chunk String)
 toChunks moduleDocs =
   case String.split "\n@docs " moduleDocs.comment of
     [] ->
@@ -231,12 +231,12 @@ toChunks moduleDocs =
         :: List.concatMap (subChunks moduleDocs) rest
 
 
-subChunks : Docs.Module -> String -> List (Chunk String)
+subChunks : Docs.Module String -> String -> List (Chunk String)
 subChunks moduleDocs postDocs =
     subChunksHelp moduleDocs (String.split "," postDocs)
 
 
-subChunksHelp : Docs.Module -> List String -> List (Chunk String)
+subChunksHelp : Docs.Module String -> List String -> List (Chunk String)
 subChunksHelp moduleDocs parts =
   case parts of
     [] ->
@@ -295,7 +295,7 @@ isValue str =
 
 
 
-toEntry : Docs.Module -> String -> Chunk String
+toEntry : Docs.Module String -> String -> Chunk String
 toEntry moduleDocs name =
   case Dict.get name moduleDocs.entries of
     Nothing ->
