@@ -83,7 +83,7 @@ getAllVersions pkg =
 
 pkgPreview :: Snap ()
 pkgPreview =
-  makeHtml "Preview Docs" ["Page","PreviewDocumentation"] $
+  makeHtml "Preview your Docs" ["Page","PreviewDocumentation"] $
     return $ Just $ (,) "{ uploads: '' }" $
       "function handleFileSelect(evt) {\n\
       \    var reader = new FileReader();\n\

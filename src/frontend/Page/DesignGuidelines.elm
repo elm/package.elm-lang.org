@@ -86,7 +86,7 @@ making someones life easier, it is not a good idea. If you cannot
 ## Write helpful documentation with examples
 
 [This document](/help/documentation-format) describes how documentation works
-in Elm, and you can preview your docs [here](/help/documentation-preview).
+in Elm, and you can preview your docs [here](/help/docs-preview).
 
 Providing examples of common uses is extremely helpful. Do it! The standard
 libraries all make a point to have examples that show how one *should* be using

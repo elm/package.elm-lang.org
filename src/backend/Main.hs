@@ -67,7 +67,7 @@ main =
             , ( "help/documentation-format"
               , ifTop $ ServeFile.elm "Documentation Format" ["Page","DocumentationFormat"]
               )
-            , ( "help/documentation-preview", ifTop ServeFile.pkgPreview )
+            , ( "help/docs-preview", ifTop ServeFile.pkgPreview )
             , ( BS.pack Path.artifactDirectory
               , serveDirectoryWith directoryConfig Path.artifactDirectory
               )
