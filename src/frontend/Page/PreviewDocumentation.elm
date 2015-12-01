@@ -1,176 +1,157 @@
 module Page.PreviewDocumentation where
 
+import Dict
+import Effects as Fx
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Dict
 import Json.Decode as Json exposing ((:=))
+import StartApp
+import Task
 
 import Route
 import Component.Header as Header
 import Component.PackageDocs as PDocs
 import Docs.Package as Docs
 import Utils.Markdown as Markdown
+import Utils.Path as Path
 
 
 
--- PORTS
-
-port fileReader : Signal (Maybe { fileText : String })
+-- WIRES
 
 
+app =
+  StartApp.start
+    { init = init
+    , view = view
+    , update = update
+    , inputs = [ docsUploads ]
+    }
 
--- SIGNALS
 
-main : Signal Html
 main =
-  Signal.map (view actionsInbox.address) models
+  app.html
 
 
-models : Signal Model
-models =
-  Signal.foldp update initialModel actions
+port worker : Signal (Task.Task Fx.Never ())
+port worker =
+  app.tasks
 
 
-actions : Signal Action
-actions =
-  Signal.merge actionsInbox.signal loadedJsons
+port uploads : Signal String
 
 
-actionsInbox : Signal.Mailbox Action
-actionsInbox =
-  Signal.mailbox NoOp
-
-
-loadedJsons : Signal Action
-loadedJsons =
+docsUploads : Signal Action
+docsUploads =
   let
-    loadFile readFile =
-      case readFile of
-        Just jsonFile ->
-          LoadDocs (jsonFile.fileText)
+    toDocs body =
+      case Json.decodeString Docs.decodePackage body of
+        Err msg ->
+          Fail (Just msg)
 
-        Nothing ->
-          WrongFile
-
+        Ok dict ->
+          LoadDocs dict
   in
-    Signal.map loadFile fileReader
-
-
-dummySignal : Signal.Mailbox PDocs.Action
-dummySignal =
-  Signal.mailbox PDocs.NoOp
+    Signal.map toDocs uploads
 
 
 
 -- MODEL
 
-type alias Model =
-  { header : Header.Model
-  , currentModuleDoc : PDocs.Model
-  , moduleDocs : Dict.Dict String Docs.Module
-  , fileError : Bool
-  }
+
+type Model
+    = AwaitingFile
+    | BadFile (Maybe String)
+    | GoodFile (Dict.Dict String Docs.Module) PDocs.Model
 
 
-initialModel : Model
-initialModel =
-  { header = Header.Model Route.Help
-  , currentModuleDoc = PDocs.Loading
-  , moduleDocs = Dict.empty
-  , fileError = False
-  }
+init : (Model, Fx.Effects Action)
+init =
+  ( AwaitingFile
+  , Fx.none
+  )
 
 
 
 -- UPDATE
 
+
 type Action
-  = NoOp
-  | WrongFile
-  | LoadDocs String
-  | ShowModule String
+    = NoOp
+    | Fail (Maybe String)
+    | LoadDocs (Dict.Dict String Docs.Module)
+    | SwitchTo String
 
 
-update : Action -> Model -> Model
+update : Action -> Model -> ( Model, Fx.Effects Action )
 update action model =
+  flip (,) Fx.none <|
   case action of
     NoOp ->
       model
 
-    LoadDocs fileText ->
-      let
-        docs = loadDocs fileText
-      in
-        { model
-          | currentModuleDoc = parseDocs (firstModuleName docs) docs
-          , moduleDocs = docs
-          , fileError = False
-        }
+    Fail maybeMsg ->
+      BadFile maybeMsg
 
-    ShowModule moduleName ->
-      { model
-        | currentModuleDoc = parseDocs moduleName model.moduleDocs
-      }
+    LoadDocs docs ->
+      case List.head (Dict.keys docs) of
+        Nothing ->
+          BadFile (Just "The JSON you uploaded does not have any modules in it!")
 
-    WrongFile ->
-      { model
-        | fileError = True
-      }
+        Just moduleName ->
+          GoodFile docs (docsForModule moduleName docs)
+
+    SwitchTo moduleName ->
+      case model of
+        GoodFile docs _ ->
+          GoodFile docs (docsForModule moduleName docs)
+
+        _ ->
+          model
 
 
 
 -- VIEW
 
+
+(=>) = (,)
+
+
 view : Signal.Address Action -> Model -> Html
 view address model =
-  Header.view dummySignal.address model.header
-    [ node "script" [ src "/assets/js/jsonLoader.js" ] []
-    , div []
-      [ h1 [] [ text "Preview your documentation" ]
-      , input [ type' "file", id "fileLoader" ] []
-      , hr [] []
-      ]
-    , moduleView address model
-    ]
+  div [] <|
+    case model of
+      AwaitingFile ->
+        [ instructions long
+        ]
 
+      BadFile maybeMsg ->
+        let
+          errorMsg =
+            case maybeMsg of
+              Just msg ->
+                "Problem uploading that file: " ++ msg
 
-moduleView : Signal.Address Action -> Model -> Html
-moduleView address model =
-  let
-    modulesNames =
-      Dict.keys model.moduleDocs
+              Nothing ->
+                "Problem uploading that file, try it a different way."
+        in
+          [ instructions long
+          , p [ style [ "color" => "red" ] ] [ text errorMsg ]
+          ]
 
-    instructions =
-      [ h2 [] [ text "How to use this:"]
-      , Markdown.block instructionsMd
-      ]
-
-    docsView =
-      [ PDocs.view dummySignal.address model.currentModuleDoc
-      , viewSidebar address modulesNames
-      ]
-
-  in
-    div [] <|
-      if model.fileError then
-        [ h3
-          [ style [ ("color", "red") ] ]
-          [ text "Wrong File. Make sure you're loading the correct .json file" ]
-        ] ++ instructions
-      else
-        case model.currentModuleDoc of
-          (PDocs.Loading) ->
-              instructions
-
-          (PDocs.RawDocs _) ->
-            docsView
-
-          (PDocs.ParsedDocs _) ->
-            docsView
-
-          (PDocs.Readme _) -> []  -- We can add this later maybe
-          (PDocs.Failed _) -> []
+      GoodFile docs info ->
+        [ instructions short
+        , div
+            [ style
+                [ "border-top" => "1px solid #eeeeee"
+                , "margin-top" => "1em"
+                ]
+            ]
+            [ PDocs.view (Signal.forwardTo address (\_ -> Debug.crash "TODO")) info
+            , viewSidebar address (Dict.keys docs)
+            ]
+        ]
 
 
 viewSidebar : Signal.Address Action -> List String -> Html
@@ -187,7 +168,6 @@ moduleLinks address modulesNames =
   let
     moduleItem moduleName =
       li [] [ moduleLink address moduleName ]
-
   in
     List.map moduleItem modulesNames
 
@@ -195,8 +175,9 @@ moduleLinks address modulesNames =
 moduleLink : Signal.Address Action -> String -> Html
 moduleLink address moduleName =
   a
-    [ onClick address (ShowModule moduleName)
-    , class "pkg-nav-module", href "#"
+    [ onClick address (SwitchTo moduleName)
+    , class "pkg-nav-module"
+    , href ("#" ++ Path.hyphenate moduleName)
     ]
     [ text moduleName ]
 
@@ -204,49 +185,57 @@ moduleLink address moduleName =
 
 -- DOCS FUNCTIONS
 
-loadDocs : String -> Dict.Dict String Docs.Module
-loadDocs fileText =
-  getModules fileText
 
-
-firstModuleName : Dict.Dict String Docs.Module -> String
-firstModuleName modules =
-  Dict.keys modules
-    |> List.head
-    |> Maybe.withDefault ""
-
-
-getModules : String -> Dict.Dict String Docs.Module
-getModules docs =
-  Json.decodeString Docs.decodePackage docs
-  |> Result.withDefault Dict.empty
-
-
-parseDocs : String -> Dict.Dict String Docs.Module -> PDocs.Model
-parseDocs moduleName docs =
+docsForModule : String -> Dict.Dict String Docs.Module -> PDocs.Model
+docsForModule moduleName docs =
   case Dict.get moduleName docs of
     Just moduleDocs ->
       let
         chunks =
           PDocs.toChunks moduleDocs
-
-        parseRawDocs info =
-          PDocs.ParsedDocs { info | chunks = (List.map (PDocs.chunkMap PDocs.stringToType) chunks) }
+            |> List.map (PDocs.chunkMap PDocs.stringToType)
       in
-        parseRawDocs (PDocs.Info moduleName (PDocs.toNameDict docs) chunks)
+        PDocs.ParsedDocs (PDocs.Info moduleName (PDocs.toNameDict docs) chunks)
 
     Nothing ->
       PDocs.Loading
 
 
 
--- INSTRUCTIONS
+-- VIEW INSTRUCTIONS
 
-instructionsMd : String
-instructionsMd = """
-You can preview how is your package documentation going to look like in the site by
-loading the documentation json file generated by ```elm-make``` on this page.
 
-To generate the documentation json file for your package,
-you must run ```elm-make --docs documentation.json``` in your package directory
+instructions : String -> Html
+instructions md =
+  div
+    [ style [ "width" => "600px" ]
+    ]
+    [ Markdown.block md
+    , input [ type' "file", id "fileLoader" ] []
+    ]
+
+
+long : String
+long = """
+
+# Documentation Preview
+
+To preview your docs, run this command in the root of your package:
+
+```bash
+elm make --docs documentation.json
+```
+
+That will create a file called `documentation.json`. Give me that file.
+
+"""
+
+
+short : String
+short = """
+
+# Documentation Preview
+
+Run `elm make --docs documentation.json` and upload new versions:
+
 """
