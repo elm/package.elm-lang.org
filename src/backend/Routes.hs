@@ -29,6 +29,7 @@ import qualified PackageSummary as PkgSummary
 import qualified ServeFile
 
 
+
 packages :: Snap ()
 packages =
     ifTop (redirect' "/" 301)
@@ -94,7 +95,9 @@ redirectToLatest name =
               redirect (BS.append (BS.pack url) (rqPathInfo request))
 
 
+
 -- DIRECTORIES
+
 
 packageDirectory :: FilePath
 packageDirectory =
@@ -111,7 +114,9 @@ documentationPath =
     "documentation.json"
 
 
+
 -- REGISTER MODULES
+
 
 register :: Snap ()
 register =
@@ -198,7 +203,9 @@ whitelistError name =
   \special exceptions the better."
 
 
+
 -- UPLOADING FILES
+
 
 uploadFiles :: FilePath -> Snap ()
 uploadFiles directory =
@@ -268,6 +275,7 @@ splitDocs directory =
 
 -- FETCH ALL AVAILABLE VERSIONS
 
+
 versions :: Snap ()
 versions =
   do  name <- getParameter "name" Pkg.fromString
@@ -275,7 +283,9 @@ versions =
       writeLBS (Binary.encode versions)
 
 
+
 -- UPDATE REMOTE PACKAGE CACHES
+
 
 allPackages :: Snap ()
 allPackages =
@@ -310,7 +320,9 @@ allPackages =
           writeLBS "null"
 
 
+
 -- FETCH RESOURCES
+
 
 documentation :: Snap ()
 documentation =
@@ -333,7 +345,9 @@ fetch filePath =
         False -> httpError 404 "That library and version is not registered."
 
 
+
 -- HELPERS
+
 
 getParameter :: BS.ByteString -> (String -> Either String a) -> Snap a
 getParameter param fromString =

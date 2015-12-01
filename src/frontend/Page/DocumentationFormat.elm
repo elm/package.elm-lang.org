@@ -47,6 +47,11 @@ the [Maybe](https://github.com/elm-lang/core/blob/master/src/Maybe.elm)
 and [Result](https://github.com/elm-lang/core/blob/master/src/Result.elm)
 documentation for complete examples.
 
+If you are preparing to publish a package, you should read through the
+[API design guidelines](/help/design-guidelines) and [preview your
+documentation](/help/docs-preview).
+
+
 ## Documenting a value
 
 Here is an example from [the `String` library](/packages/elm-lang/core/latest/String):
