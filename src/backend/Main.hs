@@ -67,7 +67,7 @@ main =
             , ("help/documentation-format"
               , ifTop $ ServeFile.elm "Documentation Format" ["Page","DocumentationFormat"]
               )
-            , ("tools/preview-documentation",  Route.previewDocumentation)
+            , ("help/documentation-preview", Route.previewDocumentation)
             , ( BS.pack Path.artifactDirectory
               , serveDirectoryWith directoryConfig Path.artifactDirectory
               )
@@ -113,7 +113,7 @@ publicModules =
     [ ["Page","Catalog"]
     , ["Page","DesignGuidelines"]
     , ["Page","DocumentationFormat"]
-    , ["Page", "PreviewDocumentation"]
+    , ["Page","PreviewDocumentation"]
     , ["Page","NotFound"]
     , ["Page","Package"]
     , ["Page","PackageOverview"]

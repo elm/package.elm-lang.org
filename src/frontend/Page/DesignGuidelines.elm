@@ -53,6 +53,7 @@ important to read through and see why these recommendations matter.
     - [Module names should not reappear in function names](#module-names-should-not-reappear-in-function-names)
     - [Avoid infix operators](#avoid-infix-operators)
 
+
 ## Design for a concrete use case
 
 Before you start writing a library, think about what your goal is.
@@ -69,6 +70,7 @@ from someone you trust. It will make your library better. If you are doing
 this right, you will have example code and a tentative API before you
 start implementing anything.
 
+
 ## Avoid gratuitous abstraction
 
 Some functional programmers like to make their API as general as possible.
@@ -80,10 +82,11 @@ Abstraction is a tool, not a design goal. Unless abstraction is
 making someones life easier, it is not a good idea. If you cannot
 *demonstrate* why your abstraction is helpful, there is a problem with your API.
 
+
 ## Write helpful documentation with examples
 
 [This document](/help/documentation-format) describes how documentation works
-in Elm.
+in Elm, and you can preview your docs [here](/help/documentation-preview).
 
 Providing examples of common uses is extremely helpful. Do it! The standard
 libraries all make a point to have examples that show how one *should* be using
@@ -96,7 +99,6 @@ Finally, think hard about the order that the functions appear in and what kind
 of title each section gets. People will read documentation linearly when learning
 a library, so give them some structure!
 
-You can preview how your package documentation is going to look in the site [here](/tools/preview-documentation).
 
 ## The data structure is always the last argument
 
@@ -130,6 +132,7 @@ filteredPeople =
 The order of arguments in fold is specifically intended to make this very
 straight-forward: *the data structure is always the last argument*.
 
+
 ## Keep tags and record constructors secret
 
 It's convenient to be able to write `Point x y` instead of `{x = x, y = y}`. But
@@ -154,6 +157,7 @@ opaque type.
 You can (and often should) use opaque types even if there is only one tag. If
 you have a dozen values to track, you can tag a record. Then you can change the
 record even between minor releases.
+
 
 ## Naming
 

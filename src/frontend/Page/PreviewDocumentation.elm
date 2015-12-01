@@ -75,7 +75,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-  { header = Header.Model Route.Tools
+  { header = Header.Model Route.Help
   , currentModuleDoc = PDocs.Loading
   , moduleDocs = Dict.empty
   , fileError = False
