@@ -3,8 +3,8 @@ module Page.PackageOverview where
 import Dict
 import Effects as Fx
 import Html exposing (..)
-import Html.Events exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 import Mouse
 import StartApp
@@ -12,6 +12,7 @@ import Task
 
 import Docs.Version as Vsn
 import Overview.History as History
+import Overview.Slider as Slider
 import Page.Context as Ctx
 import Utils.ProximityTree as Prox
 
@@ -137,7 +138,7 @@ view address model =
     [ class "center"
     , style [ "padding-top" => "150px" ]
     ]
-    [ History.view 920 dummyProxList
+    [ History.view dummyProxList
     , viewSliders (DragStart >> Signal.message address) model
     , div [ class "diff" ]
         [ h1 [] (diffHeaderText (2,1,1) (3,0,0))

@@ -2,17 +2,18 @@ module Overview.History
     ( History, Release, Magnitude
     , dummy
     , decoder
-    , view, toX
+    , view
     )
     where
 
 import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Lazy exposing (lazy2)
+import Html.Lazy exposing (lazy)
 import Json.Decode as Json exposing ((:=))
 
 import Docs.Version as Vsn
+import Overview.Constants as Constants
 import Utils.Path exposing ((</>))
 import Utils.ProximityTree as Prox exposing (ProximityTree)
 
@@ -84,23 +85,26 @@ magnitude =
 (=>) = (,)
 
 
-view : Int -> ProximityTree Release -> Html
-view outerWidth releases =
-  lazy2 viewHelp outerWidth releases
+view : ProximityTree Release -> Html
+view releases =
+  lazy viewHelp releases
 
 
-viewHelp : Int -> ProximityTree Release -> Html
-viewHelp outerWidth proxTree =
+viewHelp : ProximityTree Release -> Html
+viewHelp proxTree =
   let
     versions =
       List.map (\(frac, release) -> (frac, release.version)) (Prox.toList proxTree)
 
+    nakedVersions =
+      List.map snd versions
+
     dots =
       List.map3
-        (makeDot outerWidth)
-        ((0, versionZero) :: versions)
+        makeDot
+        (versionZero :: nakedVersions)
         versions
-        (List.map Just (List.drop 1 versions) ++ [Nothing])
+        (List.map Just (List.drop 1 nakedVersions) ++ [Nothing])
   in
     div [ class "timeline" ] (line :: dots)
 
@@ -115,29 +119,19 @@ versionZero =
   ( 0, 0, 0 )
 
 
-padding : Int
-padding =
-  30
-
-
-toX : Int -> Float -> Int
-toX outerWidth fraction =
-  padding + round (Debug.log "fraction" fraction * toFloat (outerWidth - 2 * padding))
-
-
-makeDot : Int -> (Float, Vsn.Version) -> (Float, Vsn.Version) -> Maybe (Float, Vsn.Version) -> Html
-makeDot outerWidth (_, before) (fraction, current) maybeAfter =
+makeDot : Vsn.Version -> (Float, Vsn.Version) -> Maybe Vsn.Version -> Html
+makeDot before (fraction, current) maybeAfter =
   let
     isImportant =
       case maybeAfter of
         Nothing ->
           True
 
-        Just (_, after) ->
+        Just after ->
           Vsn.Major == Vsn.magnitude current after
 
     x =
-      toX outerWidth fraction
+      Constants.toX fraction
   in
     case Vsn.magnitude before current of
       Vsn.Major ->
