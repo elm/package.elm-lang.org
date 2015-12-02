@@ -95,5 +95,12 @@ view address color label fraction =
     ]
     [ span [ style ["color" => color] ] [ text "▲"]
     , br [] []
-    , text label
+    , span
+        [ style
+            [ "background-color" => color
+            , "padding" => "2px 5px"
+            , "border-radius" => "4px"
+            ]
+        ]
+        [ text label ]
     ]

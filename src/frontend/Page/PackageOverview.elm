@@ -162,9 +162,7 @@ viewSliders handleDragStart model =
         |> Dict.toList
         |> List.map (\( id, pos ) -> viewSlider (DragInfo id >> handleDragStart) pos)
   in
-    div
-      [ class "slider-container" ]
-      (text "Move these sliders!" :: sliders)
+    div [ class "slider-container" ] sliders
 
 
 viewSlider : (Int -> Signal.Message) -> Int -> Html
@@ -181,6 +179,13 @@ viewSlider setDragOffset position =
     ]
     [ span [ style ["color" => "#60B5CC"] ] [ text "▲"]
     , br [] []
-    , text "2.0.3"
+    , span
+        [ style
+            [ "background-color" => "#60B5CC"
+            , "padding" => "2px 5px"
+            , "border-radius" => "4px"
+            ]
+        ]
+        [ text "2.0.3" ]
     ]
 
