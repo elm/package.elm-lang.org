@@ -1,5 +1,6 @@
 [
     "coreytrampe/elm-vendor",
+    "dasch/elm-page-visibility",
     "elm-lang/core",
     "evancz/elm-effects",
     "evancz/elm-http",
