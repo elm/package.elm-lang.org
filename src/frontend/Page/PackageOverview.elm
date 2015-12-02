@@ -1,4 +1,4 @@
-module Page.PackageOverviewNew where
+module Page.PackageOverview where
 
 import Dict
 import Effects as Fx
