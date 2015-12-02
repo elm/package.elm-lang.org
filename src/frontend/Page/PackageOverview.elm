@@ -1,15 +1,19 @@
-module Page.PackageOverview where
+module Page.PackageOverviewNew where
 
-import Effects as Fx exposing (Effects)
+import Dict
+import Effects as Fx
 import Html exposing (..)
+import Html.Events exposing (..)
 import Html.Attributes exposing (..)
+import Json.Decode as Decode exposing (Decoder)
+import Mouse
 import StartApp
 import Task
 
-import Component.Header as Header
-import Component.PackageOverview as Overview
+import Docs.Version as Vsn
+import Overview.History as History
 import Page.Context as Ctx
-import Route
+import Utils.ProximityTree as Prox
 
 
 
@@ -24,7 +28,7 @@ app =
     { init = init
     , view = view
     , update = update
-    , inputs = []
+    , inputs = [ drags, dragEnds ]
     }
 
 
@@ -37,35 +41,53 @@ port worker =
   app.tasks
 
 
+drags : Signal Action
+drags =
+    Signal.map DragTo Mouse.x
+
+
+dragEnds : Signal Action
+dragEnds =
+    Signal.filterMap (maybeDrop DragEnd) DragEnd Mouse.isDown
+
+
+maybeDrop : a -> Bool -> Maybe a
+maybeDrop value drop =
+    if drop then
+        Nothing
+    else
+        Just value
+
+
 
 -- MODEL
 
 
 type alias Model =
-    { header : Header.Model
-    , overview : Overview.Model
+    { dragging : Maybe DragInfo
+    , sliders : Dict.Dict SliderId Int
     }
 
 
+type alias SliderId =
+    Int
 
--- INIT
+
+type alias DragInfo =
+    { sliderId : SliderId
+    , offset : Int
+    }
 
 
-init : (Model, Effects Action)
+init : ( Model, Fx.Effects Action )
 init =
-  let
-    (header, headerFx) =
-      Header.init (Route.fromOverviewContext context)
+  ( Model Nothing (Dict.fromList [ ( 1, 0 ), ( 2, 100 ) ])
+  , Fx.none
+  )
 
-    (overview, moduleFx) =
-      Overview.init context
-  in
-    ( Model header overview
-    , Fx.batch
-        [ headerFx
-        , Fx.map UpdateOverview moduleFx
-        ]
-    )
+
+dummyProxList =
+  Prox.fromList (toFloat << .date) History.dummy
 
 
 
@@ -73,30 +95,91 @@ init =
 
 
 type Action
-    = UpdateOverview Overview.Action
+    = NoOp
+    | DragStart DragInfo
+    | DragTo Int
+    | DragEnd
 
 
-update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
-    UpdateOverview act ->
-        let
-          (newDocs, fx) =
-            Overview.update act model.overview
-        in
-          ( { model | overview = newDocs }
-          , Fx.map UpdateOverview fx
-          )
+    NoOp ->
+      model => Fx.none
+
+    DragStart dragInfo ->
+      { model | dragging = Just dragInfo } => Fx.none
+
+    DragTo position ->
+      case model.dragging of
+          Nothing ->
+              model => Fx.none
+
+          Just { sliderId, offset } ->
+              let
+                  newSliders =
+                      Dict.insert sliderId (position - offset) model.sliders
+              in
+                  { model | sliders = newSliders } => Fx.none
+
+    DragEnd ->
+      { model | dragging = Nothing } => Fx.none
 
 
 
 -- VIEW
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
-  Header.view addr model.header
-    [ Overview.view (Signal.forwardTo addr UpdateOverview) model.overview
+(=>) = (,)
+
+
+view address model =
+  div
+    [ class "center"
+    , style [ "padding-top" => "150px" ]
+    ]
+    [ History.view 920 dummyProxList
+    , viewSliders (DragStart >> Signal.message address) model
+    , div [ class "diff" ]
+        [ h1 [] (diffHeaderText (2,1,1) (3,0,0))
+        ]
     ]
 
+
+diffHeaderText lower higher =
+  [ text "Changelog from "
+  , span [ style [ "border-bottom" => "4px solid #7FD13B" ] ] [ text (Vsn.vsnToString lower) ]
+  , text " to "
+  , span [ style [ "border-bottom" => "4px solid #60B5CC" ] ] [ text (Vsn.vsnToString higher) ]
+  ]
+
+
+viewSliders : (DragInfo -> Signal.Message) -> Model -> Html
+viewSliders handleDragStart model =
+  let
+    sliders =
+      model.sliders
+        |> Dict.toList
+        |> List.map (\( id, pos ) -> viewSlider (DragInfo id >> handleDragStart) pos)
+  in
+    div
+      [ class "slider-container" ]
+      (text "Move these sliders!" :: sliders)
+
+
+viewSlider : (Int -> Signal.Message) -> Int -> Html
+viewSlider setDragOffset position =
+  button
+    [ class "slider-handle"
+    , on
+        "mousedown"
+        (Decode.at [ "target", "parentNode", "offsetLeft" ] Decode.int)
+        setDragOffset
+    , style
+        [ "left" => (toString position ++ "px")
+        ]
+    ]
+    [ span [ style ["color" => "#60B5CC"] ] [ text "▲"]
+    , br [] []
+    , text "2.0.3"
+    ]
 
