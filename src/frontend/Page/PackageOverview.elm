@@ -146,9 +146,9 @@ view address model =
 
 
 diffHeaderText lower higher =
-  [ text "Changelog from "
+  [ text "API diff between "
   , span [ style [ "border-bottom" => "4px solid #7FD13B" ] ] [ text (Vsn.vsnToString lower) ]
-  , text " to "
+  , text " and "
   , span [ style [ "border-bottom" => "4px solid #60B5CC" ] ] [ text (Vsn.vsnToString higher) ]
   ]
 
