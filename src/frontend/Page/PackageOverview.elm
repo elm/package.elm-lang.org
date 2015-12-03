@@ -129,18 +129,24 @@ update action model =
 view : Signal.Address Action -> Model -> Html
 view address {versions, slider1, slider2} =
   let
-    (fraction1, version1) =
-      Prox.nearest (Slider.currentFraction slider1) versions
+    fraction1 =
+      Slider.currentFraction slider1
 
-    (fraction2, version2) =
-      Prox.nearest (Slider.currentFraction slider2) versions
+    fraction2 =
+      Slider.currentFraction slider2
 
-    viewSlider tag frac vsn =
+    (_, version1) =
+      Prox.nearest fraction1 versions
+
+    (_, version2) =
+      Prox.nearest fraction2 versions
+
+    viewSlider tag frac vsn color =
       Slider.view
         (Signal.forwardTo address tag)
         frac
         (Vsn.vsnToString vsn)
-        (if vsn == min version1 version2 then "#7FD13B" else "#60B5CC")
+        color
   in
     div
       [ class "center"
@@ -148,20 +154,42 @@ view address {versions, slider1, slider2} =
       ]
       [ History.view versions
       , div [ class "slider-container" ]
-          [ viewSlider UpdateSlider1 fraction1 version1
-          , viewSlider UpdateSlider2 fraction2 version2
+          [ viewSlider UpdateSlider1 fraction1 version1 "#7FD13B"
+          , viewSlider UpdateSlider2 fraction2 version2 "#60B5CC"
           ]
       , div [ class "diff" ]
-          [ h1 [] (headerText version1 version2)
+          [ h1 [] (headerText fraction1 fraction2 version1 version2)
           ]
       ]
 
 
-headerText : Vsn.Version -> Vsn.Version -> List Html
-headerText lower higher =
-  [ text "Changes between "
-  , span [ style [ "border-bottom" => "4px solid #7FD13B" ] ] [ text (Vsn.vsnToString lower) ]
-  , text " and "
-  , span [ style [ "border-bottom" => "4px solid #60B5CC" ] ] [ text (Vsn.vsnToString higher) ]
-  ]
+headerText : Float -> Float -> Vsn.Version -> Vsn.Version -> List Html
+headerText fraction1 fraction2 version1 version2 =
+  let
+    text1 =
+      vsnText "#7FD13B" version1
+
+    text2 =
+      vsnText "#60B5CC" version2
+
+    (leftVsn, rightVsn) =
+      if fraction1 < fraction2 then
+        (text1, text2)
+
+      else
+        (text2, text1)
+  in
+    [ text "Changes between ", leftVsn, text " and ", rightVsn ]
+
+
+vsnText : String -> Vsn.Version -> Html
+vsnText color vsn =
+  span
+    [ style
+        [ "border-bottom" => ("4px solid " ++ color)
+        ]
+    ]
+    [ text (Vsn.vsnToString vsn)
+    ]
+
 
