@@ -1,12 +1,10 @@
 module Page.PackageOverview where
 
-import Dict
 import Effects as Fx
 import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html.Attributes exposing (class, style)
 import Html.Events exposing (..)
-import Json.Decode as Decode exposing (Decoder)
-import Mouse
+import Json.Decode as Decode
 import StartApp
 import Task
 
@@ -29,7 +27,7 @@ app =
     { init = init
     , view = view
     , update = update
-    , inputs = [ drags, dragEnds ]
+    , inputs = []
     }
 
 
@@ -42,53 +40,52 @@ port worker =
   app.tasks
 
 
-drags : Signal Action
-drags =
-    Signal.map DragTo Mouse.x
-
-
-dragEnds : Signal Action
-dragEnds =
-    Signal.filterMap (maybeDrop DragEnd) DragEnd Mouse.isDown
-
-
-maybeDrop : a -> Bool -> Maybe a
-maybeDrop value drop =
-    if drop then
-        Nothing
-    else
-        Just value
-
-
 
 -- MODEL
 
 
 type alias Model =
-    { dragging : Maybe DragInfo
-    , sliders : Dict.Dict SliderId Int
-    }
-
-
-type alias SliderId =
-    Int
-
-
-type alias DragInfo =
-    { sliderId : SliderId
-    , offset : Int
+    { versions : Prox.ProximityTree Vsn.Version
+    , slider1 : Slider.Model
+    , slider2 : Slider.Model
     }
 
 
 init : ( Model, Fx.Effects Action )
 init =
-  ( Model Nothing (Dict.fromList [ ( 1, 0 ), ( 2, 100 ) ])
-  , Fx.none
-  )
+  let
+    history =
+      History.dummy
+
+    proxTree =
+      Prox.map .version (Prox.fromList (toFloat << .date) history)
+
+    (penultimate, ultimate) =
+      latestInterestingVersions history
+  in
+    ( Model
+        proxTree
+        (Slider.init (Prox.lookup penultimate proxTree))
+        (Slider.init (Prox.lookup ultimate proxTree))
+    , Fx.none
+    )
 
 
-dummyProxList =
-  Prox.fromList (toFloat << .date) History.dummy
+latestInterestingVersions : History.History -> (Vsn.Version, Vsn.Version)
+latestInterestingVersions history =
+  let
+    interestingVersions =
+      Vsn.filterInteresting (List.map .version history)
+  in
+    case List.reverse interestingVersions of
+      latest :: sndLatest :: _ ->
+        ( sndLatest, latest )
+
+      [latest] ->
+        ( Vsn.one, latest )
+
+      [] ->
+        Debug.crash "How can there be a published package with no versions?"
 
 
 
@@ -96,34 +93,30 @@ dummyProxList =
 
 
 type Action
-    = NoOp
-    | DragStart DragInfo
-    | DragTo Int
-    | DragEnd
+    = UpdateSlider1 Slider.Action
+    | UpdateSlider2 Slider.Action
 
 
+update : Action -> Model -> ( Model, Fx.Effects Action )
 update action model =
   case action of
-    NoOp ->
-      model => Fx.none
+    UpdateSlider1 act ->
+      let
+        (newSlider, fx) =
+          Slider.update act model.slider1
+      in
+        ( { model | slider1 = newSlider }
+        , Fx.map UpdateSlider1 fx
+        )
 
-    DragStart dragInfo ->
-      { model | dragging = Just dragInfo } => Fx.none
-
-    DragTo position ->
-      case model.dragging of
-          Nothing ->
-              model => Fx.none
-
-          Just { sliderId, offset } ->
-              let
-                  newSliders =
-                      Dict.insert sliderId (position - offset) model.sliders
-              in
-                  { model | sliders = newSliders } => Fx.none
-
-    DragEnd ->
-      { model | dragging = Nothing } => Fx.none
+    UpdateSlider2 act ->
+      let
+        (newSlider, fx) =
+          Slider.update act model.slider2
+      in
+        ( { model | slider2 = newSlider }
+        , Fx.map UpdateSlider2 fx
+        )
 
 
 
@@ -133,59 +126,42 @@ update action model =
 (=>) = (,)
 
 
-view address model =
-  div
-    [ class "center"
-    , style [ "padding-top" => "150px" ]
-    ]
-    [ History.view dummyProxList
-    , viewSliders (DragStart >> Signal.message address) model
-    , div [ class "diff" ]
-        [ h1 [] (diffHeaderText (2,1,1) (3,0,0))
-        ]
-    ]
+view : Signal.Address Action -> Model -> Html
+view address {versions, slider1, slider2} =
+  let
+    (fraction1, version1) =
+      Prox.nearest (Slider.currentFraction slider1) versions
+
+    (fraction2, version2) =
+      Prox.nearest (Slider.currentFraction slider2) versions
+
+    viewSlider tag frac vsn =
+      Slider.view
+        (Signal.forwardTo address tag)
+        frac
+        (Vsn.vsnToString vsn)
+        (if vsn == min version1 version2 then "#7FD13B" else "#60B5CC")
+  in
+    div
+      [ class "center"
+      , style [ "padding-top" => "150px" ]
+      ]
+      [ History.view versions
+      , div [ class "slider-container" ]
+          [ viewSlider UpdateSlider1 fraction1 version1
+          , viewSlider UpdateSlider2 fraction2 version2
+          ]
+      , div [ class "diff" ]
+          [ h1 [] (headerText version1 version2)
+          ]
+      ]
 
 
-diffHeaderText lower higher =
-  [ text "API diff between "
+headerText : Vsn.Version -> Vsn.Version -> List Html
+headerText lower higher =
+  [ text "Changes between "
   , span [ style [ "border-bottom" => "4px solid #7FD13B" ] ] [ text (Vsn.vsnToString lower) ]
   , text " and "
   , span [ style [ "border-bottom" => "4px solid #60B5CC" ] ] [ text (Vsn.vsnToString higher) ]
   ]
-
-
-viewSliders : (DragInfo -> Signal.Message) -> Model -> Html
-viewSliders handleDragStart model =
-  let
-    sliders =
-      model.sliders
-        |> Dict.toList
-        |> List.map (\( id, pos ) -> viewSlider (DragInfo id >> handleDragStart) pos)
-  in
-    div [ class "slider-container" ] sliders
-
-
-viewSlider : (Int -> Signal.Message) -> Int -> Html
-viewSlider setDragOffset position =
-  button
-    [ class "slider-handle"
-    , on
-        "mousedown"
-        (Decode.at [ "target", "parentNode", "offsetLeft" ] Decode.int)
-        setDragOffset
-    , style
-        [ "left" => (toString position ++ "px")
-        ]
-    ]
-    [ span [ style ["color" => "#60B5CC"] ] [ text "▲"]
-    , br [] []
-    , span
-        [ style
-            [ "background-color" => "#60B5CC"
-            , "padding" => "2px 5px"
-            , "border-radius" => "4px"
-            ]
-        ]
-        [ text "2.0.3" ]
-    ]
 

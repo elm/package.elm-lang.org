@@ -1,5 +1,6 @@
 module Docs.Version
     ( Version
+    , one
     , getMajor
     , Dictionary
     , MinorPatch
@@ -29,6 +30,11 @@ type alias Version = (Int, Int, Int)
 getMajor : Version -> Int
 getMajor (major, _, _) =
   major
+
+
+one : Version
+one =
+  ( 1, 0, 0 )
 
 
 

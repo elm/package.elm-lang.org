@@ -27,7 +27,7 @@ Elm.Native.Drag.make = function(localRuntime)
 			{
 				window.removeEventListener('mousemove', reportMoves);
 				window.removeEventListener('mouseup', reportEnd);
-				callback(end);
+				callback(Task.succeed(end));
 			}
 
 			window.addEventListener('mousemove', reportMoves);

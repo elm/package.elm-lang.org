@@ -85,16 +85,16 @@ magnitude =
 (=>) = (,)
 
 
-view : ProximityTree Release -> Html
+view : ProximityTree Vsn.Version -> Html
 view releases =
   lazy viewHelp releases
 
 
-viewHelp : ProximityTree Release -> Html
+viewHelp : ProximityTree Vsn.Version -> Html
 viewHelp proxTree =
   let
     versions =
-      List.map (\(frac, release) -> (frac, release.version)) (Prox.toList proxTree)
+      Prox.toList proxTree
 
     nakedVersions =
       List.map snd versions

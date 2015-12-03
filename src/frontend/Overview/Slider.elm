@@ -26,9 +26,9 @@ type alias DragInfo =
     }
 
 
-init : Model
-init =
-  Model 0.3 Nothing
+init : Float -> Model
+init fraction =
+  Model fraction Nothing
 
 
 
@@ -49,7 +49,7 @@ update action model =
         newModel =
           { model | dragState = Just (DragInfo x x) }
       in
-        (newModel, watchDrags address)
+        (newModel, trackDrags address)
 
     DragAt x ->
       let
@@ -89,9 +89,9 @@ currentFraction {fraction, dragState} =
 -- EFFECTS
 
 
-watchDrags : Signal.Address Action -> Fx.Effects Action
-watchDrags address =
-  Fx.task (Native.Drag.watch (Signal.send address << DragAt) DragEnd)
+trackDrags : Signal.Address Action -> Fx.Effects Action
+trackDrags address =
+  Fx.task (Native.Drag.track (Signal.send address << DragAt) DragEnd)
 
 
 
@@ -101,8 +101,8 @@ watchDrags address =
 (=>) = (,)
 
 
-view : Signal.Address Action -> String -> String -> Float -> Html
-view address color label fraction =
+view : Signal.Address Action -> Float -> String -> String -> Html
+view address fraction label color =
   button
     [ class "slider-handle"
     , on "mousedown" ("pageX" := Decode.int) (Signal.message address << DragStart address)

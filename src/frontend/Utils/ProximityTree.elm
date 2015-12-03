@@ -2,6 +2,8 @@ module Utils.ProximityTree
     ( ProximityTree
     , fromList
     , toList
+    , map
+    , lookup
     , nearest
     )
     where
@@ -87,7 +89,36 @@ toList tree =
 
 
 
--- EXTRACT
+-- UTILITIES
+
+
+map : (a -> b) -> ProximityTree a -> ProximityTree b
+map func tree =
+  case tree of
+    Empty ->
+      Empty
+
+    Node {fraction,value} left right ->
+      Node (Entry fraction (func value)) (map func left) (map func right)
+
+
+lookup : a -> ProximityTree a -> Float
+lookup targetValue tree =
+  lookupHelp targetValue (toList tree)
+
+
+lookupHelp : a -> List (Float, a) -> Float
+lookupHelp targetValue entries =
+  case entries of
+    [] ->
+      Debug.crash "Trying to lookup an entry that does not exist in this ProximityTree"
+
+    (fraction, value) :: rest ->
+      if targetValue == value then
+        fraction
+
+      else
+        lookupHelp targetValue rest
 
 
 nearest : Float -> ProximityTree a -> (Float, a)
