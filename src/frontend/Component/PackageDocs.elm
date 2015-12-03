@@ -240,9 +240,10 @@ subChunks moduleDocs postDocs =
       firstChunk :: rest ->
         let
           handleRest =
-            if String.endsWith "," (String.trimRight firstChunk)
-            then multiLineDocsChunk moduleDocs
-            else List.map Markdown
+            if String.endsWith "," (String.trimRight firstChunk) then
+              multiLineDocsChunk moduleDocs
+            else
+              List.map Markdown
         in
           subChunksHelp moduleDocs (String.split "," firstChunk) ++ handleRest rest
 
@@ -258,9 +259,10 @@ multiLineDocsChunk moduleDocs docsToParse =
         Debug.crash errMsg
 
       [rest] ->
-        if String.startsWith "\n" rest || String.startsWith "#" rest
-        then Debug.crash errMsg
-        else subChunks moduleDocs rest
+        if String.startsWith "\n" rest || String.startsWith "#" rest then
+          Debug.crash errMsg
+        else
+          subChunks moduleDocs rest
 
       _ ->
         Debug.crash "This shouldn't happen: the Regex was only supposed to take one line"
