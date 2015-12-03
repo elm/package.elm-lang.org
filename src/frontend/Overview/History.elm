@@ -1,5 +1,6 @@
 module Overview.History
     ( History, Release, Magnitude
+    , coarseDiff
     , dummy
     , decoder
     , view
@@ -8,7 +9,7 @@ module Overview.History
 
 import Dict
 import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html.Attributes exposing (class, classList, style)
 import Html.Lazy exposing (lazy)
 import Json.Decode as Json exposing ((:=))
 
@@ -76,6 +77,40 @@ magnitude =
     ("added" := Json.int)
     ("changed" := Json.int)
     ("removed" := Json.int)
+
+
+
+-- COARSE DIFF
+
+
+coarseDiff : Vsn.Version -> Vsn.Version -> History -> Magnitude
+coarseDiff v1 v2 history =
+  coarseDiffHelp (min v1 v2) (max v1 v2) history (Magnitude 0 0 0)
+
+
+coarseDiffHelp : Vsn.Version -> Vsn.Version -> History -> Magnitude -> Magnitude
+coarseDiffHelp low high history magnitude =
+  case history of
+    [] ->
+      magnitude
+
+    release :: rest ->
+      if release.version > high then
+        magnitude
+
+      else if release.version > low then
+        coarseDiffHelp low high rest (addMagnitude magnitude release.magnitude)
+
+      else
+        coarseDiffHelp low high rest magnitude
+
+
+addMagnitude : Magnitude -> Magnitude -> Magnitude
+addMagnitude m1 m2 =
+  Magnitude
+    (m1.added + m2.added)
+    (m1.changed + m2.changed)
+    (m1.removed + m2.removed)
 
 
 

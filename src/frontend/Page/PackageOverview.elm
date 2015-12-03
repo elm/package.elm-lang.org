@@ -45,7 +45,8 @@ port worker =
 
 
 type alias Model =
-    { versions : Prox.ProximityTree Vsn.Version
+    { history : History.History
+    , versions : Prox.ProximityTree Vsn.Version
     , slider1 : Slider.Model
     , slider2 : Slider.Model
     }
@@ -64,6 +65,7 @@ init =
       latestInterestingVersions history
   in
     ( Model
+        history
         proxTree
         (Slider.init (Prox.lookup penultimate proxTree))
         (Slider.init (Prox.lookup ultimate proxTree))
@@ -127,7 +129,7 @@ update action model =
 
 
 view : Signal.Address Action -> Model -> Html
-view address {versions, slider1, slider2} =
+view address {history, versions, slider1, slider2} =
   let
     fraction1 =
       Slider.currentFraction slider1
@@ -147,6 +149,9 @@ view address {versions, slider1, slider2} =
         frac
         (Vsn.vsnToString vsn)
         color
+
+    magnitude =
+      History.coarseDiff version1 version2 history
   in
     div
       [ class "center"
@@ -159,6 +164,7 @@ view address {versions, slider1, slider2} =
           ]
       , div [ class "diff" ]
           [ h1 [] (headerText fraction1 fraction2 version1 version2)
+          , text (toString magnitude)
           ]
       ]
 
