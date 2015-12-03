@@ -103,7 +103,7 @@ update action model =
     UpdateSlider1 act ->
       let
         (newSlider, fx) =
-          Slider.update act model.slider1
+          Slider.update model.versions act model.slider1
       in
         ( { model | slider1 = newSlider }
         , Fx.map UpdateSlider1 fx
@@ -112,7 +112,7 @@ update action model =
     UpdateSlider2 act ->
       let
         (newSlider, fx) =
-          Slider.update act model.slider2
+          Slider.update model.versions act model.slider2
       in
         ( { model | slider2 = newSlider }
         , Fx.map UpdateSlider2 fx

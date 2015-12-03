@@ -1,13 +1,16 @@
 module Overview.Slider where
 
+import Easing exposing (ease, easeOutExpo, float)
 import Effects as Fx
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Decode as Decode exposing ((:=))
+import Time exposing (Time)
 
 import Overview.Constants as Constants
 import Native.Drag
+import Utils.ProximityTree as Prox
 
 
 
@@ -16,19 +19,38 @@ import Native.Drag
 
 type alias Model =
     { fraction : Float
-    , dragState : Maybe DragInfo
+    , drag : Maybe Drag
+    , animation : Animation
     }
 
 
-type alias DragInfo =
+type alias Drag =
     { start : Int
     , current : Int
     }
 
 
+type Animation
+    = None
+    | Start Float
+    | Running Info
+
+
+type alias Info =
+    { target : Float
+    , prevClockTime : Time
+    , elapsedTime : Time
+    }
+
+
+animationDuration : Time
+animationDuration =
+  1000
+
+
 init : Float -> Model
 init fraction =
-  Model fraction Nothing
+  Model fraction Nothing None
 
 
 
@@ -39,50 +61,97 @@ type Action
     = DragStart (Signal.Address Action) Int
     | DragAt Int
     | DragEnd
+    | Tick Time
 
 
-update : Action -> Model -> ( Model, Fx.Effects Action )
-update action model =
+update : Prox.ProximityTree a -> Action -> Model -> ( Model, Fx.Effects Action )
+update proxTree action model =
   case action of
     DragStart address x ->
       let
         newModel =
-          { model | dragState = Just (DragInfo x x) }
+          Model
+            (currentFraction model)
+            (Just (Drag x x))
+            None
       in
         (newModel, trackDrags address)
 
     DragAt x ->
       let
         newModel =
-          case model.dragState of
+          case model.drag of
             Nothing ->
               model
 
             Just dragInfo ->
               { model |
-                  dragState = Just { dragInfo | current = x }
+                  drag = Just { dragInfo | current = x }
               }
       in
         (newModel, Fx.none)
 
     DragEnd ->
-      ( Model (currentFraction model) Nothing
-      , Fx.none
-      )
+      let
+        fraction =
+          currentFraction model
+
+        target =
+          fst (Prox.nearest fraction proxTree)
+      in
+        ( Model fraction Nothing (Start target)
+        , Fx.tick Tick
+        )
+
+    Tick clockTime ->
+      case model.animation of
+        None ->
+          (model, Fx.none)
+
+        Start target ->
+          ( { model | animation = Running (Info target clockTime 0) }
+          , Fx.tick Tick
+          )
+
+        Running {target, elapsedTime, prevClockTime} ->
+          let
+            newElapsedTime =
+              elapsedTime + (clockTime - prevClockTime)
+          in
+            if newElapsedTime > animationDuration then
+              ( Model target Nothing None
+              , Fx.none
+              )
+
+            else
+              ( { model | animation = Running (Info target clockTime newElapsedTime) }
+              , Fx.tick Tick
+              )
 
 
 currentFraction : Model -> Float
-currentFraction {fraction, dragState} =
+currentFraction {fraction, drag, animation} =
   let
-    offset =
-      case dragState of
+    dragOffset =
+      case drag of
         Nothing ->
           0
 
         Just {start,current} ->
           Constants.toFraction (current - start)
+
+    animationOffset =
+      case animation of
+        None ->
+          0
+
+        Start _ ->
+          0
+
+        Running { target, elapsedTime } ->
+          ease easeOutExpo float 0 (target - fraction) animationDuration elapsedTime
   in
-    clamp 0 1 (fraction + offset)
+    clamp 0 1 (fraction + dragOffset + animationOffset)
 
 
 
