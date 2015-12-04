@@ -1,4 +1,4 @@
-module Docs.Diff (diffPackage, PackageChanges) where
+module Overview.Diff (diffPackage, PackageChanges) where
 
 import Dict
 import Effects as Fx exposing (Effects)
