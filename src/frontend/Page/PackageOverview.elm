@@ -283,12 +283,19 @@ coarseDiff history version1 version2 =
 
 
 detailedDiff docs version1 version2 =
-  case Maybe.map2 (,) (Dict.get version1 docs) (Dict.get version2 docs) of
-    Just (Ready pkg1, Ready pkg2) ->
-      detailedDiffHelp docs pkg1 pkg2
+  let
+    lowDocs =
+      Dict.get (min version1 version2) docs
 
-    _ ->
-      text ""
+    highDocs =
+      Dict.get (max version1 version2) docs
+  in
+    case Maybe.map2 (,) lowDocs highDocs of
+      Just (Ready pkg1, Ready pkg2) ->
+        detailedDiffHelp docs pkg1 pkg2
+
+      _ ->
+        text ""
 
 
 detailedDiffHelp docs pkg1 pkg2 =
