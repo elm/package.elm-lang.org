@@ -3,14 +3,14 @@ module Page.PackageOverview where
 import Dict
 import Effects as Fx
 import Html exposing (..)
-import Html.Attributes exposing (class, style)
+import Html.Attributes exposing (class, key, style)
 import Html.Events exposing (..)
 import Html.Lazy exposing (lazy3)
 import Json.Decode as Decode
 import StartApp
 import Task
 
-import Component.PackageDocs as PDocs
+import Docs.Entry as Entry
 import Docs.Package as Docs
 import Docs.Type as Type
 import Docs.Version as Vsn
@@ -238,7 +238,8 @@ view address {history, versions, slider1, slider2, docs} =
           ]
       , div [ class "diff" ]
           [ diffHeader fraction1 fraction2 version1 version2
-          , viewDiff history docs version1 version2
+          , lazy3 coarseDiff history version1 version2
+          , lazy3 detailedDiff docs version1 version2
           ]
       ]
 
@@ -273,28 +274,69 @@ vsnText color vsn =
     ]
 
 
-viewDiff history docs version1 version2 =
-  case Maybe.map2 (,) (Dict.get version1 docs) (Dict.get version2 docs) of
-    Just (Ready pkg1, Ready pkg2) ->
-      lazy3 detailedDiff docs pkg1 pkg2
 
-    _ ->
-      lazy3 coarseDiff history version1 version2
+-- VIEW DIFFS
 
 
 coarseDiff history version1 version2 =
   text (toString (History.coarseDiff version1 version2 history))
 
 
-detailedDiff docs pkg1 pkg2 =
+detailedDiff docs version1 version2 =
+  case Maybe.map2 (,) (Dict.get version1 docs) (Dict.get version2 docs) of
+    Just (Ready pkg1, Ready pkg2) ->
+      detailedDiffHelp docs pkg1 pkg2
+
+    _ ->
+      text ""
+
+
+detailedDiffHelp docs pkg1 pkg2 =
   let
     { added, changed, removed } =
       Diff.diffPackage pkg1 pkg2
   in
-    div []
-      [ p [] <| text "Added: " :: List.intersperse (text ", ") (List.map text added)
-      , p [] <| text "Removed: " :: List.intersperse (text ", ") (List.map text removed)
-      , p [] <| text "Changed: " :: List.intersperse (text ", ") (List.map text (Dict.keys changed))
+    ul [class "diff-detailed"] <|
+      List.map (listItem "diff-removed-module" "removed") removed
+      ++ List.map (listItem "diff-added-module" "added") added
+      ++ viewPackageChanges changed
+
+
+listItem itemClass verbed name =
+  li [key name]
+    [ header
+        [class itemClass]
+        [ code [] [text name], text (" was " ++ verbed ++ ".") ]
+    ]
+
+
+viewPackageChanges changes =
+  List.map viewModuleChanges (Dict.toList changes)
+
+
+viewModuleChanges (name, changes) =
+  let
+    changePairs =
+      Dict.values changes.changed
+  in
+    li [key name]
+      [ header [class "diff-changed-module"] [ code [] [ text name ] ]
+      , ul [class "diff-removed"] (List.map viewEntry (Dict.values changes.removed))
+      , ul [class "diff-added"] (List.map viewEntry (Dict.values changes.added))
+      , ul [class "diff-changed"] (List.map viewChangePair changePairs)
       ]
 
 
+viewChangePair (old, new) =
+  li []
+    [ viewTypeAnnotation old
+    , viewTypeAnnotation new
+    ]
+
+
+viewEntry entry =
+  li [] [viewTypeAnnotation entry]
+
+
+viewTypeAnnotation entry =
+  Entry.viewTypeAnnotation Dict.empty entry

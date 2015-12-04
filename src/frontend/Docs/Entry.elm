@@ -125,20 +125,25 @@ typeView : Name.Dictionary -> Model Type -> Html
 typeView nameDict model =
   let
     annotation =
-      case model.info of
-        Value tipe _ ->
-            valueAnnotation nameDict model.name tipe
-
-        Union {vars,tags} ->
-            unionAnnotation (Type.toHtml nameDict Type.App) model.name vars tags
-
-        Alias {vars,tipe} ->
-            aliasAnnotation nameDict model.name vars tipe
+      viewTypeAnnotation nameDict model
   in
     div [ class "docs-entry", id model.name ]
-      [ annotationBlock annotation
+      [ annotation
       , div [class "docs-comment"] [Markdown.block model.docs]
       ]
+
+
+viewTypeAnnotation nameDict model =
+  annotationBlock <|
+    case model.info of
+      Value tipe _ ->
+          valueAnnotation nameDict model.name tipe
+
+      Union {vars,tags} ->
+          unionAnnotation (Type.toHtml nameDict Type.App) model.name vars tags
+
+      Alias {vars,tipe} ->
+          aliasAnnotation nameDict model.name vars tipe
 
 
 annotationBlock : List (List Html) -> Html

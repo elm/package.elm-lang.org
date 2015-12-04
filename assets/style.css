@@ -276,13 +276,58 @@ pre {
   border-left: 2px solid #eeeeee;
   border-right: 2px solid #eeeeee;
   border-bottom: 2px solid #eeeeee;
-  padding: 20px;
+  padding-top: 20px;
 }
 
 .diff h1 {
   text-align: center;
   padding-top: 0;
 }
+
+.diff-detailed {
+  list-style: none;
+  padding-left: 0;
+}
+
+.diff-detailed li {
+  margin: 20px 0;
+}
+
+.diff-detailed li header {
+  padding: 10px 20px;
+  font-size: 1.5em;
+}
+
+.diff-added-module {
+  background-color: #eaffea;
+}
+.diff-added-module code {
+  color: #24F824;
+}
+
+.diff-removed-module {
+  background-color: #ffecec;
+}
+.diff-removed-module code {
+  color: #BA8888;
+}
+
+.diff-changed-module {
+  background-color: #f9f9f9;
+}
+
+.diff-added {
+  color: #24F824;
+}
+
+.diff-removed {
+  color: #BA8888;
+}
+
+.diff-changed {
+  color: yellow;
+}
+
 
 
 /* CATALOG */
