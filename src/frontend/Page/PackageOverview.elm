@@ -141,7 +141,7 @@ update action model =
           maybeLoadDocs model.docs maybeTarget
       in
         ( { model | slider2 = newSlider, docs = newDocs }
-        , Fx.batch [ Fx.map UpdateSlider1 fx, maybeRequest ]
+        , Fx.batch [ Fx.map UpdateSlider2 fx, maybeRequest ]
         )
 
     DocsFailed vsn ->
