@@ -142,7 +142,7 @@ delayedTypeParse : List (Chunk String) -> Effects Action
 delayedTypeParse chunks =
   Fx.task <|
     Task.succeed () `Task.andThen` \_ ->
-        Task.succeed (LoadParsedDocs (List.map (chunkMap stringToType) chunks))
+        Task.succeed (LoadParsedDocs (List.map (chunkMap Type.parseWithFallback) chunks))
 
 
 chunkMap : (a -> b) -> Chunk a -> Chunk b
@@ -153,16 +153,6 @@ chunkMap func chunk =
 
     Entry entry ->
       Entry (Entry.map func entry)
-
-
-stringToType : String -> Type.Type
-stringToType str =
-  case Type.parse str of
-    Ok tipe ->
-      tipe
-
-    Err _ ->
-      Type.Var str
 
 
 jumpToHash : Effects Action

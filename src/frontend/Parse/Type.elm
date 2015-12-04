@@ -1,4 +1,4 @@
-module Parse.Type (parse) where
+module Parse.Type (parse, parseWithFallback) where
 
 import Char
 import String
@@ -15,6 +15,16 @@ import Docs.Type exposing (Type(..))
 parse : String -> Result String Type
 parse tipeString =
   run tipe tipeString
+
+
+parseWithFallback : String -> Type
+parseWithFallback str =
+  case parse str of
+    Ok tipe ->
+      tipe
+
+    Err _ ->
+      Var str
 
 
 

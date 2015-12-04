@@ -9,6 +9,7 @@ import Json.Decode as Json exposing ((:=))
 
 import Component.PackageDocs as PDocs
 import Docs.Package as Docs
+import Parse.Type as Type
 import Utils.Markdown as Markdown
 import Utils.Path as Path
 
@@ -147,7 +148,7 @@ docsForModule moduleName docs =
   case Dict.get moduleName docs of
     Just moduleDocs ->
       PDocs.toChunks moduleDocs
-        |> List.map (PDocs.chunkMap PDocs.stringToType)
+        |> List.map (PDocs.chunkMap Type.parseWithFallback)
         |> PDocs.Info moduleName (PDocs.toNameDict docs)
         |> PDocs.ParsedDocs
 
