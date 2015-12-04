@@ -1,4 +1,12 @@
-module Overview.Slider where
+module Overview.Slider
+  ( Model
+  , Action
+  , init
+  , update
+  , view
+  , currentFraction
+  )
+  where
 
 import Easing exposing (ease, easeOutExpo, float)
 import Effects as Fx
@@ -64,7 +72,7 @@ type Action
     | Tick Time
 
 
-update : Prox.ProximityTree a -> Action -> Model -> ( Model, Fx.Effects Action )
+update : Prox.ProximityTree a -> Action -> Model -> ( Model, Fx.Effects Action, Maybe a )
 update proxTree action model =
   case action of
     DragStart address x ->
@@ -75,7 +83,7 @@ update proxTree action model =
             (Just (Drag x x))
             None
       in
-        (newModel, trackDrags address)
+        (newModel, trackDrags address, Nothing)
 
     DragAt x ->
       let
@@ -89,28 +97,30 @@ update proxTree action model =
                   drag = Just { dragInfo | current = x }
               }
       in
-        (newModel, Fx.none)
+        (newModel, Fx.none, Nothing)
 
     DragEnd ->
       let
         fraction =
           currentFraction model
 
-        target =
-          fst (Prox.nearest fraction proxTree)
+        (targetFraction, targetValue) =
+          Prox.nearest fraction proxTree
       in
-        ( Model fraction Nothing (Start target)
+        ( Model fraction Nothing (Start targetFraction)
         , Fx.tick Tick
+        , Just targetValue
         )
 
     Tick clockTime ->
       case model.animation of
         None ->
-          (model, Fx.none)
+          (model, Fx.none, Nothing)
 
         Start target ->
           ( { model | animation = Running (Info target clockTime 0) }
           , Fx.tick Tick
+          , Nothing
           )
 
         Running {target, elapsedTime, prevClockTime} ->
@@ -121,11 +131,13 @@ update proxTree action model =
             if newElapsedTime > animationDuration then
               ( Model target Nothing None
               , Fx.none
+              , Nothing
               )
 
             else
               ( { model | animation = Running (Info target clockTime newElapsedTime) }
               , Fx.tick Tick
+              , Nothing
               )
 
 

@@ -1,5 +1,6 @@
 module Docs.Package
   ( Package
+  , packageMap
   , Module
   , decodePackage
   , decodeModule
@@ -27,6 +28,16 @@ type alias Module tipe =
     , entries : Dict.Dict String (Entry.Model tipe)
     , hasNonCanonicalTypes : Bool
     }
+
+
+packageMap : (a -> b) -> Package a -> Package b
+packageMap func pkg =
+  Dict.map (always (moduleMap func)) pkg
+
+
+moduleMap : (a -> b) -> Module a -> Module b
+moduleMap func modul =
+  { modul | entries = Dict.map (always (Entry.map func)) modul.entries }
 
 
 

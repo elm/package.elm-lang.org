@@ -1,17 +1,25 @@
 module Page.PackageOverview where
 
+import Dict
 import Effects as Fx
 import Html exposing (..)
 import Html.Attributes exposing (class, style)
 import Html.Events exposing (..)
+import Html.Lazy exposing (lazy3)
 import Json.Decode as Decode
 import StartApp
 import Task
 
+import Component.PackageDocs as PDocs
+import Docs.Package as Docs
+import Docs.Type as Type
 import Docs.Version as Vsn
+import Overview.Diff as Diff
 import Overview.History as History
 import Overview.Slider as Slider
 import Page.Context as Ctx
+import Parse.Type as Type
+import Utils.Path exposing ((</>))
 import Utils.ProximityTree as Prox
 
 
@@ -49,7 +57,14 @@ type alias Model =
     , versions : Prox.ProximityTree Vsn.Version
     , slider1 : Slider.Model
     , slider2 : Slider.Model
+    , docs : Dict.Dict Vsn.Version Docs
     }
+
+
+type Docs
+    = Loading
+    | Failed Int
+    | Ready (Docs.Package Type.Type)
 
 
 init : ( Model, Fx.Effects Action )
@@ -69,7 +84,8 @@ init =
         proxTree
         (Slider.init (Prox.lookup penultimate proxTree))
         (Slider.init (Prox.lookup ultimate proxTree))
-    , Fx.none
+        (Dict.fromList [ penultimate => Loading, ultimate => Loading ])
+    , Fx.batch [ loadDocs penultimate, loadDocs ultimate ]
     )
 
 
@@ -97,6 +113,8 @@ latestInterestingVersions history =
 type Action
     = UpdateSlider1 Slider.Action
     | UpdateSlider2 Slider.Action
+    | DocsFailed Vsn.Version
+    | DocsLoaded Vsn.Version (Docs.Package Type.Type)
 
 
 update : Action -> Model -> ( Model, Fx.Effects Action )
@@ -104,21 +122,86 @@ update action model =
   case action of
     UpdateSlider1 act ->
       let
-        (newSlider, fx) =
+        (newSlider, fx, maybeTarget) =
           Slider.update model.versions act model.slider1
+
+        (newDocs, maybeRequest) =
+          maybeLoadDocs model.docs maybeTarget
       in
-        ( { model | slider1 = newSlider }
-        , Fx.map UpdateSlider1 fx
+        ( { model | slider1 = newSlider, docs = newDocs }
+        , Fx.batch [ Fx.map UpdateSlider1 fx, maybeRequest ]
         )
 
     UpdateSlider2 act ->
       let
-        (newSlider, fx) =
+        (newSlider, fx, maybeTarget) =
           Slider.update model.versions act model.slider2
+
+        (newDocs, maybeRequest) =
+          maybeLoadDocs model.docs maybeTarget
       in
-        ( { model | slider2 = newSlider }
-        , Fx.map UpdateSlider2 fx
+        ( { model | slider2 = newSlider, docs = newDocs }
+        , Fx.batch [ Fx.map UpdateSlider1 fx, maybeRequest ]
         )
+
+    DocsFailed vsn ->
+      ( { model | docs = Dict.insert vsn (Failed 1) model.docs }
+      , Fx.none
+      )
+
+    DocsLoaded vsn vsnDocs ->
+      ( { model | docs = Dict.insert vsn (Ready vsnDocs) model.docs }
+      , Fx.none
+      )
+
+
+
+-- SLIDERS
+
+
+sliderInfo : Prox.ProximityTree Vsn.Version -> Slider.Model -> (Float, Vsn.Version)
+sliderInfo versions slider =
+  let
+    fraction =
+      Slider.currentFraction slider
+
+    (_, version) =
+      Prox.nearest fraction versions
+  in
+    (fraction, version)
+
+
+
+-- EFFECTS
+
+
+loadDocs : Vsn.Version -> Fx.Effects Action
+loadDocs version =
+  Ctx.getDocs { user = "elm-lang", project = "core", version = Vsn.vsnToString version }
+    |> Task.map (DocsLoaded version << Docs.packageMap Type.parseWithFallback)
+    |> flip Task.onError (always (Task.succeed (DocsFailed version)))
+    |> Fx.task
+
+
+maybeLoadDocs
+    : Dict.Dict Vsn.Version Docs
+    -> Maybe Vsn.Version
+    -> (Dict.Dict Vsn.Version Docs, Fx.Effects Action)
+maybeLoadDocs docs maybeTarget =
+  case maybeTarget of
+    Nothing ->
+      (docs, Fx.none)
+
+    Just version ->
+      case Dict.get version docs of
+        Nothing ->
+          (Dict.insert version Loading docs, loadDocs version)
+
+        Just (Failed _) ->
+          (Dict.insert version Loading docs, loadDocs version)
+
+        Just _ ->
+          (docs, Fx.none)
 
 
 
@@ -129,19 +212,13 @@ update action model =
 
 
 view : Signal.Address Action -> Model -> Html
-view address {history, versions, slider1, slider2} =
+view address {history, versions, slider1, slider2, docs} =
   let
-    fraction1 =
-      Slider.currentFraction slider1
+    (fraction1, version1) =
+      sliderInfo versions slider1
 
-    fraction2 =
-      Slider.currentFraction slider2
-
-    (_, version1) =
-      Prox.nearest fraction1 versions
-
-    (_, version2) =
-      Prox.nearest fraction2 versions
+    (fraction2, version2) =
+      sliderInfo versions slider2
 
     viewSlider tag frac vsn color =
       Slider.view
@@ -149,9 +226,6 @@ view address {history, versions, slider1, slider2} =
         frac
         (Vsn.vsnToString vsn)
         color
-
-    magnitude =
-      History.coarseDiff version1 version2 history
   in
     div
       [ class "center"
@@ -163,14 +237,14 @@ view address {history, versions, slider1, slider2} =
           , viewSlider UpdateSlider2 fraction2 version2 "#60B5CC"
           ]
       , div [ class "diff" ]
-          [ h1 [] (headerText fraction1 fraction2 version1 version2)
-          , text (toString magnitude)
+          [ diffHeader fraction1 fraction2 version1 version2
+          , viewDiff history docs version1 version2
           ]
       ]
 
 
-headerText : Float -> Float -> Vsn.Version -> Vsn.Version -> List Html
-headerText fraction1 fraction2 version1 version2 =
+diffHeader : Float -> Float -> Vsn.Version -> Vsn.Version -> Html
+diffHeader fraction1 fraction2 version1 version2 =
   let
     text1 =
       vsnText "#7FD13B" version1
@@ -185,7 +259,7 @@ headerText fraction1 fraction2 version1 version2 =
       else
         (text2, text1)
   in
-    [ text "Changes between ", leftVsn, text " and ", rightVsn ]
+    h1 [] [ text "Changes between ", leftVsn, text " and ", rightVsn ]
 
 
 vsnText : String -> Vsn.Version -> Html
@@ -197,5 +271,30 @@ vsnText color vsn =
     ]
     [ text (Vsn.vsnToString vsn)
     ]
+
+
+viewDiff history docs version1 version2 =
+  case Maybe.map2 (,) (Dict.get version1 docs) (Dict.get version2 docs) of
+    Just (Ready pkg1, Ready pkg2) ->
+      lazy3 detailedDiff docs pkg1 pkg2
+
+    _ ->
+      lazy3 coarseDiff history version1 version2
+
+
+coarseDiff history version1 version2 =
+  text (toString (History.coarseDiff version1 version2 history))
+
+
+detailedDiff docs pkg1 pkg2 =
+  let
+    { added, changed, removed } =
+      Diff.diffPackage pkg1 pkg2
+  in
+    div []
+      [ p [] <| text "Added: " :: List.intersperse (text ", ") (List.map text added)
+      , p [] <| text "Removed: " :: List.intersperse (text ", ") (List.map text removed)
+      , p [] <| text "Changed: " :: List.intersperse (text ", ") (List.map text (Dict.keys changed))
+      ]
 
 
