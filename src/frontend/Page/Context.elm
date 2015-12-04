@@ -14,24 +14,28 @@ type alias OverviewContext =
 
 
 type alias VersionContext =
-    { user : String
-    , project : String
-    , version : String
-    , allVersions : List String
-    , moduleName : Maybe String
-    }
+  { user : String
+  , project : String
+  , version : String
+  , allVersions : List String
+  , moduleName : Maybe String
+  }
 
 
-getReadme : VersionContext -> Task.Task Http.Error String
+type alias SpecificVersion r =
+  { r | user : String, project : String, version : String }
+
+
+getReadme : SpecificVersion a -> Task.Task Http.Error String
 getReadme context =
   Http.getString (pathTo context "README.md")
 
 
-getDocs : VersionContext -> Task.Task Http.Error (Docs.Package String)
+getDocs : SpecificVersion a -> Task.Task Http.Error (Docs.Package String)
 getDocs context =
   Http.get Docs.decodePackage (pathTo context "documentation.json")
 
 
-pathTo : VersionContext -> String -> String
+pathTo : SpecificVersion a -> String -> String
 pathTo {user,project,version} file =
   "/packages" </> user </> project </> version </> file
