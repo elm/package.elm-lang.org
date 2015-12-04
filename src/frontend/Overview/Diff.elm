@@ -120,10 +120,10 @@ diffModule old new =
 
     toDiffPair oldEntry newEntry =
       if isEquivalent ignoreHome oldEntry newEntry then
-        Just (oldEntry, newEntry)
+        Nothing
 
       else
-        Nothing
+        Just (oldEntry, newEntry)
   in
     toChanges toDiffPair old.entries new.entries
 
