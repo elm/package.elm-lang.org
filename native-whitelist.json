@@ -1,5 +1,6 @@
 [
     "coreytrampe/elm-vendor",
+    "elm-community/elm-history",
     "elm-lang/core",
     "evancz/elm-effects",
     "evancz/elm-http",
