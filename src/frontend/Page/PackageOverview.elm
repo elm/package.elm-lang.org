@@ -3,7 +3,7 @@ module Page.PackageOverview where
 import Dict
 import Effects as Fx
 import Html exposing (..)
-import Html.Attributes exposing (class, key, style)
+import Html.Attributes exposing (class, key, src, style)
 import Html.Events exposing (..)
 import Html.Lazy exposing (lazy3)
 import Json.Decode as Decode
@@ -30,9 +30,12 @@ import Utils.ProximityTree as Prox
 port context : Ctx.OverviewContext
 
 
+port rawHistory : List History.RawRelease
+
+
 app =
   StartApp.start
-    { init = init History.dummy
+    { init = init
     , view = view
     , update = update
     , inputs = []
@@ -67,9 +70,12 @@ type Docs
     | Ready (Docs.Package Type.Type)
 
 
-init : History.History -> ( Model, Fx.Effects Action )
-init history =
+init : ( Model, Fx.Effects Action )
+init =
   let
+    history =
+      List.map History.processRaw rawHistory
+
     proxTree =
       Prox.map .version (Prox.fromList (toFloat << .date) history)
 
@@ -290,6 +296,12 @@ detailedDiff docs version1 version2 =
     case Maybe.map2 (,) lowDocs highDocs of
       Just (Ready pkg1, Ready pkg2) ->
         detailedDiffHelp docs pkg1 pkg2
+
+      Just (Loading, _) ->
+        text "Loading.."
+
+      Just (_, Loading) ->
+        text "Loading.."
 
       _ ->
         text ""

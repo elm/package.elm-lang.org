@@ -10,6 +10,7 @@ module Docs.Version
     , filterInteresting
     , realMax
     , toDict
+    , fromString
     , fromStringList
     , vsnToString
     )

@@ -5,6 +5,7 @@ import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
+import System.FilePath ((</>))
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Blaze.Html5 as H
 import Text.Blaze.Html5.Attributes as A
@@ -22,7 +23,7 @@ import qualified Path
 
 elm :: String -> [String] -> Snap ()
 elm title elmModuleName =
-  makeHtml title elmModuleName (return Nothing)
+  makeHtml title elmModuleName (fullscreen elmModuleName [])
 
 
 
@@ -38,41 +39,49 @@ pkgDocs pkg@(Pkg.Name user project) version maybeName =
     maybeStringName =
       fmap Module.nameToString maybeName
 
+    elmModule =
+      ["Page","Package"]
+
     title =
       maybe "" (++" - ") maybeStringName ++ project ++ " " ++ versionString
   in
-    makeHtml title ["Page","Package"] $
-      do  allVersions <- getAllVersions pkg
-          return $ Just $ makeContext $
-            [ ("user", show user)
-            , ("project", show project)
-            , ("version", show versionString)
-            , ("allVersions", show allVersions)
-            , ("moduleName", maybe "null" show maybeStringName)
-            ]
+    do  allVersions <- getAllVersions pkg
+
+        let context =
+              [ ("user", show user)
+              , ("project", show project)
+              , ("version", show versionString)
+              , ("allVersions", show allVersions)
+              , ("moduleName", maybe "null" show maybeStringName)
+              ]
+
+        makeHtml title elmModule $
+          fullscreen elmModule [ ("context", makeObject context) ]
 
 
 pkgOverview :: Pkg.Name -> Snap ()
 pkgOverview pkg@(Pkg.Name user project) =
-  makeHtml (user ++ "/" ++ project) ["Page","PackageOverview"] $
-    do  allVersions <- getAllVersions pkg
-        return $ Just $ makeContext $
-          [ ("user", show user)
-          , ("project", show project)
-          , ("versions", show allVersions)
-          ]
-
-
-makeContext :: [(String, String)] -> (String, String)
-makeContext entries =
   let
-    ports =
-      "{\n\
-      \    context: {"
-      ++ List.intercalate "," (List.map (\(k,v) -> "\n        " ++ k ++ ": " ++ v) entries)
-      ++ "\n    }\n}"
+    elmModule =
+      ["Page","PackageOverview"]
   in
-    (ports, "")
+    do  allVersions <- getAllVersions pkg
+
+        let context =
+              [ ("user", show user)
+              , ("project", show project)
+              , ("versions", show allVersions)
+              ]
+
+        history <-
+          liftIO $ readFile $
+            "packages" </> user </> project </> "history.json"
+
+        makeHtml (user ++ "/" ++ project) elmModule $
+          fullscreen elmModule $
+            [ ("context", makeObject context)
+            , ("rawHistory", history)
+            ]
 
 
 getAllVersions :: Pkg.Name -> Snap [String]
@@ -83,9 +92,14 @@ getAllVersions pkg =
 
 pkgPreview :: Snap ()
 pkgPreview =
-  makeHtml "Preview your Docs" ["Page","PreviewDocumentation"] $
-    return $ Just $ (,) "{ uploads: '' }" $
-      "function handleFileSelect(evt) {\n\
+  let
+    elmModule =
+      ["Page","PreviewDocumentation"]
+  in
+    makeHtml "Preview your Docs" elmModule $
+      fullscreen elmModule [("uploads", "''")]
+      ++
+      "\nfunction handleFileSelect(evt) {\n\
       \    var reader = new FileReader();\n\
       \    reader.readAsText(evt.target.files[0]);\n\
       \    reader.onload = function(event) {\n\
@@ -100,37 +114,36 @@ pkgPreview =
 -- SKELETON
 
 
-makeHtml :: String -> [String] -> Snap (Maybe (String, String)) -> Snap ()
-makeHtml title elmModuleName makePorts =
+makeHtml :: String -> [String] -> String -> Snap ()
+makeHtml title elmModuleName initializer =
   let
     elmModule =
       Module.Name elmModuleName
   in
-  do  maybePorts <- makePorts
-      writeBuilder $ Blaze.renderHtmlBuilder $ docTypeHtml $ do
-        H.head $ do
-          meta ! charset "UTF-8"
-          favicon
-          H.title (toHtml title)
-          googleAnalytics
-          link ! rel "stylesheet" ! href (cacheBuster "/assets/highlight/styles/default.css")
-          link ! rel "stylesheet" ! href (cacheBuster "/assets/style.css")
-          script ! src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
-          script ! src (cacheBuster ("/" ++ Path.artifact elmModule)) $ ""
+  writeBuilder $ Blaze.renderHtmlBuilder $ docTypeHtml $ do
+    H.head $ do
+      meta ! charset "UTF-8"
+      favicon
+      H.title (toHtml title)
+      googleAnalytics
+      link ! rel "stylesheet" ! href (cacheBuster "/assets/highlight/styles/default.css")
+      link ! rel "stylesheet" ! href (cacheBuster "/assets/style.css")
+      script ! src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
+      script ! src (cacheBuster ("/" ++ Path.artifact elmModule)) $ ""
 
-        body $
-          script $ preEscapedToMarkup $
-            case maybePorts of
-              Nothing ->
-                "\nElm.fullscreen(Elm." ++ Module.nameToString elmModule ++ ")\n"
+    body $
+      script (preEscapedToMarkup initializer)
 
-              Just (ports, postScript) ->
-                "\nvar page = Elm.fullscreen(Elm."
-                ++ Module.nameToString elmModule
-                ++ ", "
-                ++ ports
-                ++ ");\n\n"
-                ++ postScript
+
+fullscreen :: [String] -> [(String, String)] -> String
+fullscreen elmModuleName ports =
+  "\nvar page = Elm.fullscreen(Elm." ++ Module.nameToString (Module.Name elmModuleName)
+  ++ ", " ++ makeObject ports ++ ");\n"
+
+
+makeObject :: [(String, String)] -> String
+makeObject entries =
+  "{ " ++ List.intercalate "," (List.map (\(k,v) -> k ++ ": " ++ v) entries) ++ " }"
 
 
 googleAnalytics :: Html
@@ -161,3 +174,4 @@ cacheBuster url =
 uniqueToken :: String
 uniqueToken =
   unsafePerformIO (show <$> round <$> getPOSIXTime)
+

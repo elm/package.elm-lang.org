@@ -1,8 +1,9 @@
 module Overview.History
-    ( History, Release, Magnitude
+    ( History
+    , Release
+    , Magnitude
+    , RawRelease, processRaw
     , diff
-    , dummy
-    , decoder
     , view
     )
     where
@@ -41,42 +42,38 @@ type alias Magnitude =
     }
 
 
-dummy =
-  [ Release (1,0,0) (Magnitude 581 0 0) 1418249334
-  , Release (1,1,0) (Magnitude 4 0 0) 1420707342
-  , Release (1,1,1) (Magnitude 0 0 0) 1424623511
-  , Release (2,0,0) (Magnitude 27 6 82) 1429513536
-  , Release (2,0,1) (Magnitude 0 0 0) 1430312693
-  , Release (2,1,0) (Magnitude 3 0 0) 1433980479
-  , Release (3,0,0) (Magnitude 37 4 12) 1448228740
-  ]
+
+-- PORT CONVERSIONS
 
 
-
--- DECODERS
-
-
-decoder : Json.Decoder History
-decoder =
-  Json.list release
-
-
-release : Json.Decoder Release
-release =
-  Json.object3
-    Release
-    ("version" := Vsn.decoder)
-    magnitude
-    ("date" := Json.int)
+type alias RawRelease =
+    { version : String
+    , added : Int
+    , changed : Int
+    , removed : Int
+    , date : Int
+    }
 
 
-magnitude : Json.Decoder Magnitude
-magnitude =
-  Json.object3
-    Magnitude
-    ("added" := Json.int)
-    ("changed" := Json.int)
-    ("removed" := Json.int)
+processRaw : RawRelease -> Release
+processRaw raw =
+  let
+    version =
+      case Vsn.fromString raw.version of
+        Err _ ->
+          Debug.crash "invalid version listed in history"
+
+        Ok vsn ->
+          vsn
+  in
+    { version = version
+    , magnitude =
+        { added = raw.added
+        , changed = raw.changed
+        , removed = raw.removed
+        }
+    , date = raw.date
+    }
 
 
 
