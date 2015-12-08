@@ -32,7 +32,7 @@ port context : Ctx.OverviewContext
 
 app =
   StartApp.start
-    { init = init
+    { init = init History.dummy
     , view = view
     , update = update
     , inputs = []
@@ -67,12 +67,9 @@ type Docs
     | Ready (Docs.Package Type.Type)
 
 
-init : ( Model, Fx.Effects Action )
-init =
+init : History.History -> ( Model, Fx.Effects Action )
+init history =
   let
-    history =
-      History.dummy
-
     proxTree =
       Prox.map .version (Prox.fromList (toFloat << .date) history)
 
@@ -177,7 +174,7 @@ sliderInfo versions slider =
 
 loadDocs : Vsn.Version -> Fx.Effects Action
 loadDocs version =
-  Ctx.getDocs { user = "elm-lang", project = "core", version = Vsn.vsnToString version }
+  Ctx.getDocs { user = context.user, project = context.project, version = Vsn.vsnToString version }
     |> Task.map (DocsLoaded version << Docs.packageMap Type.parseWithFallback)
     |> flip Task.onError (always (Task.succeed (DocsFailed version)))
     |> Fx.task
