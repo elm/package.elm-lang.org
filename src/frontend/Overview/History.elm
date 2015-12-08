@@ -1,6 +1,6 @@
 module Overview.History
     ( History, Release, Magnitude
-    , coarseDiff
+    , diff
     , dummy
     , decoder
     , view
@@ -83,13 +83,13 @@ magnitude =
 -- COARSE DIFF
 
 
-coarseDiff : Vsn.Version -> Vsn.Version -> History -> Magnitude
-coarseDiff v1 v2 history =
-  coarseDiffHelp (min v1 v2) (max v1 v2) history (Magnitude 0 0 0)
+diff : Vsn.Version -> Vsn.Version -> History -> Magnitude
+diff v1 v2 history =
+  diffHelp (min v1 v2) (max v1 v2) history (Magnitude 0 0 0)
 
 
-coarseDiffHelp : Vsn.Version -> Vsn.Version -> History -> Magnitude -> Magnitude
-coarseDiffHelp low high history magnitude =
+diffHelp : Vsn.Version -> Vsn.Version -> History -> Magnitude -> Magnitude
+diffHelp low high history magnitude =
   case history of
     [] ->
       magnitude
@@ -99,10 +99,10 @@ coarseDiffHelp low high history magnitude =
         magnitude
 
       else if release.version > low then
-        coarseDiffHelp low high rest (addMagnitude magnitude release.magnitude)
+        diffHelp low high rest (addMagnitude magnitude release.magnitude)
 
       else
-        coarseDiffHelp low high rest magnitude
+        diffHelp low high rest magnitude
 
 
 addMagnitude : Magnitude -> Magnitude -> Magnitude

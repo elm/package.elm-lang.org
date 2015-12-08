@@ -279,7 +279,7 @@ vsnText color vsn =
 
 
 coarseDiff history version1 version2 =
-  text (toString (History.coarseDiff version1 version2 history))
+  text (toString (History.diff version1 version2 history))
 
 
 detailedDiff docs version1 version2 =
