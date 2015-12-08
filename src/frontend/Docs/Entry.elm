@@ -123,33 +123,31 @@ stringView model =
 
 typeView : Name.Dictionary -> Model Type -> Html
 typeView nameDict model =
-  let
-    annotation =
-      viewTypeAnnotation True nameDict model
-  in
-    div [ class "docs-entry", id model.name ]
-      [ annotation
-      , div [class "docs-comment"] [Markdown.block model.docs]
-      ]
+  div [ class "docs-entry", id model.name ]
+    [ annotationBlock (viewTypeAnnotation True nameDict model)
+    , div [class "docs-comment"] [Markdown.block model.docs]
+    ]
 
 
-viewTypeAnnotation : Bool -> Name.Dictionary -> Model Type -> Html
+viewTypeAnnotation : Bool -> Name.Dictionary -> Model Type -> List (List Html)
 viewTypeAnnotation isNormal nameDict model =
-  annotationBlock <|
-    case model.info of
-      Value tipe _ ->
-          valueAnnotation isNormal nameDict model.name tipe
+  case model.info of
+    Value tipe _ ->
+      valueAnnotation isNormal nameDict model.name tipe
 
-      Union {vars,tags} ->
-          unionAnnotation isNormal (Type.toHtml nameDict Type.App) model.name vars tags
+    Union {vars,tags} ->
+      unionAnnotation isNormal (Type.toHtml nameDict Type.App) model.name vars tags
 
-      Alias {vars,tipe} ->
-          aliasAnnotation isNormal nameDict model.name vars tipe
+    Alias {vars,tipe} ->
+      aliasAnnotation isNormal nameDict model.name vars tipe
 
 
 annotationBlock : List (List Html) -> Html
 annotationBlock bits =
-  div [ class "docs-annotation" ]
+  div
+    [ class "formatted-code"
+    , style ["padding" => "10px 0"]
+    ]
     (List.concat (List.intersperse [text "\n"] bits))
 
 
@@ -184,10 +182,13 @@ valueAnnotation isNormal nameDict name tipe =
 
       else
         text name
+
+    maxLength =
+      if isNormal then 64 else 88
   in
     case tipe of
       Type.Function args result ->
-          if String.length name + 3 + Type.length Type.Other tipe > 64 then
+          if String.length name + 3 + Type.length Type.Other tipe > maxLength then
             [ nameHtml ] :: longFunctionAnnotation nameDict args result
 
           else
