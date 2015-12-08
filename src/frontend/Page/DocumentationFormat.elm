@@ -47,7 +47,10 @@ the [Maybe](https://github.com/elm-lang/core/blob/master/src/Maybe.elm)
 and [Result](https://github.com/elm-lang/core/blob/master/src/Result.elm)
 documentation for complete examples.
 
-You can preview how your package documentation is going to look in the site [here](/tools/preview-documentation).
+If you are preparing to publish a package, you should read through the
+[API design guidelines](/help/design-guidelines) and [preview your
+documentation](/help/docs-preview).
+
 
 ## Documenting a value
 

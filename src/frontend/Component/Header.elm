@@ -117,9 +117,6 @@ unrollRoute route =
     Help ->
         [ text "help" ]
 
-    Tools ->
-        [ text "tools" ]
-
     Packages userRoute ->
         maybe unrollUserRoute userRoute
 

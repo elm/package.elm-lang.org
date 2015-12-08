@@ -53,21 +53,21 @@ main =
           ifTop (ServeFile.elm "Elm Packages" ["Page","Catalog"])
           <|>
             route
-            [ ("packages", Route.packages)
-            , ("versions", Route.versions)
-            , ("register", Route.register)
-            , ("description", Route.description)
-            , ("documentation", Route.documentation)
-            , ("all-packages", Route.allPackages)
-            , ("new-packages", serveFile NewPackageList.newPackages)
-            , ("assets", serveDirectoryWith directoryConfig "assets")
-            , ("help/design-guidelines"
+            [ ( "packages", Route.packages )
+            , ( "versions", Route.versions )
+            , ( "register", Route.register )
+            , ( "description", Route.description )
+            , ( "documentation", Route.documentation )
+            , ( "all-packages", Route.allPackages )
+            , ( "new-packages", serveFile NewPackageList.newPackages )
+            , ( "assets", serveDirectoryWith directoryConfig "assets" )
+            , ( "help/design-guidelines"
               , ifTop $ ServeFile.elm "Design Guidelines" ["Page","DesignGuidelines"]
               )
-            , ("help/documentation-format"
+            , ( "help/documentation-format"
               , ifTop $ ServeFile.elm "Documentation Format" ["Page","DocumentationFormat"]
               )
-            , ("tools/preview-documentation",  Route.previewDocumentation)
+            , ( "help/docs-preview", ifTop ServeFile.pkgPreview )
             , ( BS.pack Path.artifactDirectory
               , serveDirectoryWith directoryConfig Path.artifactDirectory
               )
@@ -113,7 +113,7 @@ publicModules =
     [ ["Page","Catalog"]
     , ["Page","DesignGuidelines"]
     , ["Page","DocumentationFormat"]
-    , ["Page", "PreviewDocumentation"]
+    , ["Page","PreviewDocumentation"]
     , ["Page","NotFound"]
     , ["Page","Package"]
     , ["Page","PackageOverview"]
