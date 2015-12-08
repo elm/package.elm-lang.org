@@ -18,7 +18,7 @@ type alias Dictionary =
 
 
 toLink : Dictionary -> Canonical -> Html
-toLink dict ({home,name} as canonical) =
+toLink dict {home,name} =
   case Maybe.map (Set.member name) (Dict.get home dict) of
     Just True ->
       let
@@ -29,4 +29,3 @@ toLink dict ({home,name} as canonical) =
 
     _ ->
       text name
-
