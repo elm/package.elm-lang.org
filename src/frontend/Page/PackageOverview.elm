@@ -282,7 +282,24 @@ vsnText color vsn =
 
 
 coarseDiff history version1 version2 =
-  text (toString (History.diff version1 version2 history))
+  let
+    {added, changed, removed} =
+      History.diff version1 version2 history
+  in
+    div
+      [ style
+          [ "text-align" => "center"
+          , "padding" => "16px 0"
+          ]
+      ]
+      [ coarseDiffChunk ("Added " ++ toString added)
+      , coarseDiffChunk ("Changed " ++ toString changed)
+      , coarseDiffChunk ("Removed " ++ toString removed)
+      ]
+
+
+coarseDiffChunk msg =
+  span [ style [ "padding" => "0 16px" ] ] [ text msg ]
 
 
 detailedDiff docs version1 version2 =
