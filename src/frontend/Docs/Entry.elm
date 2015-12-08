@@ -101,7 +101,7 @@ stringView model =
             [ nameToLink model.name :: padded colon ++ [text tipe] ]
 
         Union {vars,tags} ->
-            unionAnnotation (\t -> [text t]) model.name vars tags
+            unionAnnotation True (\t -> [text t]) model.name vars tags
 
         Alias {vars,tipe} ->
             [ aliasNameLine model.name vars
@@ -125,7 +125,7 @@ typeView : Name.Dictionary -> Model Type -> Html
 typeView nameDict model =
   let
     annotation =
-      viewTypeAnnotation nameDict model
+      viewTypeAnnotation True nameDict model
   in
     div [ class "docs-entry", id model.name ]
       [ annotation
@@ -133,17 +133,18 @@ typeView nameDict model =
       ]
 
 
-viewTypeAnnotation nameDict model =
+viewTypeAnnotation : Bool -> Name.Dictionary -> Model Type -> Html
+viewTypeAnnotation isNormal nameDict model =
   annotationBlock <|
     case model.info of
       Value tipe _ ->
-          valueAnnotation nameDict model.name tipe
+          valueAnnotation isNormal nameDict model.name tipe
 
       Union {vars,tags} ->
-          unionAnnotation (Type.toHtml nameDict Type.App) model.name vars tags
+          unionAnnotation isNormal (Type.toHtml nameDict Type.App) model.name vars tags
 
       Alias {vars,tipe} ->
-          aliasAnnotation nameDict model.name vars tipe
+          aliasAnnotation isNormal nameDict model.name vars tipe
 
 
 annotationBlock : List (List Html) -> Html
@@ -174,18 +175,26 @@ operator =
 -- VALUE ANNOTATIONS
 
 
-valueAnnotation : Name.Dictionary -> String -> Type -> List (List Html)
-valueAnnotation nameDict name tipe =
-  case tipe of
-    Type.Function args result ->
-        if String.length name + 3 + Type.length Type.Other tipe > 64 then
-            [ nameToLink name ] :: longFunctionAnnotation nameDict args result
+valueAnnotation : Bool -> Name.Dictionary -> String -> Type -> List (List Html)
+valueAnnotation isNormal nameDict name tipe =
+  let
+    nameHtml =
+      if isNormal then
+        nameToLink name
 
-        else
-            [ nameToLink name :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
+      else
+        text name
+  in
+    case tipe of
+      Type.Function args result ->
+          if String.length name + 3 + Type.length Type.Other tipe > 64 then
+            [ nameHtml ] :: longFunctionAnnotation nameDict args result
 
-    _ ->
-        [ nameToLink name :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
+          else
+            [ nameHtml :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
+
+      _ ->
+        [ nameHtml :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
 
 
 longFunctionAnnotation : Name.Dictionary -> List Type -> Type -> List (List Html)
@@ -206,15 +215,20 @@ longFunctionAnnotation nameDict args result =
 -- UNION ANNOTATIONS
 
 
-unionAnnotation : (tipe -> List Html) -> String -> List String -> List (Tag tipe) -> List (List Html)
-unionAnnotation tipeToHtml name vars tags =
+unionAnnotation : Bool -> (tipe -> List Html) -> String -> List String -> List (Tag tipe) -> List (List Html)
+unionAnnotation isNormal tipeToHtml name vars tags =
   let
     nameLine =
-      [ keyword "type"
-      , space
-      , nameToLink name
-      , text (String.concat (List.map ((++) " ") vars))
-      ]
+      if isNormal then
+        [ keyword "type"
+        , space
+        , nameToLink name
+        , text (String.concat (List.map ((++) " ") vars))
+        ]
+
+      else
+        [ text <| "type " ++ name ++ String.concat (List.map ((++) " ") vars)
+        ]
 
     tagLines =
       List.map2 (::)
@@ -233,8 +247,8 @@ viewTag tipeToHtml {tag,args} =
 -- ALIAS ANNOTATIONS
 
 
-aliasAnnotation : Name.Dictionary -> String -> List String -> Type -> List (List Html)
-aliasAnnotation nameDict name vars tipe =
+aliasAnnotation : Bool -> Name.Dictionary -> String -> List String -> Type -> List (List Html)
+aliasAnnotation isNormal nameDict name vars tipe =
   let
     typeLines =
       case tipe of
@@ -258,8 +272,15 @@ aliasAnnotation nameDict name vars tipe =
 
         _ ->
             [ text "    " :: Type.toHtml nameDict Type.Other tipe ]
+
+    nameLine =
+      if isNormal then
+        aliasNameLine name vars
+      else
+        [ text <| "type alias " ++ name ++ String.concat (List.map ((++) " ") vars) ++ " = "
+        ]
   in
-    aliasNameLine name vars :: typeLines
+    nameLine :: typeLines
 
 
 aliasNameLine : String -> List String -> List Html

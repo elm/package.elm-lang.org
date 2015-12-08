@@ -372,4 +372,5 @@ viewEntry entry =
 
 
 viewTypeAnnotation entry =
-  Entry.viewTypeAnnotation Dict.empty entry
+  Entry.viewTypeAnnotation False Dict.empty entry
+
