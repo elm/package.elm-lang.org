@@ -5,18 +5,9 @@ import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Http
-import Regex
-import String
-import Task
 
-import Docs.Diff as Diff
-import Docs.Entry as Entry
-import Docs.History as History
-import Docs.Package as Docs
 import Docs.Version as Vsn
 import Page.Context as Ctx
-import Utils.Markdown as Markdown
 import Utils.Path exposing ((</>))
 
 
@@ -28,7 +19,6 @@ type alias Model =
   { context : Ctx.OverviewContext
   , versionDict : Vsn.Dictionary
   , versionsAreExpanded : Bool
-  , history : History.History
   }
 
 
@@ -50,7 +40,7 @@ init context =
         total =
           List.sum (List.map (\{others} -> 1 + List.length others) (Dict.values vsnDict))
       in
-        ( Model context vsnDict (total < 10) History.dummy
+        ( Model context vsnDict (total < 10)
         , Fx.none
         )
 
@@ -80,13 +70,12 @@ update action model =
 
 
 view : Signal.Address Action -> Model -> Html
-view addr {context, versionDict, versionsAreExpanded, history} =
+view addr {context, versionDict, versionsAreExpanded} =
   div [ class "pkg-overview" ]
     [ h1 [] [text "Published Versions"]
     , p [] <|
         viewVersions context.user context.project versionsAreExpanded versionDict
         ++ expando addr versionsAreExpanded
-    , History.view addr history
     ]
 
 
