@@ -8,7 +8,7 @@ import Task
 
 import Component.Header as Header
 import Component.PackageDocs as PDocs
-import Component.PackageSidebar as PkgNav
+import Component.PackageSidebar as PSide
 import Page.Context as Ctx
 import Route
 
@@ -45,7 +45,7 @@ port worker =
 type alias Model =
     { header : Header.Model
     , moduleDocs : PDocs.Model
-    , pkgNav : PkgNav.Model
+    , pkgNav : PSide.Model
     }
 
 
@@ -63,7 +63,7 @@ init =
       PDocs.init context
 
     (pkgNav, navFx) =
-      PkgNav.init context
+      PSide.init context
   in
     ( Model header moduleDocs pkgNav
     , Fx.batch
@@ -80,7 +80,7 @@ init =
 
 type Action
     = UpdateDocs PDocs.Action
-    | UpdateNav PkgNav.Action
+    | UpdateNav PSide.Action
 
 
 update : Action -> Model -> (Model, Effects Action)
@@ -98,7 +98,7 @@ update action model =
     UpdateNav act ->
         let
           (newPkgNav, fx) =
-            PkgNav.update act model.pkgNav
+            PSide.update act model.pkgNav
         in
           ( { model | pkgNav = newPkgNav }
           , Fx.map UpdateNav fx
@@ -113,7 +113,7 @@ view : Signal.Address Action -> Model -> Html
 view addr model =
   Header.view addr model.header
     [ PDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
-    , PkgNav.view (Signal.forwardTo addr UpdateNav) model.pkgNav
+    , PSide.view (Signal.forwardTo addr UpdateNav) model.pkgNav
     ]
 
 
