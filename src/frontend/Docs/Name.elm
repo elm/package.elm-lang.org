@@ -22,8 +22,21 @@ toLink dict {home,name} =
   case Maybe.map (Set.member name) (Dict.get home dict) of
     Just True ->
       let
+        ctx =
+          "Graphics.Collage"
+
+        parseLink link =
+          String.map (\c -> if c == '.' then '-' else c) link
+
+        anchorHome =
+          if home == ctx then
+            "#"
+          else
+            home ++ "#"
+
         link =
-          String.map (\c -> if c == '.' then '-' else c) home ++ "#" ++ name
+           parseLink (anchorHome ++ name)
+
       in
         a [href link] [text name]
 
