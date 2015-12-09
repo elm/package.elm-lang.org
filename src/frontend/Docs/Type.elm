@@ -36,16 +36,12 @@ type alias Tag =
 type Context = Func | App | Other
 
 
-toHtml : Name.Dictionary -> String -> Context -> Type -> List Html
-toHtml nameDict currentModule context tipe =
+toHtml : Name.Dictionary -> Name.Context -> Context -> Type -> List Html
+toHtml nameDict docsContext context tipe =
   let
     go ctx t =
-      toHtml nameDict currentModule ctx t
+      toHtml nameDict docsContext ctx t
 
-    linkContext =
-      { current = currentModule
-      , available = List.foldl Set.union Set.empty (Dict.values nameDict)
-      }
   in
   case tipe of
     Function args result ->
@@ -65,7 +61,7 @@ toHtml nameDict currentModule context tipe =
         [ text name ]
 
     Apply name [] ->
-        [ Name.toLink linkContext name ]
+        [ Name.toLink docsContext name ]
 
     Apply name args ->
         let
@@ -78,7 +74,7 @@ toHtml nameDict currentModule context tipe =
           argsHtml =
             List.concatMap (\arg -> space :: go App arg) args
         in
-          maybeAddParens (Name.toLink linkContext name :: argsHtml)
+          maybeAddParens (Name.toLink docsContext name :: argsHtml)
 
     Tuple args ->
       List.map (go Other) args
@@ -89,7 +85,7 @@ toHtml nameDict currentModule context tipe =
     Record fields ext ->
         let
           fieldsHtml =
-            List.map (fieldToHtml nameDict currentModule) fields
+            List.map (fieldToHtml nameDict docsContext) fields
               |> List.intersperse [text ", "]
               |> List.concat
 
@@ -104,9 +100,9 @@ toHtml nameDict currentModule context tipe =
           text "{ " :: recordInsides ++ [text " }"]
 
 
-fieldToHtml : Name.Dictionary -> String -> (String, Type) -> List Html
-fieldToHtml nameDict currentModule (field, tipe) =
-  text field :: space :: colon :: space :: toHtml nameDict currentModule Other tipe
+fieldToHtml : Name.Dictionary -> Name.Context -> (String, Type) -> List Html
+fieldToHtml nameDict docsContext (field, tipe) =
+  text field :: space :: colon :: space :: toHtml nameDict docsContext Other tipe
 
 
 

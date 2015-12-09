@@ -1,6 +1,7 @@
 module Component.PackagePreview where
 
 import Dict
+import Set
 import Effects as Fx
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -96,7 +97,7 @@ view address model =
         , p [ style [ "color" => "red" ] ] [ text errorMsg ]
         ]
 
-    GoodFile docs info ->
+    GoodFile docs docsModel ->
       [ instructions short
       , div
           [ style
@@ -104,7 +105,7 @@ view address model =
               , "margin-top" => "1em"
               ]
           ]
-          [ PDocs.view (Signal.forwardTo address (\_ -> Debug.crash "TODO")) info
+          [ PDocs.view (Signal.forwardTo address (\_ -> Debug.crash "TODO")) docsModel
           , viewSidebar address (Dict.keys docs)
           ]
       ]
@@ -150,8 +151,24 @@ docsForModule moduleName docs =
         chunks =
           PDocs.toChunks moduleDocs
             |> List.map (PDocs.chunkMap PDocs.stringToType)
+
+        info =
+          PDocs.Info moduleName (PDocs.toNameDict docs) chunks
+
+        docsContext =
+          case (Dict.get moduleName docs) of
+            Just modul ->
+              { current = moduleName
+              , available = Set.fromList (Dict.keys modul.entries)
+              }
+
+            _ ->
+              { current = moduleName
+              , available = Set.empty
+              }
+
       in
-        PDocs.ParsedDocs (PDocs.Info moduleName (PDocs.toNameDict docs) chunks)
+        PDocs.ParsedDocs (info, docsContext)
 
     Nothing ->
       PDocs.Loading

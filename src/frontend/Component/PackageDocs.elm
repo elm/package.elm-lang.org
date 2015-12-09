@@ -29,7 +29,7 @@ type Model
     | Failed Http.Error
     | Readme String
     | RawDocs (Info String)
-    | ParsedDocs (Info Type.Type)
+    | ParsedDocs ((Info Type.Type), Name.Context)
 
 
 type alias Info tipe =
@@ -103,7 +103,17 @@ update action model =
     LoadParsedDocs newChunks ->
         case model of
           RawDocs info ->
-              ( ParsedDocs { info | chunks = newChunks }
+            let
+              newInfo =
+                { info | chunks = newChunks }
+
+              docsContext =
+                { current = info.name
+                , available = List.foldl Set.union Set.empty (Dict.values info.nameDict)
+                }
+
+            in
+              ( ParsedDocs (newInfo, docsContext)
               , jumpToHash
               )
 
@@ -200,11 +210,9 @@ view addr model =
           h1 [class "entry-list-title"] [text name]
           :: List.map (viewChunk Entry.stringView) chunks
 
-      ParsedDocs {name,nameDict,chunks} ->
-          let log  = Debug.log "Pdocs Name" name in
-
+      ParsedDocs ({name,nameDict,chunks}, docsContext) ->
           h1 [class "entry-list-title"] [text name]
-          :: List.map (viewChunk (Entry.typeView nameDict name)) chunks
+          :: List.map (viewChunk (Entry.typeView nameDict docsContext)) chunks
 
 
 viewChunk : (Entry.Model tipe -> Html) -> Chunk tipe -> Html

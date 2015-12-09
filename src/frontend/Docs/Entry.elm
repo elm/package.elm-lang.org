@@ -115,19 +115,19 @@ stringView model =
 (=>) = (,)
 
 
-typeView : Name.Dictionary -> String -> Model Type -> Html
-typeView nameDict currentModule model =
+typeView : Name.Dictionary -> Name.Context -> Model Type -> Html
+typeView nameDict docsContext model =
   let
     annotation =
       case model.info of
         Value tipe _ ->
-            valueAnnotation nameDict currentModule model.name tipe
+            valueAnnotation nameDict docsContext model.name tipe
 
         Union {vars,tags} ->
-            unionAnnotation (Type.toHtml nameDict currentModule Type.App) model.name vars tags
+            unionAnnotation (Type.toHtml nameDict docsContext Type.App) model.name vars tags
 
         Alias {vars,tipe} ->
-            aliasAnnotation nameDict currentModule model.name vars tipe
+            aliasAnnotation nameDict docsContext model.name vars tipe
   in
     div [ class "docs-entry", id model.name ]
       [ annotationBlock annotation
@@ -163,25 +163,25 @@ operator =
 -- VALUE ANNOTATIONS
 
 
-valueAnnotation : Name.Dictionary -> String -> String -> Type -> List (List Html)
-valueAnnotation nameDict currentModule name tipe =
+valueAnnotation : Name.Dictionary -> Name.Context -> String -> Type -> List (List Html)
+valueAnnotation nameDict docsContext name tipe =
   case tipe of
     Type.Function args result ->
         if String.length name + 3 + Type.length Type.Other tipe > 64 then
-            [ nameToLink name ] :: longFunctionAnnotation nameDict currentModule args result
+            [ nameToLink name ] :: longFunctionAnnotation nameDict docsContext args result
 
         else
-            [ nameToLink name :: padded colon ++ Type.toHtml nameDict currentModule Type.Other tipe ]
+            [ nameToLink name :: padded colon ++ Type.toHtml nameDict docsContext Type.Other tipe ]
 
     _ ->
-        [ nameToLink name :: padded colon ++ Type.toHtml nameDict currentModule Type.Other tipe ]
+        [ nameToLink name :: padded colon ++ Type.toHtml nameDict docsContext Type.Other tipe ]
 
 
-longFunctionAnnotation : Name.Dictionary -> String -> List Type -> Type -> List (List Html)
-longFunctionAnnotation nameDict currentModule args result =
+longFunctionAnnotation : Name.Dictionary -> Name.Context -> List Type -> Type -> List (List Html)
+longFunctionAnnotation nameDict docsContext args result =
   let
     tipeHtml =
-      List.map (Type.toHtml nameDict currentModule Type.Func) (args ++ [result])
+      List.map (Type.toHtml nameDict docsContext Type.Func) (args ++ [result])
 
     starters =
       [ text "    ", colon, text "  " ]
@@ -222,8 +222,8 @@ viewTag tipeToHtml {tag,args} =
 -- ALIAS ANNOTATIONS
 
 
-aliasAnnotation : Name.Dictionary -> String -> String -> List String -> Type -> List (List Html)
-aliasAnnotation nameDict currentModule name vars tipe =
+aliasAnnotation : Name.Dictionary -> Name.Context -> String -> List String -> Type -> List (List Html)
+aliasAnnotation nameDict docsContext name vars tipe =
   let
     typeLines =
       case tipe of
@@ -242,11 +242,11 @@ aliasAnnotation nameDict currentModule name vars tipe =
                       )
             in
               firstLine
-              ++ List.map2 (::) starters (List.map (Type.fieldToHtml nameDict currentModule) fields)
+              ++ List.map2 (::) starters (List.map (Type.fieldToHtml nameDict docsContext) fields)
               ++ [[text "    }"]]
 
         _ ->
-            [ text "    " :: Type.toHtml nameDict currentModule Type.Other tipe ]
+            [ text "    " :: Type.toHtml nameDict docsContext Type.Other tipe ]
   in
     aliasNameLine name vars :: typeLines
 

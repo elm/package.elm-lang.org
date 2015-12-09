@@ -23,12 +23,6 @@ type alias Context =
     }
 
 
-ctx =
-  { current = "Graphics.Collage"
-  , available = Set.fromList ["Form", "Shape", "Path", "LineStyle", "LineCap", "LineJoin"]
-  }
-
-
 toLink : Context -> Canonical -> Html
 toLink ctx {home,name} =
   if Set.member name ctx.available then
