@@ -17,28 +17,49 @@ type alias Dictionary =
     Dict.Dict String (Set.Set String)
 
 
+type alias Context =
+    { current : String
+    , available : Set.Set String
+    }
+
+
+ctx =
+  { current = "Graphics.Collage"
+  , available = Set.fromList ["Form", "Shape", "Path", "LineStyle", "LineCap", "LineJoin"]
+  }
+
+
 toLink : Dictionary -> Canonical -> Html
-toLink dict {home,name} =
-  case Maybe.map (Set.member name) (Dict.get home dict) of
-    Just True ->
-      let
-        ctx =
-          "Graphics.Collage"
+toLink _ {home,name} =
+  if Set.member name ctx.available then
+    let
+      link =
+        (anchorContext ctx home) ++ name
+          |> parseLink
 
-        parseLink link =
-          String.map (\c -> if c == '.' then '-' else c) link
+    in
+      a [href link] [text name]
 
-        anchorHome =
-          if home == ctx then
-            "#"
-          else
-            home ++ "#"
+  else
+    text (displayQualifiedType home name)
 
-        link =
-           parseLink (anchorHome ++ name)
 
-      in
-        a [href link] [text name]
+parseLink : String -> String
+parseLink link =
+  String.map (\c -> if c == '.' then '-' else c) link
 
-    _ ->
-      text name
+
+anchorContext : Context -> String -> String
+anchorContext {current} home =
+  if home == current then
+    "#"
+  else
+    home ++ "#"
+
+
+displayQualifiedType : String -> String -> String
+displayQualifiedType moduleName tipe =
+  if String.isEmpty moduleName then
+    tipe
+  else
+    moduleName ++ "." ++ tipe
