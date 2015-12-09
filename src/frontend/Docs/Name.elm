@@ -29,8 +29,8 @@ ctx =
   }
 
 
-toLink : Dictionary -> Canonical -> Html
-toLink _ {home,name} =
+toLink : Context -> Canonical -> Html
+toLink ctx {home,name} =
   if Set.member name ctx.available then
     let
       link =
@@ -41,7 +41,7 @@ toLink _ {home,name} =
       a [href link] [text name]
 
   else
-    text (displayQualifiedType home name)
+    text (qualifiedType home name)
 
 
 parseLink : String -> String
@@ -57,8 +57,8 @@ anchorContext {current} home =
     home ++ "#"
 
 
-displayQualifiedType : String -> String -> String
-displayQualifiedType moduleName tipe =
+qualifiedType : String -> String -> String
+qualifiedType moduleName tipe =
   if String.isEmpty moduleName then
     tipe
   else

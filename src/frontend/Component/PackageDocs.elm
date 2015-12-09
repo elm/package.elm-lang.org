@@ -201,8 +201,10 @@ view addr model =
           :: List.map (viewChunk Entry.stringView) chunks
 
       ParsedDocs {name,nameDict,chunks} ->
+          let log  = Debug.log "Pdocs Name" name in
+
           h1 [class "entry-list-title"] [text name]
-          :: List.map (viewChunk (Entry.typeView nameDict)) chunks
+          :: List.map (viewChunk (Entry.typeView nameDict name)) chunks
 
 
 viewChunk : (Entry.Model tipe -> Html) -> Chunk tipe -> Html
@@ -303,4 +305,3 @@ toEntry moduleDocs name =
 
     Just entry ->
         Entry entry
-

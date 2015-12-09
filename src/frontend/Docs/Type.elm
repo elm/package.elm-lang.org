@@ -36,11 +36,16 @@ type alias Tag =
 type Context = Func | App | Other
 
 
-toHtml : Name.Dictionary -> Context -> Type -> List Html
-toHtml nameDict context tipe =
+toHtml : Name.Dictionary -> String -> Context -> Type -> List Html
+toHtml nameDict currentModule context tipe =
   let
     go ctx t =
-      toHtml nameDict ctx t
+      toHtml nameDict currentModule ctx t
+
+    linkContext =
+      { current = currentModule
+      , available = List.foldl Set.union Set.empty (Dict.values nameDict)
+      }
   in
   case tipe of
     Function args result ->
@@ -60,7 +65,7 @@ toHtml nameDict context tipe =
         [ text name ]
 
     Apply name [] ->
-        [ Name.toLink nameDict name ]
+        [ Name.toLink linkContext name ]
 
     Apply name args ->
         let
@@ -73,7 +78,7 @@ toHtml nameDict context tipe =
           argsHtml =
             List.concatMap (\arg -> space :: go App arg) args
         in
-          maybeAddParens (Name.toLink nameDict name :: argsHtml)
+          maybeAddParens (Name.toLink linkContext name :: argsHtml)
 
     Tuple args ->
       List.map (go Other) args
@@ -84,7 +89,7 @@ toHtml nameDict context tipe =
     Record fields ext ->
         let
           fieldsHtml =
-            List.map (fieldToHtml nameDict) fields
+            List.map (fieldToHtml nameDict currentModule) fields
               |> List.intersperse [text ", "]
               |> List.concat
 
@@ -99,9 +104,9 @@ toHtml nameDict context tipe =
           text "{ " :: recordInsides ++ [text " }"]
 
 
-fieldToHtml : Name.Dictionary -> (String, Type) -> List Html
-fieldToHtml nameDict (field, tipe) =
-  text field :: space :: colon :: space :: toHtml nameDict Other tipe
+fieldToHtml : Name.Dictionary -> String -> (String, Type) -> List Html
+fieldToHtml nameDict currentModule (field, tipe) =
+  text field :: space :: colon :: space :: toHtml nameDict currentModule Other tipe
 
 
 
@@ -163,4 +168,3 @@ length context tipe =
                 2 + String.length extName
         in
           recordLength + extLength
-
