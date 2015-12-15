@@ -183,7 +183,7 @@ function checkOneToOne(user, project, versions, tags)
 	}
 
 	console.error(
-		'Not getting all the versions I need for ' + user + '/' + repo + ':\n'
+		'Not getting all the versions I need for ' + user + '/' + project + ':\n'
 		+ '  Needed: ' + versions + '\n'
 		+ '  Found: ' + foundVersions
 	);
