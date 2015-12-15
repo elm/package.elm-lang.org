@@ -6,3 +6,4 @@ artifacts
 packages
 all-packages.json
 new-packages.json
+node_modules
