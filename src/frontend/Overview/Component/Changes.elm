@@ -211,8 +211,7 @@ view address {history, versions, slider1, slider2, docs} =
         color
   in
     div []
-      [ h1 [] [text "Changes"]
-      , History.view versions
+      [ History.view versions
       , div [ class "slider-container" ]
           [ viewSlider UpdateSlider1 fraction1 version1 "#7FD13B"
           , viewSlider UpdateSlider2 fraction2 version2 "#60B5CC"
