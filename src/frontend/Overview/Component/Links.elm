@@ -1,4 +1,11 @@
-module Component.PackageOverview where
+module Overview.Component.Links
+  ( Model
+  , init
+  , update
+  , Action
+  , view
+  )
+  where
 
 import Dict
 import Effects as Fx exposing (Effects)
