@@ -314,16 +314,35 @@ pre {
 }
 
 .diff-added {
-  color: #24F824;
+    background-color: #eaffea;
+    list-style: none;
+}
+
+.diff-added span.formatted-code::before {
+    content: "+ ";
 }
 
 .diff-removed {
-  color: #BA8888;
+    background-color: #ffecec;
+    list-style: none;
+}
+
+.diff-removed span.formatted-code::before {
+    content: "- ";
 }
 
 .diff-changed {
+    background-color: #fffff0;
+    list-style: none;
 }
 
+.diff-changed span.formatted-code.old::before {
+    content: "< ";
+}
+
+.diff-changed span.formatted-code.new::before {
+    content: "> ";
+}
 
 
 /* CATALOG */

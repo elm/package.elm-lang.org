@@ -339,22 +339,23 @@ viewModuleChanges (name, changes) =
 
 viewChangePair (old, new) =
   li []
-    [ viewTypeAnnotation old
+    [ viewTypeAnnotation old "old"
     , br [] []
-    , viewTypeAnnotation new
+    , viewTypeAnnotation new "new"
     ]
 
 
 viewEntry entry =
-  li [] [viewTypeAnnotation entry]
+  li [] [viewTypeAnnotation entry ""]
 
 
-viewTypeAnnotation entry =
+viewTypeAnnotation entry class' =
   let
     kids =
       Entry.viewTypeAnnotation False Dict.empty entry
         |> List.intersperse [text "\n"]
         |> List.concat
+    
   in
-    span [class "formatted-code"] kids
+    span [class ("formatted-code " ++ class')] kids
 
