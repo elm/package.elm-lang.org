@@ -287,7 +287,11 @@ pre {
 }
 
 .diff-detailed li {
-  margin: 10px 0;
+  padding-bottom: 3em;
+}
+
+.diff-detailed li li {
+  padding: 10px 0;
 }
 
 .diff-detailed li header {
@@ -295,53 +299,39 @@ pre {
   font-size: 1.5em;
 }
 
-.diff-added-module {
-  background-color: #eaffea;
-}
-.diff-added-module code {
-  color: #24F824;
-}
-
-.diff-removed-module {
-  background-color: #ffecec;
-}
-.diff-removed-module code {
-  color: #BA8888;
-}
-
-.diff-changed-module {
+.diff-module-header {
   background-color: #f9f9f9;
 }
 
 .diff-added {
-    background-color: #eaffea;
-    list-style: none;
+  background-color: #eaffea;
+  list-style: none;
 }
 
 .diff-added span.formatted-code::before {
-    content: "+ ";
+  content: "+ ";
 }
 
 .diff-removed {
-    background-color: #ffecec;
-    list-style: none;
+  background-color: #ffecec;
+  list-style: none;
 }
 
 .diff-removed span.formatted-code::before {
-    content: "- ";
+  content: "- ";
 }
 
 .diff-changed {
-    background-color: #fffff0;
-    list-style: none;
+  background-color: #fffff0;
+  list-style: none;
 }
 
 .diff-changed span.formatted-code.old::before {
-    content: "< ";
+  content: "< ";
 }
 
 .diff-changed span.formatted-code.new::before {
-    content: "> ";
+  content: "> ";
 }
 
 

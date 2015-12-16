@@ -307,8 +307,8 @@ detailedDiffHelp docs pkg1 pkg2 =
       Diff.diffPackage pkg1 pkg2
   in
     ul [class "diff-detailed"] <|
-      List.map (listItem "diff-removed-module" "removed") removed
-      ++ List.map (listItem "diff-added-module" "added") added
+      List.map (listItem "diff-module-header" "removed") removed
+      ++ List.map (listItem "diff-module-header" "added") added
       ++ viewPackageChanges changed
 
 
@@ -330,7 +330,7 @@ viewModuleChanges (name, changes) =
       Dict.values changes.changed
   in
     li [key name]
-      [ header [class "diff-changed-module"] [ code [] [ text name ] ]
+      [ header [class "diff-module-header"] [ code [] [ text name ] ]
       , ul [class "diff-removed"] (List.map viewEntry (Dict.values changes.removed))
       , ul [class "diff-added"] (List.map viewEntry (Dict.values changes.added))
       , ul [class "diff-changed"] (List.map viewChangePair changePairs)
@@ -355,7 +355,7 @@ viewTypeAnnotation entry class' =
       Entry.viewTypeAnnotation False Dict.empty entry
         |> List.intersperse [text "\n"]
         |> List.concat
-    
+
   in
     span [class ("formatted-code " ++ class')] kids
 
