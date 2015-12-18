@@ -109,10 +109,47 @@ stringView model =
 
 
 
+-- TYPE FILTER
+
+
+typeContainsQuery : String -> Model Type -> Bool
+typeContainsQuery query model =
+  case model.info of
+    Value tipe _ ->
+      let
+        inName = String.contains query model.name
+
+        inType = Type.containsQuery query tipe
+
+      in
+        inName || inType
+
+    _ ->
+      False
+
+
 -- TYPE VIEW
 
 
 (=>) = (,)
+
+
+typeViewAnnotation : Name.Dictionary -> Model Type -> Html
+typeViewAnnotation nameDict model =
+  let
+    annotation =
+      case model.info of
+        Value tipe _ ->
+            valueAnnotation nameDict model.name tipe
+
+        Union {vars,tags} ->
+            unionAnnotation (Type.toHtml nameDict Type.App) model.name vars tags
+
+        Alias {vars,tipe} ->
+            aliasAnnotation nameDict model.name vars tipe
+  in
+    div [ class "docs-entry", id model.name ]
+      [ annotationBlock annotation ]
 
 
 typeView : Name.Dictionary -> Model Type -> Html
