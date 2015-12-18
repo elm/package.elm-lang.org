@@ -15,10 +15,8 @@ import Docs.Entry as Entry
 import Docs.Name as Name
 import Docs.Package as Docs
 import Docs.Type as Type
-import Native.Jump
 import Page.Context as Ctx
 import Parse.Type as Type
-import Utils.Markdown as Markdown
 
 
 
@@ -220,7 +218,6 @@ viewSearchResults nameDict query chunks =
               |> List.filter (\ (similarity, _) -> similarity > 0)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, entry) -> entry)
-              |> List.map (\ entry -> Debug.log "entry" entry)
               |> List.map (Entry.typeViewAnnotation nameDict)
 
 
