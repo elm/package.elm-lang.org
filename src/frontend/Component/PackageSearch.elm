@@ -40,9 +40,8 @@ type alias Info tipe =
   }
 
 
-type Chunk tipe
-    = Markdown String
-    | Entry (Entry.Model tipe)
+type alias Chunk tipe
+    = Entry.Model tipe
 
 
 -- INIT
@@ -150,12 +149,7 @@ delayedTypeParse chunks =
 
 chunkMap : (a -> b) -> Chunk a -> Chunk b
 chunkMap func chunk =
-  case chunk of
-    Markdown md ->
-      Markdown md
-
-    Entry entry ->
-      Entry (Entry.map func entry)
+  Entry.map func chunk
 
 
 stringToType : String -> Type.Type
@@ -205,14 +199,7 @@ view addr model =
 viewSearchResults : Name.Dictionary -> String -> List (Chunk Type.Type) -> List Html
 viewSearchResults nameDict query chunks =
   let
-    toEntry chunk =
-      case chunk of
-        Entry entry ->
-          Just entry
-        _ ->
-          Nothing
-
-    entries = List.filterMap toEntry chunks
+    entries = chunks
 
     queryType = stringToType query
 
@@ -233,18 +220,14 @@ viewSearchResults nameDict query chunks =
               |> List.filter (\ (similarity, _) -> similarity > 0)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, entry) -> entry)
+              |> List.map (\ entry -> Debug.log "entry" entry)
               |> List.map (Entry.typeViewAnnotation nameDict)
 
 
 
 viewChunk : (Entry.Model tipe -> Html) -> Chunk tipe -> Html
 viewChunk entryView chunk =
-  case chunk of
-    Markdown _ ->
-        div [] []
-
-    Entry entry ->
-        entryView entry
+    entryView chunk
 
 
 -- MAKE CHUNKS
@@ -282,23 +265,7 @@ subChunksHelp moduleDocs parts =
               :: subChunksHelp moduleDocs remainingParts
 
             Nothing ->
-              let
-                trimmedPart =
-                  String.trimLeft rawPart
-              in
-                case String.words trimmedPart of
-                  [] ->
-                      [ Markdown (String.join "," parts) ]
-
-                  token :: _ ->
-                      case isValue token of
-                        Just valueName ->
-                          [ toEntry moduleDocs valueName
-                          , Markdown (String.dropLeft (String.length token) trimmedPart)
-                          ]
-
-                        Nothing ->
-                          [ Markdown (String.join "," parts) ]
+              []
 
 
 var : Regex.Regex
@@ -331,5 +298,5 @@ toEntry moduleDocs name =
         Debug.crash ("docs have been corrupted, could not find " ++ name)
 
     Just entry ->
-        Entry entry
+        entry
 
