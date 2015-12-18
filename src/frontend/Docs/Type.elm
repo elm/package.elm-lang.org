@@ -224,6 +224,8 @@ similarity a b =
         10
       else if String.contains nameA nameB then
         1
+      -- else if nameA /= nameB then
+      --   -10
       else
         0
 

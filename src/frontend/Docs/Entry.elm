@@ -119,7 +119,8 @@ typeContainsQuery query model =
       let
         inName = String.contains query model.name
 
-        inType = Type.containsQuery query tipe
+        -- inType = Type.containsQuery query tipe
+        inType = False
 
       in
         inName || inType
@@ -144,13 +145,14 @@ typeSimilarity queryType model =
 (=>) = (,)
 
 
-typeViewAnnotation : Name.Dictionary -> Model Type -> Html
-typeViewAnnotation nameDict model =
+-- TODO: DRY this up
+typeViewAnnotation : Name.Canonical -> Name.Dictionary -> Model Type -> Html
+typeViewAnnotation canonical nameDict model =
   let
     annotation =
       case model.info of
         Value tipe _ ->
-            valueAnnotation nameDict model.name tipe
+            valueAnnotationCanonical canonical nameDict model.name tipe
 
         Union {vars,tags} ->
             unionAnnotation (Type.toHtml nameDict Type.App) model.name vars tags
@@ -158,7 +160,7 @@ typeViewAnnotation nameDict model =
         Alias {vars,tipe} ->
             aliasAnnotation nameDict model.name vars tipe
   in
-    div [ class "docs-entry", id model.name ]
+    div [ class "docs-entry" ]
       [ annotationBlock annotation ]
 
 
@@ -208,6 +210,20 @@ operator =
 
 
 -- VALUE ANNOTATIONS
+
+-- TODO: DRY this up
+valueAnnotationCanonical : Name.Canonical -> Name.Dictionary -> String -> Type -> List (List Html)
+valueAnnotationCanonical canonical nameDict name tipe =
+  case tipe of
+    Type.Function args result ->
+        if String.length name + 3 + Type.length Type.Other tipe > 64 then
+            [ Name.toLink nameDict canonical ] :: longFunctionAnnotation nameDict args result
+
+        else
+            [ (Name.toLink nameDict canonical) :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
+
+    _ ->
+        [ Name.toLink nameDict canonical :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
 
 
 valueAnnotation : Name.Dictionary -> String -> Type -> List (List Html)

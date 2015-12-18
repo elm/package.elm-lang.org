@@ -39,7 +39,7 @@ type alias Info tipe =
 
 
 type alias Chunk tipe
-    = Entry.Model tipe
+    = (Name.Canonical, Entry.Model tipe)
 
 
 -- INIT
@@ -146,8 +146,8 @@ delayedTypeParse chunks =
 
 
 chunkMap : (a -> b) -> Chunk a -> Chunk b
-chunkMap func chunk =
-  Entry.map func chunk
+chunkMap func (name, entry) =
+  (name, Entry.map func entry)
 
 
 stringToType : String -> Type.Type
@@ -197,8 +197,6 @@ view addr model =
 viewSearchResults : Name.Dictionary -> String -> List (Chunk Type.Type) -> List Html
 viewSearchResults nameDict query chunks =
   let
-    entries = chunks
-
     queryType = stringToType query
 
   in
@@ -208,17 +206,18 @@ viewSearchResults nameDict query chunks =
     else
       case queryType of
         Type.Var string ->
-            entries
-              |> List.filter (Entry.typeContainsQuery query)
-              |> List.map (Entry.typeViewAnnotation nameDict)
+            chunks
+              |> List.filter (\ (name, entry) -> Entry.typeContainsQuery query entry)
+              |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name nameDict entry)
 
         _ ->
-            entries
-              |> List.map (\ entry -> (Entry.typeSimilarity queryType entry, entry))
+            chunks
+              -- TODO: clean this up
+              |> List.map (\ (name, entry) -> (Entry.typeSimilarity queryType entry, (name, entry)))
               |> List.filter (\ (similarity, _) -> similarity > 0)
               |> List.sortBy (\ (similarity, _) -> -similarity)
-              |> List.map (\ (_, entry) -> entry)
-              |> List.map (Entry.typeViewAnnotation nameDict)
+              |> List.map (\ (_, chunk) -> chunk)
+              |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) nameDict) entry)
 
 
 
@@ -290,5 +289,5 @@ toEntry moduleDocs name =
         Debug.crash ("docs have been corrupted, could not find " ++ name)
 
     Just entry ->
-        entry
+        (Name.Canonical moduleDocs.name name, entry)
 
