@@ -28,7 +28,6 @@ import Utils.Markdown as Markdown
 type Model
     = Loading
     | Failed Http.Error
-    | Readme String
     | RawDocs (Info String)
     | ParsedDocs (Info Type.Type)
 
@@ -61,9 +60,8 @@ init context =
 
 
 type Action
-    = LoadDocs String Docs.Package
+    = LoadDocs Docs.Package
     | LoadParsedDocs (List (Chunk Type.Type))
-    | LoadReadme String
     | Fail Http.Error
     | Query String
     | NoOp
@@ -80,13 +78,10 @@ update action model =
     Query query ->
         flip (,) Fx.none <|
           case model of
-            ParsedDocs facts ->
-                ParsedDocs { facts | query = query }
+            ParsedDocs info ->
+                ParsedDocs { info | query = query }
 
             RawDocs _ ->
-                model
-
-            Readme _ ->
                 model
 
             Loading ->
@@ -100,32 +95,27 @@ update action model =
         , Fx.none
         )
 
-    LoadReadme readme ->
-        ( Readme readme
-        , Fx.none
-        )
+    LoadDocs docs ->
+        let
+          chunkEffects = docs
+            |> Dict.toList
+            |> List.map (\ (_, moduleDocs) -> delayedTypeParse (toChunks moduleDocs))
 
-    LoadDocs moduleName docs ->
-        case Dict.get moduleName docs of
-          Just moduleDocs ->
-              let
-                chunks =
-                  toChunks moduleDocs
-              in
-                ( RawDocs (Info moduleName (toNameDict docs) chunks "")
-                , delayedTypeParse chunks
-                )
-
-          Nothing ->
-              ( Failed (Http.UnexpectedPayload ("Could not find module '" ++ moduleName ++ "'"))
-              , Fx.none
-              )
+        in
+          ( RawDocs (Info "" (toNameDict docs) [] "")
+          , Fx.batch chunkEffects
+          )
 
     LoadParsedDocs newChunks ->
         case model of
           RawDocs info ->
               ( ParsedDocs { info | chunks = newChunks }
-              , jumpToHash
+              , Fx.none
+              )
+
+          ParsedDocs info ->
+              ( ParsedDocs { info | chunks = info.chunks ++ newChunks }
+              , Fx.none
               )
 
           _ ->
@@ -145,18 +135,10 @@ toNameDict pkg =
 
 getContext : Ctx.VersionContext -> Effects Action
 getContext context =
-  case context.moduleName of
-    Nothing ->
-      Ctx.getReadme context
-        |> Task.map LoadReadme
-        |> flip Task.onError (Task.succeed << Fail)
-        |> Fx.task
-
-    Just name ->
-      Ctx.getDocs context
-        |> Task.map (LoadDocs name)
-        |> flip Task.onError (Task.succeed << Fail)
-        |> Fx.task
+  Ctx.getDocs context
+    |> Task.map LoadDocs
+    |> flip Task.onError (Task.succeed << Fail)
+    |> Fx.task
 
 
 delayedTypeParse : List (Chunk String) -> Effects Action
@@ -186,13 +168,6 @@ stringToType str =
       Type.Var str
 
 
-jumpToHash : Effects Action
-jumpToHash =
-  Native.Jump.jump
-    |> Task.map (always NoOp)
-    |> Fx.task
-
-
 
 -- VIEW
 
@@ -209,17 +184,13 @@ view addr model =
           ]
 
       Failed httpError ->
-          [ p [] [text "Documentation did not load."]
+          [ p [] [text "Documentation did not load or parse."]
           , p [] [text (toString httpError)]
           ]
 
-      Readme readme ->
-          [ Markdown.block readme
-          ]
-
       RawDocs {name,chunks} ->
-          h1 [class "entry-list-title"] [text name]
-          :: List.map (viewChunk Entry.stringView) chunks
+          [ p [] [text "Parsing..."]
+          ]
 
       ParsedDocs {name,nameDict,chunks,query} ->
           input
