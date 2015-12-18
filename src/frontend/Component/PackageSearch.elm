@@ -214,7 +214,7 @@ viewSearchResults nameDict query chunks =
 
         _ ->
             entries
-              |> List.map (\ entry -> (Entry.typeSimilarity queryType entry,  entry))
+              |> List.map (\ entry -> (Entry.typeSimilarity queryType entry, entry))
               |> List.filter (\ (similarity, _) -> similarity > 0)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, entry) -> entry)
