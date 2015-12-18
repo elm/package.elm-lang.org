@@ -243,14 +243,26 @@ viewSearchResults nameDict query chunks =
 
     entries = List.filterMap toEntry chunks
 
+    queryType = stringToType query
+
   in
     if String.isEmpty query then
-      List.map (Entry.typeViewAnnotation nameDict) entries
+      []
 
     else
-      entries
-        |> List.filter (Entry.typeContainsQuery query)
-        |> List.map (Entry.typeViewAnnotation nameDict)
+      case queryType of
+        Type.Var string ->
+            entries
+              |> List.filter (Entry.typeContainsQuery query)
+              |> List.map (Entry.typeViewAnnotation nameDict)
+
+        _ ->
+            entries
+              |> List.map (\ entry -> (Entry.typeSimilarity queryType entry,  entry))
+              |> List.filter (\ (similarity, _) -> similarity > 0)
+              |> List.sortBy (\ (similarity, _) -> -similarity)
+              |> List.map (\ (_, entry) -> entry)
+              |> List.map (Entry.typeViewAnnotation nameDict)
 
 
 

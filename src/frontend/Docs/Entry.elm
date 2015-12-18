@@ -128,6 +128,16 @@ typeContainsQuery query model =
       False
 
 
+typeSimilarity : Type -> Model Type -> Int
+typeSimilarity queryType model =
+  case model.info of
+    Value tipe _ ->
+      Type.similarity queryType tipe
+
+    _ ->
+      0
+
+
 -- TYPE VIEW
 
 

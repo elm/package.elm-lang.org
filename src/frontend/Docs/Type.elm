@@ -213,3 +213,49 @@ containsQuery query tipe =
         in
           inRecord || inExt
 
+
+similarity : Type -> Type -> Int
+similarity a b =
+  let
+    typeSimilarity = 0
+
+    compareNames nameA nameB =
+      if nameA == nameB then
+        10
+      else if String.contains nameA nameB then
+        1
+      else
+        0
+
+  in
+    case (a, b) of
+
+      (Function argsA resultA, Function argsB resultB) ->
+          if List.length argsA == List.length argsB then
+            typeSimilarity
+              + List.sum (List.map2 similarity argsA argsB)
+              + similarity resultA resultB
+          else
+            typeSimilarity
+
+      (Var nameA, Var nameB) ->
+          typeSimilarity
+            + compareNames nameA nameB
+
+      (Apply canonicalA [], Apply canonicalB []) ->
+          typeSimilarity
+            + compareNames canonicalA.name canonicalB.name
+
+      (Apply canonicalA argsA, Apply canonicalB argsB) ->
+          if List.length argsA == List.length argsB then
+            typeSimilarity
+              + compareNames canonicalA.name canonicalB.name
+              + List.sum (List.map2 similarity argsA argsB)
+          else
+            typeSimilarity
+
+      (Tuple argsA, Tuple argsB) ->
+          typeSimilarity
+            + List.sum (List.map2 similarity argsA argsB)
+
+      _ -> 0
