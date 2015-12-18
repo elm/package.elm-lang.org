@@ -164,3 +164,52 @@ length context tipe =
         in
           recordLength + extLength
 
+
+
+-- SEARCH
+
+
+containsQuery : String -> Type -> Bool
+containsQuery query tipe =
+  case tipe of
+    Function args result ->
+        let
+          argsContainQuery =
+            List.any (\b -> b) (List.map (\t -> containsQuery query t) args)
+        in
+          containsQuery query result || argsContainQuery
+
+    Var name ->
+        String.contains query name
+
+    Apply {name} [] ->
+        String.contains query name
+
+    Apply {name} args ->
+        let
+          argsContainQuery =
+            List.any (\b -> b) (List.map (\t -> containsQuery query t) args)
+        in
+          String.contains query name || argsContainQuery
+
+    Tuple args ->
+        List.any (\b -> b) (List.map (\t -> containsQuery query t) args)
+
+    Record fields ext ->
+        let
+          inField (field, tipe) =
+            String.contains query field || containsQuery query tipe
+
+          inRecord =
+            List.any (\b -> b) (List.map (\ft -> inField ft) fields)
+
+          inExt =
+            case ext of
+              Nothing ->
+                False
+
+              Just extName ->
+                String.contains query extName
+        in
+          inRecord || inExt
+
