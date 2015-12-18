@@ -222,11 +222,6 @@ viewSearchResults nameDict query chunks =
 
 
 
-viewChunk : (Entry.Model tipe -> Html) -> Chunk tipe -> Html
-viewChunk entryView chunk =
-    entryView chunk
-
-
 -- MAKE CHUNKS
 
 
