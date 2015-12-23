@@ -208,8 +208,18 @@ pre {
 }
 
 
+
 /* SEARCH */
-.pkg-search input {
+
+
+.search {
+  width: 600px;
+  display: inline-block;
+  vertical-align: top;
+}
+
+
+.search input {
   width: 578px;
   font-size: 1.5em;
   padding: 10px;

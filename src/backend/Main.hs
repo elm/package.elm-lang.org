@@ -61,6 +61,9 @@ main =
             , ( "all-packages", Route.allPackages )
             , ( "new-packages", serveFile NewPackageList.newPackages )
             , ( "assets", serveDirectoryWith directoryConfig "assets" )
+            , ( "search"
+              , ifTop $ ServeFile.elm "Search" ["Page","Search"]
+              )
             , ( "help/design-guidelines"
               , ifTop $ ServeFile.elm "Design Guidelines" ["Page","DesignGuidelines"]
               )
@@ -114,6 +117,7 @@ publicModules =
     , ["Page","DesignGuidelines"]
     , ["Page","DocumentationFormat"]
     , ["Page","PreviewDocumentation"]
+    , ["Page","Search"]
     , ["Page","NotFound"]
     , ["Page","Package"]
     , ["Page","PackageOverview"]

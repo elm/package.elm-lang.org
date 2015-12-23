@@ -1,4 +1,4 @@
-module Component.PackageSearch where
+module Component.Search where
 
 import Dict
 import Effects as Fx exposing (Effects)
@@ -6,11 +6,13 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
+import Json.Decode as Json
 import Regex
 import Set
 import String
 import Task
 
+import Docs.Summary as Summary
 import Docs.Entry as Entry
 import Docs.Name as Name
 import Docs.Package as Docs
@@ -26,6 +28,7 @@ import Parse.Type as Type
 type Model
     = Loading
     | Failed Http.Error
+    | Catalog (List Summary.Summary)
     | RawDocs (Info String)
     | ParsedDocs (Info Type.Type)
 
@@ -45,10 +48,10 @@ type alias Chunk tipe
 -- INIT
 
 
-init : Ctx.VersionContext -> (Model, Effects Action)
-init context =
+init : (Model, Effects Action)
+init =
   ( Loading
-  , getContext context
+  , getPackageInfo
   )
 
 
@@ -57,7 +60,8 @@ init context =
 
 
 type Action
-    = LoadDocs Docs.Package
+    = LoadCatalog (List Summary.Summary, List String)
+    | LoadDocs Docs.Package
     | LoadParsedDocs (List (Chunk Type.Type))
     | Fail Http.Error
     | Query String
@@ -78,6 +82,9 @@ update action model =
             ParsedDocs info ->
                 ParsedDocs { info | query = query }
 
+            Catalog _ ->
+                model
+
             RawDocs _ ->
                 model
 
@@ -91,6 +98,23 @@ update action model =
         ( Failed httpError
         , Fx.none
         )
+
+    LoadCatalog (allSummaries, updatedPkgs) ->
+        let
+          updatedSet =
+            Set.fromList updatedPkgs
+
+          (summaries, oldSummaries) =
+            List.partition (\{name} -> Set.member name updatedSet) allSummaries
+
+          contextEffects = summaries
+            |> List.map latestVersionContext
+            |> List.map getContext
+
+        in
+          ( Catalog summaries
+          , Fx.batch contextEffects
+          )
 
     LoadDocs docs ->
         let
@@ -126,8 +150,42 @@ toNameDict pkg =
   Dict.map (\_ modul -> Set.fromList (Dict.keys modul.entries)) pkg
 
 
+latestVersionContext : Summary.Summary -> Ctx.VersionContext
+latestVersionContext summary =
+  let
+    userProject = String.split "/" summary.name
+    user = Maybe.withDefault "user" (List.head userProject)
+    project = Maybe.withDefault "project" (List.head (List.reverse userProject))
+    version = List.head summary.versions
+      |> Maybe.withDefault (1,0,0)
+      |> (\ (a,b,c) -> String.join "." (List.map toString [a,b,c]))
+    allVersions = []
+  in
+    Ctx.VersionContext
+      user
+      project
+      version
+      allVersions
+      Nothing
+
 
 -- EFFECTS
+
+
+getPackageInfo : Effects Action
+getPackageInfo =
+  let
+    getAll =
+      Http.get Summary.decoder "/all-packages"
+
+    getNew =
+      Http.get (Json.list Json.string) "/new-packages"
+
+  in
+    Task.map2 (,) getAll getNew
+      |> Task.map LoadCatalog
+      |> flip Task.onError (Task.succeed << Fail)
+      |> Fx.task
 
 
 getContext : Ctx.VersionContext -> Effects Action
@@ -172,7 +230,11 @@ view addr model =
   div [class "search"] <|
     case model of
       Loading ->
-          [ p [] [text "Loading..."]
+          [ p [] [text "Loading list of packages..."]
+          ]
+
+      Catalog catalog ->
+          [ p [] [text <| "Loading docs for " ++ toString (List.length catalog) ++ "packages..."]
           ]
 
       Failed httpError ->
@@ -191,17 +253,23 @@ view addr model =
             , on "input" targetValue (Signal.message addr << Query)
             ]
             []
-          :: viewSearchResults nameDict query chunks
+          :: viewSearchResults addr nameDict query chunks
 
 
-viewSearchResults : Name.Dictionary -> String -> List (Chunk Type.Type) -> List Html
-viewSearchResults nameDict query chunks =
+viewSearchResults : Signal.Address Action -> Name.Dictionary -> String -> List (Chunk Type.Type) -> List Html
+viewSearchResults addr nameDict query chunks =
   let
     queryType = stringToType query
 
   in
     if String.isEmpty query then
-      []
+      [ h1 [] [ text "Welcome to Elm Search" ]
+      , p [] [ text "Search the latest Elm libraries by either function name, or by approximate type signature."]
+      , h2 [] [ text "Example searches" ]
+      , ul []
+        [ li [] [ a [ onClick addr (Query "map")] [ text "map" ] ]
+          , li [] [ a [ onClick addr (Query "(a -> b -> b) -> b -> List a -> b")] [ text "(a -> b -> b) -> b -> List a -> b" ] ]        ]
+      ]
 
     else
       case queryType of
@@ -214,7 +282,7 @@ viewSearchResults nameDict query chunks =
             chunks
               -- TODO: clean this up
               |> List.map (\ (name, entry) -> (Entry.typeSimilarity queryType entry, (name, entry)))
-              |> List.filter (\ (similarity, _) -> similarity > 0)
+              |> List.filter (\ (similarity, _) -> similarity > 1)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, chunk) -> chunk)
               |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) nameDict) entry)
