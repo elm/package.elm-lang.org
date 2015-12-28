@@ -222,13 +222,28 @@ viewChunk entryView chunk =
 
 toChunks : Docs.Module -> List (Chunk String)
 toChunks moduleDocs =
-  case String.split "\n@docs " moduleDocs.comment of
-    [] ->
-        Debug.crash "Expecting some documented functions in this module!"
+  let
+  sections =
+    String.split "\n\n" moduleDocs.comment
 
-    firstChunk :: rest ->
+  process section =
+    case String.split "\n@docs " section of
+      [] ->
+        []
+
+      [text] ->
+        [Markdown text]
+
+      firstChunk :: rest ->
         Markdown firstChunk
         :: List.concatMap (subChunks moduleDocs) rest
+
+  in
+    if List.isEmpty sections then
+      Debug.crash "Expecting some documented functions in this module!"
+
+    else
+      List.concatMap process sections
 
 
 subChunks : Docs.Module -> String -> List (Chunk String)
@@ -303,4 +318,3 @@ toEntry moduleDocs name =
 
     Just entry ->
         Entry entry
-
