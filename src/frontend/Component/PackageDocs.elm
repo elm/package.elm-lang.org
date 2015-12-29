@@ -265,17 +265,12 @@ subChunksHelp moduleDocs parts =
                   token :: _ ->
                       case isValue token of
                         Just valueName ->
-                          let
-                            text =
-                              trimmedPart::remainingParts
-                                |> String.join ","
-                                |> String.dropLeft (String.length token)
-                                |> Markdown
-
-                          in
-                            [ toEntry moduleDocs valueName
-                            , text
-                            ]
+                          [ toEntry moduleDocs valueName
+                          , trimmedPart :: remainingParts
+                              |> String.join ","
+                              |> String.dropLeft (String.length token)
+                              |> Markdown
+                          ]
 
                         Nothing ->
                           [ Markdown (String.join "," parts) ]
