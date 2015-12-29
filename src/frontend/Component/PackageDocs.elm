@@ -246,6 +246,7 @@ subChunksHelp moduleDocs parts =
         let
           part =
             String.trim rawPart
+
         in
           case isValue part of
             Just valueName ->
@@ -265,7 +266,10 @@ subChunksHelp moduleDocs parts =
                       case isValue token of
                         Just valueName ->
                           [ toEntry moduleDocs valueName
-                          , Markdown (String.dropLeft (String.length token) trimmedPart)
+                          , trimmedPart :: remainingParts
+                              |> String.join ","
+                              |> String.dropLeft (String.length token)
+                              |> Markdown
                           ]
 
                         Nothing ->
@@ -303,4 +307,3 @@ toEntry moduleDocs name =
 
     Just entry ->
         Entry entry
-
