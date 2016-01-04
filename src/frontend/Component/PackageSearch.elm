@@ -204,17 +204,28 @@ viewSearchResults nameDict query chunks =
       []
 
     else
+      -- case queryType of
+      --   Type.Var string ->
+      --       chunks
+      --         |> List.filter (\ (name, entry) -> Entry.typeContainsQuery query entry)
+      --         |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name nameDict entry)
+
+      --   _ ->
       case queryType of
         Type.Var string ->
             chunks
-              |> List.filter (\ (name, entry) -> Entry.typeContainsQuery query entry)
-              |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name nameDict entry)
+              -- TODO: clean this up
+              |> List.map (\ (name, entry) -> (Entry.nameSimilarity query entry, (name, entry)))
+              |> List.filter (\ (similarity, _) -> similarity > 0)
+              |> List.sortBy (\ (similarity, _) -> -similarity)
+              |> List.map (\ (_, chunk) -> chunk)
+              |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) nameDict) entry)
 
         _ ->
             chunks
               -- TODO: clean this up
               |> List.map (\ (name, entry) -> (Entry.typeSimilarity queryType entry, (name, entry)))
-              |> List.filter (\ (similarity, _) -> similarity > 0)
+              |> List.filter (\ (similarity, _) -> similarity > 10)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, chunk) -> chunk)
               |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) nameDict) entry)

@@ -282,7 +282,7 @@ viewSearchResults addr nameDict query chunks =
             chunks
               -- TODO: clean this up
               |> List.map (\ (name, entry) -> (Entry.typeSimilarity queryType entry, (name, entry)))
-              |> List.filter (\ (similarity, _) -> similarity > 1)
+              |> List.filter (\ (similarity, _) -> similarity > 10)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, chunk) -> chunk)
               |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) nameDict) entry)

@@ -1,5 +1,6 @@
 module Docs.Type where
 
+import Char
 import Dict
 import Effects as Fx exposing (Effects)
 import Html exposing (..)
@@ -222,15 +223,16 @@ similarity a b =
     compareNames nameA nameB =
       if nameA == nameB then
         10
-      else if String.contains nameA nameB then
-        1
+      -- else if String.contains nameA nameB then
+      --   1
       -- else if nameA /= nameB then
       --   -10
       else
         0
 
+    normalized = (normalize a, normalize b)
   in
-    case (a, b) of
+    case normalized of
 
       (Function argsA resultA, Function argsB resultB) ->
           if List.length argsA == List.length argsB then
@@ -261,3 +263,89 @@ similarity a b =
             + List.sum (List.map2 similarity argsA argsB)
 
       _ -> 0
+
+
+
+-- NORMALIZING
+
+type alias Mapping = Dict.Dict String String
+
+defaultMapping : Mapping
+defaultMapping =
+  Dict.empty
+    |> Dict.insert "number" "number"
+    |> Dict.insert "comparable" "comparable"
+
+
+nextMappingValue : Mapping -> String
+nextMappingValue mapping =
+  let
+    base = (Dict.size mapping) - (Dict.size defaultMapping)
+    code = (base % 26) + (Char.toCode 'a')
+    string = String.fromChar (Char.fromCode code)
+    times = (base // 26) + 1
+  in
+    String.repeat times string
+
+
+updateMapping : Type -> Mapping -> Mapping
+updateMapping tipe mapping =
+  let
+    updateMappingFor name =
+      if Dict.member name mapping then
+        mapping
+      else
+        Dict.insert
+          name
+          (nextMappingValue mapping)
+          mapping
+  in
+    case tipe of
+      Function args result ->
+        List.foldl updateMapping mapping (List.append args [result])
+
+      Var name -> updateMappingFor name
+
+      Apply name args ->
+          List.foldl updateMapping mapping args
+
+      Tuple args ->
+          List.foldl updateMapping mapping args
+
+      Record fields ext ->
+          List.foldl updateMapping mapping (List.map (\ (_, t) -> t) fields)
+
+
+normalize : Type -> Type
+normalize tipe =
+  normalizeWithMapping (updateMapping tipe defaultMapping) tipe
+
+
+normalizeWithMapping : Mapping -> Type -> Type
+normalizeWithMapping mapping tipe =
+  let
+    normalize' = normalizeWithMapping mapping
+  in
+    case tipe of
+      Function args result ->
+          Function
+            (List.map normalize' args)
+            (normalize' result)
+
+      Var name ->
+          let
+            name' =
+              case Dict.get name mapping of
+                Just n -> n
+                Nothing -> name
+          in
+            Var name'
+
+      Apply name args ->
+          Apply name (List.map normalize' args)
+
+      Tuple args ->
+          Tuple (List.map normalize' args)
+
+      Record fields ext ->
+          Record (List.map (\ (k, v) -> (k, normalize' v)) fields) ext
