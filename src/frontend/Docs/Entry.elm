@@ -129,6 +129,21 @@ typeContainsQuery query model =
       False
 
 
+nameSimilarity : String -> Model Type -> Int
+nameSimilarity query model =
+  case model.info of
+    Value tipe _ ->
+      if query == model.name then
+        10
+      else if String.contains query model.name then
+        1
+      else
+        0
+
+    _ ->
+      0
+
+
 typeSimilarity : Type -> Model Type -> Int
 typeSimilarity queryType model =
   case model.info of
