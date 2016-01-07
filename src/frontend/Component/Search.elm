@@ -42,7 +42,7 @@ type alias Info tipe =
 
 
 type alias Chunk tipe
-    = (Name.Canonical, Entry.Model tipe)
+    = (Ctx.VersionContext, Name.Canonical, Entry.Model tipe)
 
 
 -- INIT
@@ -61,7 +61,7 @@ init =
 
 type Action
     = LoadCatalog (List Summary.Summary, List String)
-    | LoadDocs Docs.Package
+    | LoadDocs Ctx.VersionContext Docs.Package
     | LoadParsedDocs (List (Chunk Type.Type))
     | Fail Http.Error
     | Query String
@@ -116,11 +116,11 @@ update action model =
           , Fx.batch contextEffects
           )
 
-    LoadDocs docs ->
+    LoadDocs context docs ->
         let
           chunkEffects = docs
             |> Dict.toList
-            |> List.map (\ (_, moduleDocs) -> delayedTypeParse (toChunks moduleDocs))
+            |> List.map (\ (_, moduleDocs) -> delayedTypeParse (toChunks context moduleDocs))
 
         in
           ( RawDocs (Info "" (toNameDict docs) [] "")
@@ -166,6 +166,7 @@ latestVersionContext summary =
       project
       version
       allVersions
+      -- TODO: Module name
       Nothing
 
 
@@ -191,7 +192,7 @@ getPackageInfo =
 getContext : Ctx.VersionContext -> Effects Action
 getContext context =
   Ctx.getDocs context
-    |> Task.map LoadDocs
+    |> Task.map (LoadDocs context)
     |> flip Task.onError (Task.succeed << Fail)
     |> Fx.task
 
@@ -204,8 +205,8 @@ delayedTypeParse chunks =
 
 
 chunkMap : (a -> b) -> Chunk a -> Chunk b
-chunkMap func (name, entry) =
-  (name, Entry.map func entry)
+chunkMap func (ctx, name, entry) =
+  (ctx, name, Entry.map func entry)
 
 
 stringToType : String -> Type.Type
@@ -260,6 +261,7 @@ viewSearchResults : Signal.Address Action -> Name.Dictionary -> String -> List (
 viewSearchResults addr nameDict query chunks =
   let
     queryType = stringToType query
+    -- dict = Debug.log "nameDict" nameDict
 
   in
     if String.isEmpty query then
@@ -268,47 +270,52 @@ viewSearchResults addr nameDict query chunks =
       , h2 [] [ text "Example searches" ]
       , ul []
         [ li [] [ a [ onClick addr (Query "map")] [ text "map" ] ]
-          , li [] [ a [ onClick addr (Query "(a -> b -> b) -> b -> List a -> b")] [ text "(a -> b -> b) -> b -> List a -> b" ] ]        ]
+        , li [] [ a
+          [ onClick addr (Query "(a -> b -> b) -> b -> List a -> b")]
+          [ text "(a -> b -> b) -> b -> List a -> b" ] ]
+        ]
       ]
 
     else
       case queryType of
         Type.Var string ->
             chunks
-              |> List.filter (\ (name, entry) -> Entry.typeContainsQuery query entry)
-              |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name nameDict entry)
+              |> List.filter (\ (ctx, name, entry) -> Entry.typeContainsQuery query entry)
+              |> List.map (\ (ctx, name, entry) -> Entry.typeViewAnnotation name nameDict entry)
 
         _ ->
             chunks
               -- TODO: clean this up
-              |> List.map (\ (name, entry) -> (Entry.typeSimilarity queryType entry, (name, entry)))
+              |> List.map (\ (ctx, name, entry) -> (Entry.typeSimilarity queryType entry, (ctx, name, entry)))
               |> List.filter (\ (similarity, _) -> similarity > 10)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, chunk) -> chunk)
-              |> List.map (\ (name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) nameDict) entry)
+              |> List.map (\ (ctx, name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) nameDict) entry)
+            --   |> List.map (\ (ctx, name, entry) -> div [] [text (ctx.user ++ "." ++ ctx.project ++ "." ++ ctx.version ++ " : " ++ name.home ++ "." ++ name.name)])
+            --   |> List.map (\ (ctx, name, entry) -> Name.toLink nameDict name)
 
 
 
 -- MAKE CHUNKS
 
 
-toChunks : Docs.Module -> List (Chunk String)
-toChunks moduleDocs =
+toChunks : Ctx.VersionContext -> Docs.Module -> List (Chunk String)
+toChunks ctx moduleDocs =
   case String.split "\n@docs " moduleDocs.comment of
     [] ->
         Debug.crash "Expecting some documented functions in this module!"
 
     firstChunk :: rest ->
-        List.concatMap (subChunks moduleDocs) rest
+        List.concatMap (subChunks ctx moduleDocs) rest
 
 
-subChunks : Docs.Module -> String -> List (Chunk String)
-subChunks moduleDocs postDocs =
-    subChunksHelp moduleDocs (String.split "," postDocs)
+subChunks : Ctx.VersionContext -> Docs.Module -> String -> List (Chunk String)
+subChunks ctx moduleDocs postDocs =
+    subChunksHelp ctx moduleDocs (String.split "," postDocs)
 
 
-subChunksHelp : Docs.Module -> List String -> List (Chunk String)
-subChunksHelp moduleDocs parts =
+subChunksHelp : Ctx.VersionContext -> Docs.Module -> List String -> List (Chunk String)
+subChunksHelp ctx moduleDocs parts =
   case parts of
     [] ->
         []
@@ -320,8 +327,8 @@ subChunksHelp moduleDocs parts =
         in
           case isValue part of
             Just valueName ->
-              toEntry moduleDocs valueName
-              :: subChunksHelp moduleDocs remainingParts
+              toEntry ctx moduleDocs valueName
+              :: subChunksHelp ctx moduleDocs remainingParts
 
             Nothing ->
               []
@@ -350,12 +357,12 @@ isValue str =
 
 
 
-toEntry : Docs.Module -> String -> Chunk String
-toEntry moduleDocs name =
+toEntry : Ctx.VersionContext -> Docs.Module -> String -> Chunk String
+toEntry ctx moduleDocs name =
   case Dict.get name moduleDocs.entries of
     Nothing ->
         Debug.crash ("docs have been corrupted, could not find " ++ name)
 
     Just entry ->
-        (Name.Canonical moduleDocs.name name, entry)
+        (ctx, Name.Canonical moduleDocs.name name, entry)
 
