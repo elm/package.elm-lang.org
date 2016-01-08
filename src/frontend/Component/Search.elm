@@ -25,6 +25,34 @@ import Parse.Type as Type
 -- MODEL
 
 
+type alias PackageInfo =
+  { package: Docs.Package
+  , context : Ctx.VersionContext
+  , nameDict : Name.Dictionary
+  }
+
+
+{-| All packages by canonicalized name, that is `user/project/version`.
+-}
+type alias Packages =
+    Dict.Dict String PackageInfo
+
+
+type alias Chunk tipe =
+  { package : String
+  , name : Name.Canonical
+  , entry : Entry.Model tipe
+  }
+
+
+type alias Info tipe =
+--   { packageDict : Packages
+  { packageDict : Dict.Dict String Docs.Package
+  , chunks : List (Chunk tipe)
+  , query : String
+  }
+
+
 type Model
     = Loading
     | Failed Http.Error
@@ -32,17 +60,6 @@ type Model
     | RawDocs (Info String)
     | ParsedDocs (Info Type.Type)
 
-
-type alias Info tipe =
-  { name : String
-  , nameDict : Name.Dictionary
-  , chunks : List (Chunk tipe)
-  , query : String
-  }
-
-
-type alias Chunk tipe
-    = (Ctx.VersionContext, Name.Canonical, Entry.Model tipe)
 
 
 -- INIT
@@ -65,17 +82,11 @@ type Action
     | LoadParsedDocs (List (Chunk Type.Type))
     | Fail Http.Error
     | Query String
-    | NoOp
 
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
-    NoOp ->
-        ( model
-        , Fx.none
-        )
-
     Query query ->
         flip (,) Fx.none <|
           case model of
@@ -116,14 +127,25 @@ update action model =
           , Fx.batch contextEffects
           )
 
-    LoadDocs context docs ->
+    LoadDocs {user, project, version} docs ->
         let
+          pkgName = List.foldr (++) "" (List.intersperse "/" [user, project, version])
+
+          m = case model of
+            Loading -> "Loading"
+            Failed _ -> "Failed"
+            Catalog _ -> "Catalog"
+            RawDocs _ -> "RawDocs"
+            ParsedDocs _ -> "ParsedDocs"
+
+          ms = Debug.log "model" m
+
           chunkEffects = docs
             |> Dict.toList
-            |> List.map (\ (_, moduleDocs) -> delayedTypeParse (toChunks context moduleDocs))
+            |> List.map (\ (name, moduleDocs) -> delayedTypeParse (toChunks name moduleDocs))
 
         in
-          ( RawDocs (Info "" (toNameDict docs) [] "")
+          ( RawDocs (Info (Dict.singleton pkgName docs) [] "")
           , Fx.batch chunkEffects
           )
 
@@ -205,8 +227,8 @@ delayedTypeParse chunks =
 
 
 chunkMap : (a -> b) -> Chunk a -> Chunk b
-chunkMap func (ctx, name, entry) =
-  (ctx, name, Entry.map func entry)
+chunkMap func {name, entry} =
+  Chunk "" name (Entry.map func entry)
 
 
 stringToType : String -> Type.Type
@@ -243,22 +265,25 @@ view addr model =
           , p [] [text (toString httpError)]
           ]
 
-      RawDocs {name,chunks} ->
+      RawDocs {chunks} ->
           [ p [] [text "Parsing..."]
           ]
 
-      ParsedDocs {name,nameDict,chunks,query} ->
+      ParsedDocs {packageDict,chunks,query} ->
+        -- let
+        --   pkgs = Debug.log "pkgs" packageDict
+        -- in
           input
             [ placeholder "Search function by name or type"
             , value query
             , on "input" targetValue (Signal.message addr << Query)
             ]
             []
-          :: viewSearchResults addr nameDict query chunks
+          :: viewSearchResults addr query chunks
 
 
-viewSearchResults : Signal.Address Action -> Name.Dictionary -> String -> List (Chunk Type.Type) -> List Html
-viewSearchResults addr nameDict query chunks =
+viewSearchResults : Signal.Address Action -> String -> List (Chunk Type.Type) -> List Html
+viewSearchResults addr query chunks =
   let
     queryType = stringToType query
     -- dict = Debug.log "nameDict" nameDict
@@ -280,17 +305,17 @@ viewSearchResults addr nameDict query chunks =
       case queryType of
         Type.Var string ->
             chunks
-              |> List.filter (\ (ctx, name, entry) -> Entry.typeContainsQuery query entry)
-              |> List.map (\ (ctx, name, entry) -> Entry.typeViewAnnotation name nameDict entry)
+              |> List.filter (\ {package, name, entry} -> Entry.typeContainsQuery query entry)
+              |> List.map (\ {package, name, entry} -> Entry.typeViewAnnotation name Dict.empty entry)
 
         _ ->
             chunks
               -- TODO: clean this up
-              |> List.map (\ (ctx, name, entry) -> (Entry.typeSimilarity queryType entry, (ctx, name, entry)))
+              |> List.map (\ {package, name, entry} -> (Entry.typeSimilarity queryType entry, (package, name, entry)))
               |> List.filter (\ (similarity, _) -> similarity > 10)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, chunk) -> chunk)
-              |> List.map (\ (ctx, name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) nameDict) entry)
+              |> List.map (\ (ctx, name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) Dict.empty) entry)
             --   |> List.map (\ (ctx, name, entry) -> div [] [text (ctx.user ++ "." ++ ctx.project ++ "." ++ ctx.version ++ " : " ++ name.home ++ "." ++ name.name)])
             --   |> List.map (\ (ctx, name, entry) -> Name.toLink nameDict name)
 
@@ -299,7 +324,7 @@ viewSearchResults addr nameDict query chunks =
 -- MAKE CHUNKS
 
 
-toChunks : Ctx.VersionContext -> Docs.Module -> List (Chunk String)
+toChunks : String -> Docs.Module -> List (Chunk String)
 toChunks ctx moduleDocs =
   case String.split "\n@docs " moduleDocs.comment of
     [] ->
@@ -309,12 +334,12 @@ toChunks ctx moduleDocs =
         List.concatMap (subChunks ctx moduleDocs) rest
 
 
-subChunks : Ctx.VersionContext -> Docs.Module -> String -> List (Chunk String)
+subChunks : String -> Docs.Module -> String -> List (Chunk String)
 subChunks ctx moduleDocs postDocs =
     subChunksHelp ctx moduleDocs (String.split "," postDocs)
 
 
-subChunksHelp : Ctx.VersionContext -> Docs.Module -> List String -> List (Chunk String)
+subChunksHelp : String -> Docs.Module -> List String -> List (Chunk String)
 subChunksHelp ctx moduleDocs parts =
   case parts of
     [] ->
@@ -357,12 +382,11 @@ isValue str =
 
 
 
-toEntry : Ctx.VersionContext -> Docs.Module -> String -> Chunk String
+toEntry : String -> Docs.Module -> String -> Chunk String
 toEntry ctx moduleDocs name =
   case Dict.get name moduleDocs.entries of
     Nothing ->
         Debug.crash ("docs have been corrupted, could not find " ++ name)
 
     Just entry ->
-        (ctx, Name.Canonical moduleDocs.name name, entry)
-
+        Chunk "" (Name.Canonical moduleDocs.name name) entry
