@@ -83,33 +83,7 @@ tagMap func tag =
 
 
 
--- STRING VIEW
-
-
-stringView : Model String -> Html
-stringView model =
-  let
-    annotation =
-      case model.info of
-        Value tipe _ ->
-            [ nameToLink model.name :: padded colon ++ [text tipe] ]
-
-        Union {vars,tags} ->
-            unionAnnotation (\t -> [text t]) model.name vars tags
-
-        Alias {vars,tipe} ->
-            [ aliasNameLine model.name vars
-            , [ text "    ", text tipe ]
-            ]
-  in
-    div [ class "docs-entry", id model.name ]
-      [ annotationBlock annotation
-      , div [class "docs-comment"] [Markdown.block model.docs]
-      ]
-
-
-
--- TYPE FILTER
+-- FILTER
 
 
 nameSimilarity : String -> Model Type -> Int
@@ -135,6 +109,33 @@ typeSimilarity queryType model =
 
     _ ->
       0
+
+
+
+-- STRING VIEW
+
+
+stringView : Model String -> Html
+stringView model =
+  let
+    annotation =
+      case model.info of
+        Value tipe _ ->
+            [ nameToLink model.name :: padded colon ++ [text tipe] ]
+
+        Union {vars,tags} ->
+            unionAnnotation (\t -> [text t]) model.name vars tags
+
+        Alias {vars,tipe} ->
+            [ aliasNameLine model.name vars
+            , [ text "    ", text tipe ]
+            ]
+  in
+    div [ class "docs-entry", id model.name ]
+      [ annotationBlock annotation
+      , div [class "docs-comment"] [Markdown.block model.docs]
+      ]
+
 
 
 -- TYPE VIEW
