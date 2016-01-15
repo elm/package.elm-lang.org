@@ -112,23 +112,6 @@ stringView model =
 -- TYPE FILTER
 
 
-typeContainsQuery : String -> Model Type -> Bool
-typeContainsQuery query model =
-  case model.info of
-    Value tipe _ ->
-      let
-        inName = String.contains query model.name
-
-        -- inType = Type.containsQuery query tipe
-        inType = False
-
-      in
-        inName || inType
-
-    _ ->
-      False
-
-
 nameSimilarity : String -> Model Type -> Int
 nameSimilarity query model =
   case model.info of

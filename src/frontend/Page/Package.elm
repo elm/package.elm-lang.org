@@ -8,7 +8,6 @@ import Task
 
 import Component.Header as Header
 import Component.PackageDocs as PDocs
-import Component.PackageSearch as PkgSearch
 import Component.PackageSidebar as PkgNav
 import Page.Context as Ctx
 import Route
@@ -46,7 +45,6 @@ port worker =
 type alias Model =
     { header : Header.Model
     , moduleDocs : PDocs.Model
-    , pkgSearch : PkgSearch.Model
     , pkgNav : PkgNav.Model
     }
 
@@ -64,17 +62,13 @@ init =
     (moduleDocs, moduleFx) =
       PDocs.init context
 
-    (pkgSearch, searchFx) =
-      PkgSearch.init context
-
     (pkgNav, navFx) =
       PkgNav.init context
   in
-    ( Model header moduleDocs pkgSearch pkgNav
+    ( Model header moduleDocs pkgNav
     , Fx.batch
         [ headerFx
         , Fx.map UpdateDocs moduleFx
-        , Fx.map UpdateSearch searchFx
         , Fx.map UpdateNav navFx
         ]
     )
@@ -86,7 +80,6 @@ init =
 
 type Action
     = UpdateDocs PDocs.Action
-    | UpdateSearch PkgSearch.Action
     | UpdateNav PkgNav.Action
 
 
@@ -100,15 +93,6 @@ update action model =
         in
           ( { model | moduleDocs = newDocs }
           , Fx.map UpdateDocs fx
-          )
-
-    UpdateSearch act ->
-        let
-          (newPkgSearch, fx) =
-            PkgSearch.update act model.pkgSearch
-        in
-          ( { model | pkgSearch = newPkgSearch }
-          , Fx.map UpdateSearch fx
           )
 
     UpdateNav act ->
@@ -127,8 +111,7 @@ update action model =
 view : Signal.Address Action -> Model -> Html
 view addr model =
   Header.view addr model.header
-    [ PkgSearch.view (Signal.forwardTo addr UpdateSearch) model.pkgSearch
-    , PDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
+    [ PDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
     , PkgNav.view (Signal.forwardTo addr UpdateNav) model.pkgNav
     ]
 
