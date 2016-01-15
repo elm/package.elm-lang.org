@@ -242,7 +242,7 @@ view addr model =
 viewSearchResults : Signal.Address Action -> Info -> List Html
 viewSearchResults addr {packageDict, query, chunks} =
   let
-    queryType = PDocs.stringToType query
+    queryType = Type.normalize (PDocs.stringToType query)
   in
     if String.isEmpty query then
       searchIntro addr

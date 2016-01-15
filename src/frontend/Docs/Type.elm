@@ -230,9 +230,8 @@ similarity a b =
       else
         0
 
-    normalized = (normalize a, normalize b)
   in
-    case normalized of
+    case (a, b) of
 
       (Function argsA resultA, Function argsB resultB) ->
           if List.length argsA == List.length argsB then
