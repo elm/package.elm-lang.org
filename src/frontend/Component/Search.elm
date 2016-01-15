@@ -25,6 +25,29 @@ import Parse.Type as Type
 -- MODEL
 
 
+type Model
+    = Loading
+    | Failed Http.Error
+    | Catalog (List Summary.Summary)
+    | Docs Info
+
+
+type alias Info =
+    { packageDict : Packages
+    , chunks : List Chunk
+    , query : String
+    , failed : List Summary.Summary
+    }
+
+
+type alias PackageIdentifier =
+    String
+
+
+type alias Packages =
+    Dict.Dict PackageIdentifier PackageInfo
+
+
 type alias PackageInfo =
   { package: Docs.Package
   , context : Ctx.VersionContext
@@ -32,34 +55,11 @@ type alias PackageInfo =
   }
 
 
-{-| All packages by canonicalized name, that is `user/project/version`.
--}
-type alias Packages =
-    Dict.Dict String PackageInfo
-
-
-type alias Chunk tipe =
-  { package : String
+type alias Chunk =
+  { package : PackageIdentifier
   , name : Name.Canonical
-  , entry : Entry.Model tipe
+  , entry : Entry.Model Type.Type
   }
-
-
-type alias Info tipe =
---   { packageDict : Packages
-  { packageDict : Dict.Dict String Docs.Package
-  , chunks : List (Chunk tipe)
-  , query : String
-  }
-
-
-type Model
-    = Loading
-    | Failed Http.Error
-    | Catalog (List Summary.Summary)
-    | RawDocs (Info String)
-    | ParsedDocs (Info Type.Type)
-
 
 
 -- INIT
@@ -72,15 +72,14 @@ init =
   )
 
 
-
 -- UPDATE
 
 
 type Action
-    = LoadCatalog (List Summary.Summary, List String)
+    = Fail Http.Error
+    | Load (List Summary.Summary, List String)
+    | FailDocs Summary.Summary
     | LoadDocs Ctx.VersionContext Docs.Package
-    | LoadParsedDocs (List (Chunk Type.Type))
-    | Fail Http.Error
     | Query String
 
 
@@ -90,19 +89,10 @@ update action model =
     Query query ->
         flip (,) Fx.none <|
           case model of
-            ParsedDocs info ->
-                ParsedDocs { info | query = query }
+            Docs info ->
+                Docs { info | query = query }
 
-            Catalog _ ->
-                model
-
-            RawDocs _ ->
-                model
-
-            Loading ->
-                model
-
-            Failed err ->
+            _ ->
                 model
 
     Fail httpError ->
@@ -110,7 +100,7 @@ update action model =
         , Fx.none
         )
 
-    LoadCatalog (allSummaries, updatedPkgs) ->
+    Load (allSummaries, updatedPkgs) ->
         let
           updatedSet =
             Set.fromList updatedPkgs
@@ -118,53 +108,53 @@ update action model =
           (summaries, oldSummaries) =
             List.partition (\{name} -> Set.member name updatedSet) allSummaries
 
-          contextEffects = summaries
-            |> List.map latestVersionContext
-            |> List.map getContext
+          contextEffects = List.map getDocs summaries
 
         in
           ( Catalog summaries
           , Fx.batch contextEffects
           )
 
-    LoadDocs {user, project, version} docs ->
-        let
-          pkgName = List.foldr (++) "" (List.intersperse "/" [user, project, version])
-
-          m = case model of
-            Loading -> "Loading"
-            Failed _ -> "Failed"
-            Catalog _ -> "Catalog"
-            RawDocs _ -> "RawDocs"
-            ParsedDocs _ -> "ParsedDocs"
-
-          ms = Debug.log "model" m
-
-          chunkEffects = docs
-            |> Dict.toList
-            |> List.map (\ (name, moduleDocs) -> delayedTypeParse (toChunks name moduleDocs))
-
-        in
-          ( RawDocs (Info (Dict.singleton pkgName docs) [] "")
-          , Fx.batch chunkEffects
-          )
-
-    LoadParsedDocs newChunks ->
+    FailDocs summary ->
         case model of
-          RawDocs info ->
-              ( ParsedDocs { info | chunks = newChunks }
-              , Fx.none
-              )
-
-          ParsedDocs info ->
-              ( ParsedDocs { info | chunks = info.chunks ++ newChunks }
+          Docs info ->
+              ( Docs { info | failed = summary :: info.failed }
               , Fx.none
               )
 
           _ ->
-              ( Failed (Http.UnexpectedPayload ("Something went wrong parsing types."))
+              ( Docs (Info (Dict.empty) [] "" [summary])
               , Fx.none
               )
+
+    LoadDocs ctx docs ->
+        let
+          {user, project, version} = ctx
+
+          pkgName = List.foldr (++) "" (List.intersperse "/" [user, project, version])
+
+          pkgInfo = PackageInfo docs ctx (toNameDict docs)
+
+          chunks = docs
+            |> Dict.toList
+            |> List.map (\ (name, moduleDocs) -> toChunks pkgName moduleDocs)
+            |> List.concat
+
+        in
+          case model of
+            Docs info ->
+                ( Docs
+                    { info
+                    | packageDict = Dict.insert pkgName pkgInfo info.packageDict
+                    , chunks = List.append info.chunks chunks
+                    }
+                , Fx.none
+                )
+
+            _ ->
+                ( Docs (Info (Dict.singleton pkgName pkgInfo) chunks "" [])
+                , Fx.none
+                )
 
 
 toNameDict : Docs.Package -> Name.Dictionary
@@ -181,14 +171,12 @@ latestVersionContext summary =
     version = List.head summary.versions
       |> Maybe.withDefault (1,0,0)
       |> (\ (a,b,c) -> String.join "." (List.map toString [a,b,c]))
-    allVersions = []
   in
     Ctx.VersionContext
       user
       project
       version
-      allVersions
-      -- TODO: Module name
+      []
       Nothing
 
 
@@ -206,29 +194,20 @@ getPackageInfo =
 
   in
     Task.map2 (,) getAll getNew
-      |> Task.map LoadCatalog
+      |> Task.map Load
       |> flip Task.onError (Task.succeed << Fail)
       |> Fx.task
 
 
-getContext : Ctx.VersionContext -> Effects Action
-getContext context =
-  Ctx.getDocs context
-    |> Task.map (LoadDocs context)
-    |> flip Task.onError (Task.succeed << Fail)
-    |> Fx.task
-
-
-delayedTypeParse : List (Chunk String) -> Effects Action
-delayedTypeParse chunks =
-  Fx.task <|
-    Task.succeed () `Task.andThen` \_ ->
-        Task.succeed (LoadParsedDocs (List.map (chunkMap stringToType) chunks))
-
-
-chunkMap : (a -> b) -> Chunk a -> Chunk b
-chunkMap func {name, entry} =
-  Chunk "" name (Entry.map func entry)
+getDocs : Summary.Summary -> Effects Action
+getDocs summary =
+  let
+    context = latestVersionContext summary
+  in
+    Ctx.getDocs context
+        |> Task.map (LoadDocs context)
+        |> (flip Task.onError) (always (Task.succeed (FailDocs summary)))
+        |> Fx.task
 
 
 stringToType : String -> Type.Type
@@ -256,42 +235,43 @@ view addr model =
           [ p [] [text "Loading list of packages..."]
           ]
 
+      Failed httpError ->
+          [ p [] [text "Package summary did not load."]
+          , p [] [text (toString httpError)]
+          ]
+
       Catalog catalog ->
           [ p [] [text <| "Loading docs for " ++ toString (List.length catalog) ++ "packages..."]
           ]
 
-      Failed httpError ->
-          [ p [] [text "Documentation did not load or parse."]
-          , p [] [text (toString httpError)]
-          ]
-
-      RawDocs {chunks} ->
-          [ p [] [text "Parsing..."]
-          ]
-
-      ParsedDocs {packageDict,chunks,query} ->
-        -- let
-        --   pkgs = Debug.log "pkgs" packageDict
-        -- in
+      Docs {packageDict,chunks,query} ->
           input
             [ placeholder "Search function by name or type"
             , value query
             , on "input" targetValue (Signal.message addr << Query)
             ]
             []
-          :: viewSearchResults addr query chunks
+          :: viewSearchResults packageDict addr query chunks
 
 
-viewSearchResults : Signal.Address Action -> String -> List (Chunk Type.Type) -> List Html
-viewSearchResults addr query chunks =
+viewSearchResults : Packages -> Signal.Address Action -> String -> List Chunk -> List Html
+viewSearchResults packageDict addr query chunks =
   let
     queryType = stringToType query
     -- dict = Debug.log "nameDict" nameDict
+
+    nameDictFor name =
+        case Dict.get name packageDict of
+            Just info
+                -> .nameDict info
+            Nothing
+                -> Dict.empty
 
   in
     if String.isEmpty query then
       [ h1 [] [ text "Welcome to Elm Search" ]
       , p [] [ text "Search the latest Elm libraries by either function name, or by approximate type signature."]
+      , p [] [ text (toString <| List.length chunks) ]
       , h2 [] [ text "Example searches" ]
       , ul []
         [ li [] [ a [ onClick addr (Query "map")] [ text "map" ] ]
@@ -306,7 +286,7 @@ viewSearchResults addr query chunks =
         Type.Var string ->
             chunks
               |> List.filter (\ {package, name, entry} -> Entry.typeContainsQuery query entry)
-              |> List.map (\ {package, name, entry} -> Entry.typeViewAnnotation name Dict.empty entry)
+              |> List.map (\ {package, name, entry} -> Entry.typeViewAnnotation name (nameDictFor package) entry)
 
         _ ->
             chunks
@@ -315,16 +295,14 @@ viewSearchResults addr query chunks =
               |> List.filter (\ (similarity, _) -> similarity > 10)
               |> List.sortBy (\ (similarity, _) -> -similarity)
               |> List.map (\ (_, chunk) -> chunk)
-              |> List.map (\ (ctx, name, entry) -> Entry.typeViewAnnotation name (Dict.filter (\ key _ -> key == name.home) Dict.empty) entry)
-            --   |> List.map (\ (ctx, name, entry) -> div [] [text (ctx.user ++ "." ++ ctx.project ++ "." ++ ctx.version ++ " : " ++ name.home ++ "." ++ name.name)])
-            --   |> List.map (\ (ctx, name, entry) -> Name.toLink nameDict name)
+              |> List.map (\ (package, name, entry) -> Entry.typeViewAnnotation name (nameDictFor package) entry)
 
 
 
 -- MAKE CHUNKS
 
 
-toChunks : String -> Docs.Module -> List (Chunk String)
+toChunks : String -> Docs.Module -> List Chunk
 toChunks ctx moduleDocs =
   case String.split "\n@docs " moduleDocs.comment of
     [] ->
@@ -334,12 +312,12 @@ toChunks ctx moduleDocs =
         List.concatMap (subChunks ctx moduleDocs) rest
 
 
-subChunks : String -> Docs.Module -> String -> List (Chunk String)
+subChunks : String -> Docs.Module -> String -> List Chunk
 subChunks ctx moduleDocs postDocs =
     subChunksHelp ctx moduleDocs (String.split "," postDocs)
 
 
-subChunksHelp : String -> Docs.Module -> List String -> List (Chunk String)
+subChunksHelp : String -> Docs.Module -> List String -> List Chunk
 subChunksHelp ctx moduleDocs parts =
   case parts of
     [] ->
@@ -356,7 +334,21 @@ subChunksHelp ctx moduleDocs parts =
               :: subChunksHelp ctx moduleDocs remainingParts
 
             Nothing ->
-              []
+              let
+                trimmedPart =
+                  String.trimLeft rawPart
+              in
+                case String.words trimmedPart of
+                  [] ->
+                      []
+
+                  token :: _ ->
+                      case isValue token of
+                        Just valueName ->
+                          [ toEntry ctx moduleDocs valueName ]
+
+                        Nothing ->
+                          []
 
 
 var : Regex.Regex
@@ -382,11 +374,14 @@ isValue str =
 
 
 
-toEntry : String -> Docs.Module -> String -> Chunk String
-toEntry ctx moduleDocs name =
+toEntry : String -> Docs.Module -> String -> Chunk
+toEntry pkgName moduleDocs name =
   case Dict.get name moduleDocs.entries of
     Nothing ->
         Debug.crash ("docs have been corrupted, could not find " ++ name)
 
     Just entry ->
-        Chunk "" (Name.Canonical moduleDocs.name name) entry
+        Chunk
+            pkgName
+            (Name.Canonical moduleDocs.name name)
+            (Entry.map stringToType entry)
