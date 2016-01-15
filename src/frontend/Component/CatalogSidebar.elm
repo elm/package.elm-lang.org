@@ -62,6 +62,7 @@ view addr model =
         , li [] [ a [ href "/help/design-guidelines" ] [ text "API Design Guidelines" ] ]
         , li [] [ a [ href "/help/documentation-format" ] [ text "Write great docs" ] ]
         , li [] [ a [ href "/help/docs-preview" ] [ text "Preview your docs" ] ]
+        , li [] [ a [ href "/search" ] [ text "API Search" ] ]
         , li [] [ a [ href "http://elm-lang.org" ] [ text "Elm Website" ] ]
         ]
     , h2 [] [ text "Popular Packages" ]
