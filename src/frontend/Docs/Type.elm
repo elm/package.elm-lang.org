@@ -166,53 +166,46 @@ length context tipe =
           recordLength + extLength
 
 
-
--- SEARCH
-
-
-containsQuery : String -> Type -> Bool
-containsQuery query tipe =
+complexity : Type -> Int
+complexity tipe =
   case tipe of
     Function args result ->
         let
-          argsContainQuery =
-            List.any (\b -> b) (List.map (\t -> containsQuery query t) args)
+          argLengths =
+            List.map complexity args
         in
-          containsQuery query result || argsContainQuery
+          (List.length args + 1) * 10 + List.sum argLengths + complexity result
 
     Var name ->
-        String.contains query name
-
-    Apply {name} [] ->
-        String.contains query name
+        10
 
     Apply {name} args ->
-        let
-          argsContainQuery =
-            List.any (\b -> b) (List.map (\t -> containsQuery query t) args)
-        in
-          String.contains query name || argsContainQuery
+        List.length args * 10 + List.sum (List.map complexity args)
 
     Tuple args ->
-        List.any (\b -> b) (List.map (\t -> containsQuery query t) args)
+        List.length args * 10 + List.sum (List.map complexity args)
 
     Record fields ext ->
         let
-          inField (field, tipe) =
-            String.contains query field || containsQuery query tipe
+          fieldLength (field, tipe) =
+            complexity tipe
 
-          inRecord =
-            List.any (\b -> b) (List.map (\ft -> inField ft) fields)
+          recordLength =
+            List.sum (List.map fieldLength fields)
 
-          inExt =
+          extLength =
             case ext of
               Nothing ->
-                False
+                0
 
               Just extName ->
-                String.contains query extName
+                10
         in
-          inRecord || inExt
+          recordLength + extLength
+
+
+
+-- SEARCH
 
 
 similarity : Type -> Type -> Int
@@ -223,8 +216,8 @@ similarity a b =
     compareNames nameA nameB =
       if nameA == nameB then
         10
-      -- else if String.contains nameA nameB then
-      --   1
+      else if String.contains nameA nameB then
+        1
       -- else if nameA /= nameB then
       --   -10
       else
