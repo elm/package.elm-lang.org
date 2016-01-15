@@ -213,9 +213,6 @@ getDocs summary =
 -- VIEW
 
 
-(=>) = (,)
-
-
 view : Signal.Address Action -> Model -> Html
 view addr model =
   div [class "search"] <|
@@ -247,7 +244,6 @@ viewSearchResults : Packages -> Signal.Address Action -> String -> List Chunk ->
 viewSearchResults packageDict addr query chunks =
   let
     queryType = PDocs.stringToType query
-    -- dict = Debug.log "nameDict" nameDict
 
     nameDictFor name =
         case Dict.get name packageDict of
@@ -271,20 +267,24 @@ viewSearchResults packageDict addr query chunks =
       ]
 
     else
-      case queryType of
-        Type.Var string ->
-            chunks
-              |> List.filter (\ {package, name, entry} -> Entry.typeContainsQuery query entry)
-              |> List.map (\ {package, name, entry} -> Entry.typeViewAnnotation name (nameDictFor package) entry)
+      let
+        filteredChunks =
+            case queryType of
+                Type.Var string ->
+                  chunks
+                    |> List.map (\ {package, name, entry} -> (Entry.nameSimilarity query entry, (package, name, entry)))
+                    |> List.filter (\ (similarity, _) -> similarity > 0)
 
-        _ ->
-            chunks
-              -- TODO: clean this up
-              |> List.map (\ {package, name, entry} -> (Entry.typeSimilarity queryType entry, (package, name, entry)))
-              |> List.filter (\ (similarity, _) -> similarity > 10)
-              |> List.sortBy (\ (similarity, _) -> -similarity)
-              |> List.map (\ (_, chunk) -> chunk)
-              |> List.map (\ (package, name, entry) -> Entry.typeViewAnnotation name (nameDictFor package) entry)
+                _ ->
+                  chunks
+                    |> List.map (\ {package, name, entry} -> (Entry.typeSimilarity queryType entry, (package, name, entry)))
+                    |> List.filter (\ (similarity, _) -> similarity > 10)
+
+      in
+        filteredChunks
+            |> List.sortBy (\ (similarity, _) -> -similarity)
+            |> List.map (\ (_, chunk) -> chunk)
+            |> List.map (\ (package, name, entry) -> Entry.typeViewAnnotation name (nameDictFor package) entry)
 
 
 
