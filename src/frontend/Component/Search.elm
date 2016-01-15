@@ -20,7 +20,7 @@ import Docs.Package as Docs
 import Docs.Type as Type
 import Page.Context as Ctx
 import Parse.Type as Type
-
+import Utils.Path exposing ((</>))
 
 
 -- MODEL
@@ -134,14 +134,13 @@ update action model =
         let
           {user, project, version} = ctx
 
-          pkgName = List.foldr (++) "" (List.intersperse "/" [user, project, version])
+          pkgName = user </> project </> version
 
           pkgInfo = PackageInfo docs ctx (PDocs.toNameDict docs)
 
           chunks = docs
             |> Dict.toList
-            |> List.map (\ (name, moduleDocs) -> toChunks pkgName moduleDocs)
-            |> List.concat
+            |> List.concatMap (\ (name, moduleDocs) -> toChunks pkgName moduleDocs)
 
         in
           case model of
@@ -230,41 +229,23 @@ view addr model =
           [ p [] [text <| "Loading docs for " ++ toString (List.length catalog) ++ "packages..."]
           ]
 
-      Docs {packageDict,chunks,query} ->
+      Docs info ->
           input
             [ placeholder "Search function by name or type"
-            , value query
+            , value info.query
             , on "input" targetValue (Signal.message addr << Query)
             ]
             []
-          :: viewSearchResults packageDict addr query chunks
+          :: viewSearchResults addr info
 
 
-viewSearchResults : Packages -> Signal.Address Action -> String -> List Chunk -> List Html
-viewSearchResults packageDict addr query chunks =
+viewSearchResults : Signal.Address Action -> Info -> List Html
+viewSearchResults addr {packageDict, query, chunks} =
   let
     queryType = PDocs.stringToType query
-
-    nameDictFor name =
-        case Dict.get name packageDict of
-            Just info
-                -> .nameDict info
-            Nothing
-                -> Dict.empty
-
   in
     if String.isEmpty query then
-      [ h1 [] [ text "Welcome to Elm Search" ]
-      , p [] [ text "Search the latest Elm libraries by either function name, or by approximate type signature."]
-      , p [] [ text (toString <| List.length chunks) ]
-      , h2 [] [ text "Example searches" ]
-      , ul []
-        [ li [] [ a [ onClick addr (Query "map")] [ text "map" ] ]
-        , li [] [ a
-          [ onClick addr (Query "(a -> b -> b) -> b -> List a -> b")]
-          [ text "(a -> b -> b) -> b -> List a -> b" ] ]
-        ]
-      ]
+      searchIntro addr
 
     else
       let
@@ -272,19 +253,40 @@ viewSearchResults packageDict addr query chunks =
             case queryType of
                 Type.Var string ->
                   chunks
-                    |> List.map (\ {package, name, entry} -> (Entry.nameSimilarity query entry, (package, name, entry)))
+                    |> List.map (\ chunk -> (Entry.nameSimilarity query chunk.entry, chunk))
                     |> List.filter (\ (similarity, _) -> similarity > 0)
 
                 _ ->
                   chunks
-                    |> List.map (\ {package, name, entry} -> (Entry.typeSimilarity queryType entry, (package, name, entry)))
+                    |> List.map (\ chunk -> (Entry.typeSimilarity queryType chunk.entry, chunk))
                     |> List.filter (\ (similarity, _) -> similarity > 10)
 
       in
         filteredChunks
             |> List.sortBy (\ (similarity, _) -> -similarity)
-            |> List.map (\ (_, chunk) -> chunk)
-            |> List.map (\ (package, name, entry) -> Entry.typeViewAnnotation name (nameDictFor package) entry)
+            |> List.map (\ (_, {package, name, entry}) -> Entry.typeViewAnnotation name (nameDict packageDict package) entry)
+
+
+searchIntro : Signal.Address Action -> List Html
+searchIntro addr =
+    [ h1 [] [ text "Welcome to Elm Search" ]
+    , p [] [ text "Search the latest Elm libraries by either function name, or by approximate type signature."]
+    , h2 [] [ text "Example searches" ]
+    , ul []
+        (List.map
+            (\ query ->
+                li [] [ a [ href "#", onClick addr (Query query)] [ text query ]])
+            exampleSearches)
+    ]
+
+
+exampleSearches : List String
+exampleSearches =
+    [ "map"
+    , "(a -> b -> b) -> b -> List a -> b"
+    , "(a -> b -> c) -> b -> a -> c"
+    , "Result x a -> (a -> Result x b) -> Result x b"
+    ]
 
 
 
@@ -351,3 +353,12 @@ toChunk pkgIdent moduleDocs name =
             pkgIdent
             (Name.Canonical moduleDocs.name name)
             (Entry.map PDocs.stringToType entry)
+
+
+nameDict : Packages -> PackageIdentifier -> Name.Dictionary
+nameDict packageDict name =
+    case Dict.get name packageDict of
+        Just info
+            -> .nameDict info
+        Nothing
+            -> Dict.empty
