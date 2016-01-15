@@ -12,6 +12,7 @@ import Set
 import String
 import Task
 
+import Component.PackageDocs as PDocs
 import Docs.Summary as Summary
 import Docs.Entry as Entry
 import Docs.Name as Name
@@ -62,6 +63,7 @@ type alias Chunk =
   }
 
 
+
 -- INIT
 
 
@@ -70,6 +72,7 @@ init =
   ( Loading
   , getPackageInfo
   )
+
 
 
 -- UPDATE
@@ -133,7 +136,7 @@ update action model =
 
           pkgName = List.foldr (++) "" (List.intersperse "/" [user, project, version])
 
-          pkgInfo = PackageInfo docs ctx (toNameDict docs)
+          pkgInfo = PackageInfo docs ctx (PDocs.toNameDict docs)
 
           chunks = docs
             |> Dict.toList
@@ -157,11 +160,6 @@ update action model =
                 )
 
 
-toNameDict : Docs.Package -> Name.Dictionary
-toNameDict pkg =
-  Dict.map (\_ modul -> Set.fromList (Dict.keys modul.entries)) pkg
-
-
 latestVersionContext : Summary.Summary -> Ctx.VersionContext
 latestVersionContext summary =
   let
@@ -178,6 +176,7 @@ latestVersionContext summary =
       version
       []
       Nothing
+
 
 
 -- EFFECTS
@@ -208,16 +207,6 @@ getDocs summary =
         |> Task.map (LoadDocs context)
         |> (flip Task.onError) (always (Task.succeed (FailDocs summary)))
         |> Fx.task
-
-
-stringToType : String -> Type.Type
-stringToType str =
-  case Type.parse str of
-    Ok tipe ->
-      tipe
-
-    Err _ ->
-      Type.Var str
 
 
 
@@ -257,7 +246,7 @@ view addr model =
 viewSearchResults : Packages -> Signal.Address Action -> String -> List Chunk -> List Html
 viewSearchResults packageDict addr query chunks =
   let
-    queryType = stringToType query
+    queryType = PDocs.stringToType query
     -- dict = Debug.log "nameDict" nameDict
 
     nameDictFor name =
@@ -302,23 +291,23 @@ viewSearchResults packageDict addr query chunks =
 -- MAKE CHUNKS
 
 
-toChunks : String -> Docs.Module -> List Chunk
-toChunks ctx moduleDocs =
+toChunks : PackageIdentifier -> Docs.Module -> List Chunk
+toChunks pkgIdent moduleDocs =
   case String.split "\n@docs " moduleDocs.comment of
     [] ->
         Debug.crash "Expecting some documented functions in this module!"
 
     firstChunk :: rest ->
-        List.concatMap (subChunks ctx moduleDocs) rest
+        List.concatMap (subChunks pkgIdent moduleDocs) rest
 
 
-subChunks : String -> Docs.Module -> String -> List Chunk
-subChunks ctx moduleDocs postDocs =
-    subChunksHelp ctx moduleDocs (String.split "," postDocs)
+subChunks : PackageIdentifier -> Docs.Module -> String -> List Chunk
+subChunks pkgIdent moduleDocs postDocs =
+    subChunksHelp pkgIdent moduleDocs (String.split "," postDocs)
 
 
-subChunksHelp : String -> Docs.Module -> List String -> List Chunk
-subChunksHelp ctx moduleDocs parts =
+subChunksHelp : PackageIdentifier -> Docs.Module -> List String -> List Chunk
+subChunksHelp pkgIdent moduleDocs parts =
   case parts of
     [] ->
         []
@@ -328,10 +317,10 @@ subChunksHelp ctx moduleDocs parts =
           part =
             String.trim rawPart
         in
-          case isValue part of
+          case PDocs.isValue part of
             Just valueName ->
-              toEntry ctx moduleDocs valueName
-              :: subChunksHelp ctx moduleDocs remainingParts
+              toChunk pkgIdent moduleDocs valueName
+              :: subChunksHelp pkgIdent moduleDocs remainingParts
 
             Nothing ->
               let
@@ -343,45 +332,22 @@ subChunksHelp ctx moduleDocs parts =
                       []
 
                   token :: _ ->
-                      case isValue token of
+                      case PDocs.isValue token of
                         Just valueName ->
-                          [ toEntry ctx moduleDocs valueName ]
+                          [ toChunk pkgIdent moduleDocs valueName ]
 
                         Nothing ->
                           []
 
 
-var : Regex.Regex
-var =
-  Regex.regex "^[a-zA-Z0-9_']+$"
-
-
-operator : Regex.Regex
-operator =
-  Regex.regex "^\\([^a-zA-Z0-9]+\\)$"
-
-
-isValue : String -> Maybe String
-isValue str =
-  if Regex.contains var str then
-    Just str
-
-  else if Regex.contains operator str then
-    Just (String.dropLeft 1 (String.dropRight 1 str))
-
-  else
-    Nothing
-
-
-
-toEntry : String -> Docs.Module -> String -> Chunk
-toEntry pkgName moduleDocs name =
+toChunk : PackageIdentifier -> Docs.Module -> String -> Chunk
+toChunk pkgIdent moduleDocs name =
   case Dict.get name moduleDocs.entries of
     Nothing ->
         Debug.crash ("docs have been corrupted, could not find " ++ name)
 
     Just entry ->
         Chunk
-            pkgName
+            pkgIdent
             (Name.Canonical moduleDocs.name name)
-            (Entry.map stringToType entry)
+            (Entry.map PDocs.stringToType entry)
