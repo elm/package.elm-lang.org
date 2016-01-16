@@ -257,8 +257,51 @@ similarity a b =
       _ -> 0
 
 
+distance : Type -> Type -> Int
+distance a b =
+  let
+    penalty = 10
+
+    compareNames nameA nameB =
+      if nameA == nameB then
+        0
+      else if String.contains nameA nameB then
+        1
+      else
+        penalty
+
+  in
+    case (a, b) of
+
+      (Function argsA resultA, Function argsB resultB) ->
+          if List.length argsA == List.length argsB then
+            List.sum (List.map2 distance argsA argsB)
+              + distance resultA resultB
+          else
+            penalty * (abs (List.length argsA - List.length argsB))
+
+      (Var nameA, Var nameB) ->
+          compareNames nameA nameB
+
+      (Apply canonicalA [], Apply canonicalB []) ->
+          compareNames canonicalA.name canonicalB.name
+
+      (Apply canonicalA argsA, Apply canonicalB argsB) ->
+          if List.length argsA == List.length argsB then
+            compareNames canonicalA.name canonicalB.name
+              + List.sum (List.map2 distance argsA argsB)
+          else
+            penalty
+
+      (Tuple argsA, Tuple argsB) ->
+          List.sum (List.map2 distance argsA argsB)
+
+      _ -> 100
+
+
 
 -- NORMALIZING
+
 
 type alias Mapping = Dict.Dict String String
 

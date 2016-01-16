@@ -101,6 +101,21 @@ nameSimilarity query model =
       0
 
 
+nameDistance : String -> Model Type -> Int
+nameDistance query model =
+  case model.info of
+    Value tipe _ ->
+      if query == model.name then
+        0
+      else if String.contains query model.name then
+        1
+      else
+        10
+
+    _ ->
+      100
+
+
 typeSimilarity : Type -> Model Type -> Int
 typeSimilarity queryType model =
   case model.info of
@@ -110,6 +125,15 @@ typeSimilarity queryType model =
     _ ->
       0
 
+
+typeDistance : Type -> Model Type -> Int
+typeDistance queryType model =
+  case model.info of
+    Value tipe _ ->
+      Type.distance queryType tipe
+
+    _ ->
+      100
 
 
 -- STRING VIEW

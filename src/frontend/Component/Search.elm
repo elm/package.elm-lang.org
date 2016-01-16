@@ -253,16 +253,15 @@ viewSearchResults addr { packageDict, query, chunks } =
                     case queryType of
                         Type.Var string ->
                             chunks
-                                |> List.map (\chunk -> ( Entry.nameSimilarity query chunk.entry, chunk ))
-                                |> List.filter (\( similarity, _ ) -> similarity > 0)
+                                |> List.map (\chunk -> ( Entry.nameDistance query chunk.entry, chunk ))
 
                         _ ->
                             chunks
-                                |> List.map (\chunk -> ( Entry.typeSimilarity queryType chunk.entry, chunk ))
-                                |> List.filter (\( similarity, _ ) -> similarity > 10)
+                                |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entry, chunk ))
             in
                 filteredChunks
-                    |> List.sortBy (\( similarity, _ ) -> -similarity)
+                    |> List.filter (\( distance, _ ) -> distance < 10)
+                    |> List.sortBy (\( distance, _ ) -> distance)
                     |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation name (nameDict packageDict package) entry)
 
 
