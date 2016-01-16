@@ -158,9 +158,16 @@ typeViewAnnotation canonical nameDict model =
 
         Alias {vars,tipe} ->
             aliasAnnotation nameDict model.name vars tipe
+
+    description =
+      Maybe.withDefault
+        ""
+        (List.head (String.split "\n\n" model.docs))
   in
     div [ class "docs-entry" ]
-      [ annotationBlock annotation ]
+      [ annotationBlock annotation
+      , div [class "docs-comment"] [Markdown.block description]
+      ]
 
 
 typeView : Name.Dictionary -> Model Type -> Html
