@@ -59,6 +59,7 @@ type alias Chunk =
     { package : PackageIdentifier
     , name : Name.Canonical
     , entry : Entry.Model Type.Type
+    , entryNormalized : Entry.Model Type.Type
     }
 
 
@@ -257,7 +258,7 @@ viewSearchResults addr { packageDict, query, chunks } =
 
                         _ ->
                             chunks
-                                |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entry, chunk ))
+                                |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entryNormalized, chunk ))
             in
                 filteredChunks
                     |> List.filter (\( distance, _ ) -> distance < 10)
@@ -349,11 +350,16 @@ toChunk pkgIdent moduleDocs name =
         Nothing ->
             Debug.crash ("docs have been corrupted, could not find " ++ name)
 
-        Just entry ->
+        Just e ->
+          let
+            entry = Entry.map PDocs.stringToType e
+            entryNormalized = Entry.map Type.normalize entry
+          in
             Chunk
                 pkgIdent
                 (Name.Canonical moduleDocs.name name)
-                (Entry.map PDocs.stringToType entry)
+                entry
+                entryNormalized
 
 
 nameDict : Packages -> PackageIdentifier -> Name.Dictionary

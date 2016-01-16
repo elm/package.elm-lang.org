@@ -120,7 +120,7 @@ typeSimilarity : Type -> Model Type -> Int
 typeSimilarity queryType model =
   case model.info of
     Value tipe _ ->
-      Type.similarity queryType (Type.normalize tipe)
+      Type.similarity queryType tipe
 
     _ ->
       0
