@@ -262,13 +262,13 @@ distance a b =
   let
     penalty = 10
 
-    compareNames nameA nameB =
+    compareNames p nameA nameB =
       if nameA == nameB then
         0
       else if String.contains nameA nameB then
         1
       else
-        penalty
+        p
 
   in
     case (a, b) of
@@ -281,14 +281,15 @@ distance a b =
             penalty * (abs (List.length argsA - List.length argsB))
 
       (Var nameA, Var nameB) ->
-          compareNames nameA nameB
+          compareNames 5 nameA nameB
 
       (Apply canonicalA [], Apply canonicalB []) ->
-          compareNames canonicalA.name canonicalB.name
+          compareNames 2 canonicalA.name canonicalB.name
 
       (Apply canonicalA argsA, Apply canonicalB argsB) ->
           if List.length argsA == List.length argsB then
-            compareNames canonicalA.name canonicalB.name
+            compareNames 2 canonicalA.home canonicalB.home
+              + compareNames 2 canonicalA.name canonicalB.name
               + List.sum (List.map2 distance argsA argsB)
           else
             penalty
