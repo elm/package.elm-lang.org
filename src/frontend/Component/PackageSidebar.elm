@@ -6,7 +6,6 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Http
-import Regex
 import Set
 import String
 import Task
@@ -14,7 +13,6 @@ import Task
 import Docs.Package as Docs
 import Docs.Entry as Entry
 import Page.Context as Ctx
-import Utils.Markdown as Markdown
 import Utils.Path as Path exposing ((</>))
 
 
