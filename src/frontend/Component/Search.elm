@@ -35,8 +35,10 @@ type Model
 type alias Info =
     { packageDict : Packages
     , chunks : List Chunk
-    , query : String
     , failed : List Summary.Summary
+    , query : String
+    , excludedPackages : Set.Set PackageIdentifier
+    , focusedPackage : Maybe PackageIdentifier
     }
 
 
@@ -84,6 +86,7 @@ type Action
     | FailDocs Summary.Summary
     | LoadDocs Ctx.VersionContext Docs.Package
     | Query String
+    | ToggleFocus PackageIdentifier
 
 
 update : Action -> Model -> ( Model, Effects Action )
@@ -125,7 +128,7 @@ update action model =
                     )
 
                 _ ->
-                    ( Docs (Info (Dict.empty) [] "" [ summary ])
+                    ( Docs (Info (Dict.empty) [] [ summary ] "" Set.empty Nothing)
                     , Fx.none
                     )
 
@@ -153,14 +156,38 @@ update action model =
                         )
 
                     _ ->
-                        ( Docs (Info (Dict.singleton pkgName pkgInfo) chunks "" [])
+                        ( Docs (Info (Dict.singleton pkgName pkgInfo) chunks [] "" Set.empty Nothing)
                         , Fx.none
                         )
+
+        ToggleFocus package ->
+            case model of
+                Docs info ->
+                    let
+                      newFocusedPackage =
+                        case info.focusedPackage of
+                          Just currentPackage ->
+                            if currentPackage == package then
+                              Nothing
+                            else
+                              Just package
+                          Nothing ->
+                            Just package
+                    in
+                      ( Docs { info | focusedPackage = newFocusedPackage }
+                      , Fx.none
+                      )
+
+                _ ->
+                    ( model
+                    , Fx.none
+                    )
 
 
 latestVersionContext : Summary.Summary -> Ctx.VersionContext
 latestVersionContext summary =
     let
+        --TODO: Better error handling
         userProject = String.split "/" summary.name
 
         user = Maybe.withDefault "user" (List.head userProject)
@@ -242,7 +269,7 @@ view addr model =
 
 
 viewSearchResults : Signal.Address Action -> Info -> List Html
-viewSearchResults addr { packageDict, query, chunks } =
+viewSearchResults addr ({ query, chunks } as info) =
     let
         queryType = Type.normalize (PDocs.stringToType query)
     in
@@ -255,15 +282,38 @@ viewSearchResults addr { packageDict, query, chunks } =
                         Type.Var string ->
                             chunks
                                 |> List.map (\chunk -> ( Entry.nameDistance query chunk.entry, chunk ))
+                                |> List.filter (\( distance, _ ) -> distance < 10)
 
                         _ ->
                             chunks
                                 |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entryNormalized, chunk ))
+                                |> List.filter (\( distance, _ ) -> distance < 10)
+
+                filteredChunksPackages =
+                    filteredChunks
+                        |> List.foldl
+                            (\( _, chunk ) -> Set.insert chunk.package)
+                            Set.empty
+                        |> Set.toList
             in
-                filteredChunks
-                    |> List.filter (\( distance, _ ) -> distance < 10)
-                    |> List.sortBy (\( distance, _ ) -> distance)
-                    |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation package name (nameDict packageDict package) entry)
+                [ div [] (searchResultsPackages addr filteredChunksPackages)
+                , div [] (searchResultsChunks info filteredChunks)
+                ]
+
+
+searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
+searchResultsPackages addr packages =
+    List.map
+      (\ identifier -> button [ onClick addr (ToggleFocus identifier) ] [ text identifier ])
+      packages
+
+
+searchResultsChunks : Info -> List (Int, Chunk) -> List Html
+searchResultsChunks {packageDict, focusedPackage} weightedChunks =
+    weightedChunks
+        |> List.sortBy (\( distance, _ ) -> distance)
+        |> List.filter (\( _, {package} ) -> focusedPackage == Nothing || focusedPackage == Just package)
+        |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation package name (nameDict packageDict package) entry)
 
 
 searchIntro : Signal.Address Action -> List Html
@@ -351,15 +401,16 @@ toChunk pkgIdent moduleDocs name =
             Debug.crash ("docs have been corrupted, could not find " ++ name)
 
         Just e ->
-          let
-            entry = Entry.map PDocs.stringToType e
-            entryNormalized = Entry.map Type.normalize entry
-          in
-            Chunk
-                pkgIdent
-                (Name.Canonical moduleDocs.name name)
-                entry
-                entryNormalized
+            let
+                entry = Entry.map PDocs.stringToType e
+
+                entryNormalized = Entry.map Type.normalize entry
+            in
+                Chunk
+                    pkgIdent
+                    (Name.Canonical moduleDocs.name name)
+                    entry
+                    entryNormalized
 
 
 nameDict : Packages -> PackageIdentifier -> Name.Dictionary
@@ -367,6 +418,16 @@ nameDict packageDict name =
     case Dict.get name packageDict of
         Just info ->
             .nameDict info
+
+        Nothing ->
+            Dict.empty
+
+
+chunkPackage : Packages -> PackageIdentifier -> Docs.Package
+chunkPackage packageDict name =
+    case Dict.get name packageDict of
+        Just info ->
+            .package info
 
         Nothing ->
             Dict.empty
