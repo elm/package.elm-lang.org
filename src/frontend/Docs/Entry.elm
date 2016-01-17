@@ -169,13 +169,14 @@ stringView model =
 
 
 -- TODO: DRY this up
-typeViewAnnotation : Name.Canonical -> Name.Dictionary -> Model Type -> Html
-typeViewAnnotation canonical nameDict model =
+typeViewAnnotation : String -> Name.Canonical -> Name.Dictionary -> Model Type -> Html
+typeViewAnnotation basePath canonical nameDict model =
   let
+    path = "/packages/" ++ basePath
     annotation =
       case model.info of
         Value tipe _ ->
-            valueAnnotationCanonical canonical nameDict model.name tipe
+            valueAnnotationCanonical path canonical nameDict model.name tipe
 
         Union {vars,tags} ->
             unionAnnotation (Type.toHtml nameDict Type.App) model.name vars tags
@@ -190,7 +191,13 @@ typeViewAnnotation canonical nameDict model =
   in
     div [ class "docs-entry" ]
       [ annotationBlock annotation
-      , div [class "docs-comment"] [Markdown.block description]
+      , div [] [Markdown.block description]
+      , div []
+        [ a
+          [ href (path)
+          , style ["color" => "#bbb"]
+          ]
+          [text basePath]]
       ]
 
 
@@ -242,18 +249,18 @@ operator =
 -- VALUE ANNOTATIONS
 
 -- TODO: DRY this up
-valueAnnotationCanonical : Name.Canonical -> Name.Dictionary -> String -> Type -> List (List Html)
-valueAnnotationCanonical canonical nameDict name tipe =
+valueAnnotationCanonical : String -> Name.Canonical -> Name.Dictionary -> String -> Type -> List (List Html)
+valueAnnotationCanonical basePath canonical nameDict name tipe =
   case tipe of
     Type.Function args result ->
         if String.length name + 3 + Type.length Type.Other tipe > 64 then
-            [ Name.toLink nameDict canonical ] :: longFunctionAnnotation nameDict args result
+            [ Name.toBaseLink basePath nameDict canonical ] :: longFunctionAnnotation nameDict args result
 
         else
-            [ (Name.toLink nameDict canonical) :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
+            [ (Name.toBaseLink basePath nameDict canonical) :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
 
     _ ->
-        [ Name.toLink nameDict canonical :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
+        [ Name.toBaseLink basePath nameDict canonical :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
 
 
 valueAnnotation : Name.Dictionary -> String -> Type -> List (List Html)

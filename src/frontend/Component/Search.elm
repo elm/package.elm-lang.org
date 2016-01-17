@@ -263,7 +263,7 @@ viewSearchResults addr { packageDict, query, chunks } =
                 filteredChunks
                     |> List.filter (\( distance, _ ) -> distance < 10)
                     |> List.sortBy (\( distance, _ ) -> distance)
-                    |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation name (nameDict packageDict package) entry)
+                    |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation package name (nameDict packageDict package) entry)
 
 
 searchIntro : Signal.Address Action -> List Html
