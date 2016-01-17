@@ -296,9 +296,11 @@ viewSearchResults addr ({ query, chunks } as info) =
                             Set.empty
                         |> Set.toList
             in
-                [ div [] (searchResultsPackages addr filteredChunksPackages)
-                , div [] (searchResultsChunks info filteredChunks)
-                ]
+                searchResultsChunks info filteredChunks
+                -- Disable package filter for now as it needs mor thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI.
+                --[ div [] (searchResultsPackages addr filteredChunksPackages)
+                --, div [] (searchResultsChunks info filteredChunks)
+                --]
 
 
 searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
