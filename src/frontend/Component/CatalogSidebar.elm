@@ -1,19 +1,9 @@
 module Component.CatalogSidebar where
 
-import Dict
 import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
-import Http
-import Regex
-import String
-import Task
-
-import Docs.Package as Docs
-import Docs.Entry as Entry
-import Page.Context as Ctx
-import Utils.Markdown as Markdown
 
 
 type alias Model = ()
