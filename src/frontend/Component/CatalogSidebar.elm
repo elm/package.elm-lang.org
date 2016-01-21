@@ -89,7 +89,7 @@ renderingPackages =
   [ "evancz" => "elm-html"
   , "evancz" => "elm-svg"
   , "evancz" => "elm-markdown"
-  , "johnpmayer" => "elm-webgl"
+  , "elm-community" => "elm-webgl"
   ]
 
 
