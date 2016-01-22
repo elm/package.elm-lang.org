@@ -161,7 +161,9 @@ view addr model =
           ]
 
       Success {context, query, searchDict} ->
-          [ moduleLink context Nothing
+          [ h2 [] [ text "Download" ]
+          , installCommand context
+          , moduleLink context Nothing
           , br [] []
           , githubLink context
           , h2 [] [ text "Module Docs" ]
@@ -173,6 +175,26 @@ view addr model =
               []
           , viewSearchDict context query searchDict
           ]
+
+
+installCommand : Ctx.VersionContext -> Html
+installCommand { user, project } =
+  let
+    style' =
+      style
+        [ ("backgroundImage", "url(/assets/ic_file_download_black_24px.svg)")
+        , ("backgroundRepeat", "no-repeat")
+        , ("backgroundPosition", "6px")
+        , ("paddingLeft", "35px")
+        ]
+  in
+    input
+      [ value ("elm-package install " ++ user ++ "/" ++ project)
+      , readonly True
+      , attribute "onClick" "this.select()" -- small hack
+      , style'
+      ]
+      []
 
 
 viewSearchDict : Ctx.VersionContext -> String -> SearchDict -> Html
