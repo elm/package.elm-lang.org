@@ -21,6 +21,7 @@ import Docs.Entry as Entry
 import Docs.Package as Docs
 import Docs.Type as Type
 import Docs.Version as Vsn
+import Overview.Constants as Constants
 import Overview.Diff as Diff
 import Overview.History as History
 import Overview.Slider as Slider
@@ -55,20 +56,67 @@ init context history =
     proxTree =
       Prox.map .version (Prox.fromList (toFloat << .date) history)
 
+    spacings =
+      timelineSpacingByVersion history
+
+    spacer version =
+      Maybe.withDefault 0.0 (Dict.get version spacings)
+
+    optimizedTree =
+      Prox.optimizeSpacing spacer proxTree
+
     (penultimate, ultimate) =
       latestInterestingVersions history
   in
     ( Model
         history
-        proxTree
-        (Slider.init (Prox.lookup penultimate proxTree))
-        (Slider.init (Prox.lookup ultimate proxTree))
+        optimizedTree
+        (Slider.init (Prox.lookup penultimate optimizedTree))
+        (Slider.init (Prox.lookup ultimate optimizedTree))
         (Dict.fromList [ penultimate => Loading, ultimate => Loading ])
     , Fx.batch
         [ loadDocs context penultimate
         , loadDocs context ultimate
         ]
     )
+
+
+magnitudes : List Vsn.Version -> List Vsn.Magnitude
+magnitudes versions =
+  let
+    versionZero =
+      (0, 0, 0)
+  in
+    List.map2
+      Vsn.magnitude
+      (versionZero :: versions)
+      versions
+
+
+versionSpacing : Vsn.Magnitude -> Float
+versionSpacing magnitude =
+  let
+    gap =
+      8
+
+    versionWidth =
+      Constants.dotSize magnitude Constants.WithBorder
+  in
+    (toFloat (versionWidth + gap)) / Constants.activeWidth
+
+
+timelineSpacingByVersion : List History.Release -> Dict.Dict Vsn.Version Float
+timelineSpacingByVersion history =
+  let
+    versions =
+      List.sortBy .date history
+        |> List.map .version
+
+    widths =
+      List.map versionSpacing (magnitudes versions)
+  in
+    List.map2 (,) versions widths
+      |> Dict.fromList
 
 
 latestInterestingVersions : History.History -> (Vsn.Version, Vsn.Version)
