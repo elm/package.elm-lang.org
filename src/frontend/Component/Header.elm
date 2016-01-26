@@ -50,7 +50,7 @@ view _ model contents =
     , div [class "footer"]
         [ text "All code for this site is open source and written in Elm. "
         , a [ class "grey-link", href "https://github.com/elm-lang/package.elm-lang.org/" ] [ text "Check it out" ]
-        , text "! — © 2012-2015 Evan Czaplicki"
+        , text "! — © 2012-2016 Evan Czaplicki"
         ]
     ]
 
