@@ -17,6 +17,7 @@ import Docs.Entry as Entry
 import Docs.Name as Name
 import Docs.Package as Docs
 import Docs.Type as Type
+import Docs.Version as Version
 import Page.Context as Ctx
 import Parse.Type as Type
 import Utils.Path exposing ((</>))
@@ -184,28 +185,26 @@ update action model =
                     )
 
 
-latestVersionContext : Summary.Summary -> Ctx.VersionContext
+latestVersionContext : Summary.Summary -> Result String Ctx.VersionContext
 latestVersionContext summary =
     let
-        --TODO: Better error handling
-        userProject = String.split "/" summary.name
+        userProjectList =
+          List.take 2 (String.split "/" summary.name)
 
-        user = Maybe.withDefault "user" (List.head userProject)
+        latestVersionSingleton =
+          summary.versions
+            |> List.take 1
+            |> List.map Version.vsnToString
 
-        project = Maybe.withDefault "project" (List.head (List.reverse userProject))
-
-        version =
-            List.head summary.versions
-                |> Maybe.withDefault ( 1, 0, 0 )
-                |> (\( a, b, c ) -> String.join "." (List.map toString [ a, b, c ]))
     in
-        Ctx.VersionContext
-            user
-            project
-            version
-            []
-            Nothing
+      case List.append userProjectList latestVersionSingleton of
+        [user, project, version] ->
+          Result.Ok
+            (Ctx.VersionContext user project version [] Nothing)
 
+        _ ->
+          Result.Err
+            "Summary is corrupted"
 
 
 -- EFFECTS
@@ -229,12 +228,19 @@ getPackageInfo =
 getDocs : Summary.Summary -> Effects Action
 getDocs summary =
     let
-        context = latestVersionContext summary
+        contextResult = latestVersionContext summary
+
+        failTask = Task.succeed (FailDocs summary)
     in
-        Ctx.getDocs context
-            |> Task.map (LoadDocs context)
-            |> (flip Task.onError) (always (Task.succeed (FailDocs summary)))
-            |> Fx.task
+      case contextResult of
+        Result.Ok context ->
+          Ctx.getDocs context
+              |> Task.map (LoadDocs context)
+              |> (flip Task.onError) (always failTask)
+              |> Fx.task
+
+        Result.Err error ->
+          Fx.task failTask
 
 
 
@@ -259,13 +265,18 @@ view addr model =
                 ]
 
             Docs info ->
-                input
-                    [ placeholder "Search function by name or type"
-                    , value info.query
-                    , on "input" targetValue (Signal.message addr << Query)
-                    ]
+                [ input
+                  [ placeholder "Search function by name or type"
+                  , value info.query
+                  , on "input" targetValue (Signal.message addr << Query)
+                  ]
+                  []
+                , div [] (viewSearchResults addr info)
+                , h3 [] [ text "Could not load or parse documentation of the following packages" ]
+                , ul
                     []
-                    :: viewSearchResults addr info
+                    (List.map (\summary -> li [] [ text summary.name] ) info.failed)
+                ]
 
 
 viewSearchResults : Signal.Address Action -> Info -> List Html
@@ -320,8 +331,8 @@ searchResultsChunks {packageDict, focusedPackage} weightedChunks =
 
 searchIntro : Signal.Address Action -> List Html
 searchIntro addr =
-    [ h1 [] [ text "Welcome to Elm Search" ]
-    , p [] [ text "Search the latest Elm libraries by either function name, or by approximate type signature." ]
+    [ h1 [] [ text "Welcome to the Elm API Search" ]
+    , p [] [ text "Search the modules of the latest Elm packages by either function name or by approximate type signature." ]
     , h2 [] [ text "Example searches" ]
     , ul
         []
@@ -351,7 +362,7 @@ toChunks : PackageIdentifier -> Docs.Module -> List Chunk
 toChunks pkgIdent moduleDocs =
     case String.split "\n@docs " moduleDocs.comment of
         [] ->
-            Debug.crash "Expecting some documented functions in this module!"
+            []
 
         firstChunk :: rest ->
             List.concatMap (subChunks pkgIdent moduleDocs) rest
@@ -359,10 +370,10 @@ toChunks pkgIdent moduleDocs =
 
 subChunks : PackageIdentifier -> Docs.Module -> String -> List Chunk
 subChunks pkgIdent moduleDocs postDocs =
-    subChunksHelp pkgIdent moduleDocs (String.split "," postDocs)
+    catMaybes (subChunksHelp pkgIdent moduleDocs (String.split "," postDocs))
 
 
-subChunksHelp : PackageIdentifier -> Docs.Module -> List String -> List Chunk
+subChunksHelp : PackageIdentifier -> Docs.Module -> List String -> List (Maybe Chunk)
 subChunksHelp pkgIdent moduleDocs parts =
     case parts of
         [] ->
@@ -375,7 +386,7 @@ subChunksHelp pkgIdent moduleDocs parts =
             in
                 case PDocs.isValue part of
                     Just valueName ->
-                        toChunk pkgIdent moduleDocs valueName
+                        toMaybeChunk pkgIdent moduleDocs valueName
                             :: subChunksHelp pkgIdent moduleDocs remainingParts
 
                     Nothing ->
@@ -390,17 +401,17 @@ subChunksHelp pkgIdent moduleDocs parts =
                                 token :: _ ->
                                     case PDocs.isValue token of
                                         Just valueName ->
-                                            [ toChunk pkgIdent moduleDocs valueName ]
+                                            [ toMaybeChunk pkgIdent moduleDocs valueName ]
 
                                         Nothing ->
                                             []
 
 
-toChunk : PackageIdentifier -> Docs.Module -> String -> Chunk
-toChunk pkgIdent moduleDocs name =
+toMaybeChunk : PackageIdentifier -> Docs.Module -> String -> Maybe Chunk
+toMaybeChunk pkgIdent moduleDocs name =
     case Dict.get name moduleDocs.entries of
         Nothing ->
-            Debug.crash ("docs have been corrupted, could not find " ++ name)
+            Nothing
 
         Just e ->
             let
@@ -408,6 +419,7 @@ toChunk pkgIdent moduleDocs name =
 
                 entryNormalized = Entry.map Type.normalize entry
             in
+              Just <|
                 Chunk
                     pkgIdent
                     (Name.Canonical moduleDocs.name name)
@@ -433,3 +445,11 @@ chunkPackage packageDict name =
 
         Nothing ->
             Dict.empty
+
+
+catMaybes : List (Maybe a) -> List a
+catMaybes xs =
+  case xs of
+    [] -> []
+    (Nothing::xs') -> catMaybes xs'
+    (Just x::xs') -> x :: catMaybes xs'
