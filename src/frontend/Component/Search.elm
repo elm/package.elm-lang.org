@@ -265,72 +265,29 @@ view addr model =
                 ]
 
             Docs info ->
-                [ input
-                  [ placeholder "Search function by name or type"
-                  , value info.query
-                  , on "input" targetValue (Signal.message addr << Query)
-                  ]
-                  []
-                , div [] (viewSearchResults addr info)
-                , h3 [] [ text "Could not load or parse documentation of the following packages" ]
-                , ul
-                    []
-                    (List.map (\summary -> li [] [ text summary.name] ) info.failed)
+                [ viewSearchInput addr info
+                , if String.isEmpty info.query then
+                    viewSearchIntro addr
+                  else
+                    viewSearchResults addr info
+                , viewPackesInfo info
                 ]
 
 
-viewSearchResults : Signal.Address Action -> Info -> List Html
-viewSearchResults addr ({ query, chunks } as info) =
-    let
-        queryType = Type.normalize (PDocs.stringToType query)
-    in
-        if String.isEmpty query then
-            searchIntro addr
-        else
-            let
-                filteredChunks =
-                    case queryType of
-                        Type.Var string ->
-                            chunks
-                                |> List.map (\chunk -> ( Entry.nameDistance query chunk.entry, chunk ))
-                                |> List.filter (\( distance, _ ) -> distance < 10)
-
-                        _ ->
-                            chunks
-                                |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entryNormalized, chunk ))
-                                |> List.filter (\( distance, _ ) -> distance < 10)
-
-                filteredChunksPackages =
-                    filteredChunks
-                        |> List.foldl
-                            (\( _, chunk ) -> Set.insert chunk.package)
-                            Set.empty
-                        |> Set.toList
-            in
-                searchResultsChunks info filteredChunks
-                -- Disable package filter for now as it needs mor thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI.
-                --[ div [] (searchResultsPackages addr filteredChunksPackages)
-                --, div [] (searchResultsChunks info filteredChunks)
-                --]
+viewSearchInput : Signal.Address Action -> Info -> Html
+viewSearchInput addr info =
+  input
+    [ placeholder "Search function by name or type"
+    , value info.query
+    , on "input" targetValue (Signal.message addr << Query)
+    ]
+    []
 
 
-searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
-searchResultsPackages addr packages =
-    List.map
-      (\ identifier -> button [ onClick addr (ToggleFocus identifier) ] [ text identifier ])
-      packages
-
-
-searchResultsChunks : Info -> List (Int, Chunk) -> List Html
-searchResultsChunks {packageDict, focusedPackage} weightedChunks =
-    weightedChunks
-        |> List.sortBy (\( distance, _ ) -> distance)
-        |> List.filter (\( _, {package} ) -> focusedPackage == Nothing || focusedPackage == Just package)
-        |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation package name (nameDict packageDict package) entry)
-
-
-searchIntro : Signal.Address Action -> List Html
-searchIntro addr =
+viewSearchIntro : Signal.Address Action -> Html
+viewSearchIntro addr =
+  div
+    []
     [ h1 [] [ text "Welcome to the Elm API Search" ]
     , p [] [ text "Search the modules of the latest Elm packages by either function name or by approximate type signature." ]
     , h2 [] [ text "Example searches" ]
@@ -353,6 +310,82 @@ exampleSearches =
     , "Result x a -> (a -> Result x b) -> Result x b"
     ]
 
+
+viewSearchResults : Signal.Address Action -> Info -> Html
+viewSearchResults addr ({ query, chunks } as info) =
+    let
+        queryType = Type.normalize (PDocs.stringToType query)
+
+        filteredChunks =
+            case queryType of
+                Type.Var string ->
+                    chunks
+                        |> List.map (\chunk -> ( Entry.nameDistance query chunk.entry, chunk ))
+                        |> List.filter (\( distance, _ ) -> distance < 10)
+
+                _ ->
+                    chunks
+                        |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entryNormalized, chunk ))
+                        |> List.filter (\( distance, _ ) -> distance < 10)
+
+        filteredChunksPackages =
+            filteredChunks
+                |> List.foldl
+                    (\( _, chunk ) -> Set.insert chunk.package)
+                    Set.empty
+                |> Set.toList
+    in
+      div [] (searchResultsChunks info filteredChunks)
+        -- Disable package filter for now as it needs mor thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI.
+        --[ div [] (searchResultsPackages addr filteredChunksPackages)
+        --, div [] (searchResultsChunks info filteredChunks)
+        --]
+
+
+searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
+searchResultsPackages addr packages =
+    List.map
+      (\ identifier -> button [ onClick addr (ToggleFocus identifier) ] [ text identifier ])
+      packages
+
+
+searchResultsChunks : Info -> List (Int, Chunk) -> List Html
+searchResultsChunks {packageDict, focusedPackage} weightedChunks =
+    weightedChunks
+        |> List.sortBy (\( distance, _ ) -> distance)
+        |> List.filter (\( _, {package} ) -> focusedPackage == Nothing || focusedPackage == Just package)
+        |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation package name (nameDict packageDict package) entry)
+
+
+viewPackesInfo : Info -> Html
+viewPackesInfo info =
+  div
+    []
+    [ h2 [] [ text "Some statistics" ]
+    , p
+      []
+      [ text "The search index contains "
+      , strong [] [ text (toString (Dict.size info.packageDict)) ]
+      , text " packages with a total of "
+      , strong [] [ text (toString (List.length info.chunks)) ]
+      , text " type definitions."
+      ]
+    , if not (List.isEmpty info.failed) then
+      div
+        []
+        [ p [] [ text "The following packages did not load or parse," ]
+        , ul
+          []
+          (List.map
+            (\summary ->
+              li [] [ a [ href ("/packages/" ++ summary.name) ] [ text summary.name ] ]
+            )
+            info.failed
+          )
+        ]
+      else
+        text ""
+    ]
 
 
 -- MAKE CHUNKS
