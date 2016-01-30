@@ -86,21 +86,6 @@ tagMap func tag =
 -- FILTER
 
 
-nameSimilarity : String -> Model Type -> Int
-nameSimilarity query model =
-  case model.info of
-    Value tipe _ ->
-      if query == model.name then
-        10
-      else if String.contains query model.name then
-        1
-      else
-        0
-
-    _ ->
-      0
-
-
 nameDistance : String -> Model Type -> Int
 nameDistance query model =
   case model.info of
@@ -114,16 +99,6 @@ nameDistance query model =
 
     _ ->
       100
-
-
-typeSimilarity : Type -> Model Type -> Int
-typeSimilarity queryType model =
-  case model.info of
-    Value tipe _ ->
-      Type.similarity queryType tipe
-
-    _ ->
-      0
 
 
 typeDistance : Type -> Model Type -> Int
@@ -169,6 +144,7 @@ stringView model =
 
 
 -- TODO: DRY this up
+-- What we need here is that all link building functions use the versionContext so that the URLs can be absolute. I started doing this just with the valueAnnotation and using a basePath String insteadt of the versionContext. But this doesn't scale...
 typeViewAnnotation : String -> Name.Canonical -> Name.Dictionary -> Model Type -> Html
 typeViewAnnotation basePath canonical nameDict model =
   let
@@ -191,13 +167,14 @@ typeViewAnnotation basePath canonical nameDict model =
   in
     div [ class "docs-entry" ]
       [ annotationBlock annotation
-      , div [] [Markdown.block description]
-      , div []
+      , div [] [ Markdown.block description ]
+      , span []
         [ a
           [ href (path)
           , style ["color" => "#bbb"]
           ]
-          [text basePath]]
+          [ text basePath ]
+        ]
       ]
 
 
