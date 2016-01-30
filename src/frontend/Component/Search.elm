@@ -337,7 +337,14 @@ viewPackesInfo info =
           []
           (List.map
             (\summary ->
-              li [] [ a [ href ("/packages/" ++ summary.name) ] [ text summary.name ] ]
+              li
+                []
+                [ a
+                  [ href ("/packages/" ++ summary.name)
+                  , class "grey-link"
+                  ]
+                  [ text summary.name ]
+                ]
             )
             info.failed
           )
