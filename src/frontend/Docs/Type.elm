@@ -237,16 +237,7 @@ length context tipe =
 distance : Type -> Type -> Int
 distance a b =
   let
-    penalty = 10
-
-    compareNames p nameA nameB =
-      if nameA == nameB then
-        0
-      else if String.contains nameA nameB then
-        1
-      else
-        p
-
+    defaultPenalty = 10
   in
     case (a, b) of
 
@@ -255,27 +246,38 @@ distance a b =
             List.sum (List.map2 distance argsA argsB)
               + distance resultA resultB
           else
-            penalty * (abs (List.length argsA - List.length argsB))
+            defaultPenalty * (abs (List.length argsA - List.length argsB))
 
       (Var nameA, Var nameB) ->
-          compareNames 5 nameA nameB
+          compareNamesWithPenalty defaultPenalty nameA nameB
 
-      -- TODO: should we take `Canonical.home` into account?
       (Apply canonicalA [], Apply canonicalB []) ->
-          compareNames 2 canonicalA.name canonicalB.name
+          compareNamesWithPenalty 2 canonicalA.home canonicalB.home
+          + compareNamesWithPenalty 2 canonicalA.name canonicalB.name
 
       (Apply canonicalA argsA, Apply canonicalB argsB) ->
           if List.length argsA == List.length argsB then
-            compareNames 2 canonicalA.home canonicalB.home
-              + compareNames 2 canonicalA.name canonicalB.name
+            compareNamesWithPenalty 2 canonicalA.home canonicalB.home
+              + compareNamesWithPenalty 2 canonicalA.name canonicalB.name
               + List.sum (List.map2 distance argsA argsB)
           else
-            penalty
+            defaultPenalty * (abs (List.length argsA - List.length argsB))
 
       (Tuple argsA, Tuple argsB) ->
           List.sum (List.map2 distance argsA argsB)
 
       _ -> 100
+
+
+compareNamesWithPenalty : Int -> String -> String -> Int
+compareNamesWithPenalty penalty nameA nameB =
+  if nameA == nameB then
+    0
+  else if String.contains nameA nameB then
+    1
+  else
+    penalty
+
 
 
 type alias Mapping = Dict.Dict String String
