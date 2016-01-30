@@ -350,7 +350,7 @@ viewPackesInfo info =
                     []
                     [ a
                         [ href ("/packages/" ++ summary.name)
-                        , class "grey-link"
+                        , style [ ("color", "#bbb")]
                         ]
                         [ text summary.name ]
                     ]
@@ -398,21 +398,15 @@ viewSearchResults addr ({ query, chunks } as info) =
       div [] (searchResultsChunks info filteredChunks)
 
 
-
--- Disable package filter for now as it needs more thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI.
---[ div [] (searchResultsPackages addr filteredChunksPackages)
---, div [] (searchResultsChunks info filteredChunks)
---]
-
-
 searchResultsChunks : Info -> List ( Int, Chunk ) -> List Html
 searchResultsChunks { packageDict, focusedPackage } weightedChunks =
   weightedChunks
     |> List.sortBy (\( distance, _ ) -> distance)
-    |> List.filter (\( _, { package } ) -> focusedPackage == Nothing || focusedPackage == Just package)
-    |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation package name (nameDict packageDict package) entry)
+    --|> List.filter (\( _, { package } ) -> focusedPackage == Nothing || focusedPackage == Just package)
+    |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewSearch package name (nameDict packageDict package) entry)
 
 
+{- Package filters are not used for now as it needs more thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI. -}
 searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
 searchResultsPackages addr packages =
   List.map

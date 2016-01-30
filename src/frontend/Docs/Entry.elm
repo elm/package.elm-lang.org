@@ -143,16 +143,16 @@ stringView model =
 (=>) = (,)
 
 
--- TODO: DRY this up
--- What we need here is that all link building functions use the versionContext so that the URLs can be absolute. I started doing this just with the valueAnnotation and using a basePath String insteadt of the versionContext. But this doesn't scale...
-typeViewAnnotation : String -> Name.Canonical -> Name.Dictionary -> Model Type -> Html
-typeViewAnnotation basePath canonical nameDict model =
+-- TODO: DRY this up with the existing "normal" typeView, mainly with regard to support absolute links via the basePath od the Context.
+typeViewSearch : String -> Name.Canonical -> Name.Dictionary -> Model Type -> Html
+typeViewSearch basePath canonical nameDict model =
   let
     path = "/packages/" ++ basePath
+
     annotation =
       case model.info of
         Value tipe _ ->
-            valueAnnotationCanonical path canonical nameDict model.name tipe
+            valueAnnotationSearch path canonical nameDict model.name tipe
 
         Union {vars,tags} ->
             unionAnnotation (Type.toHtml nameDict Type.App) model.name vars tags
@@ -170,7 +170,7 @@ typeViewAnnotation basePath canonical nameDict model =
       , div [] [ Markdown.block description ]
       , span []
         [ a
-          [ href (path)
+          [ href path
           , style ["color" => "#bbb"]
           ]
           [ text basePath ]
@@ -225,19 +225,20 @@ operator =
 
 -- VALUE ANNOTATIONS
 
--- TODO: DRY this up
-valueAnnotationCanonical : String -> Name.Canonical -> Name.Dictionary -> String -> Type -> List (List Html)
-valueAnnotationCanonical basePath canonical nameDict name tipe =
+
+-- TODO: DRY this up with the existing "normal" typeView, mainly with regard to support absolute links via the basePath od the Context.
+valueAnnotationSearch : String -> Name.Canonical -> Name.Dictionary -> String -> Type -> List (List Html)
+valueAnnotationSearch basePath canonical nameDict name tipe =
   case tipe of
     Type.Function args result ->
         if String.length name + 3 + Type.length Type.Other tipe > 64 then
-            [ Name.toBaseLink basePath nameDict canonical ] :: longFunctionAnnotation nameDict args result
+            [ Name.toBaseLink basePath nameDict canonical ] :: longFunctionAnnotationSearch basePath nameDict args result
 
         else
-            [ (Name.toBaseLink basePath nameDict canonical) :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
+            [ (Name.toBaseLink basePath nameDict canonical) :: padded colon ++ Type.toHtmlWithBasePath basePath nameDict Type.Other tipe ]
 
     _ ->
-        [ Name.toBaseLink basePath nameDict canonical :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
+        [ Name.toBaseLink basePath nameDict canonical :: padded colon ++ Type.toHtmlWithBasePath basePath nameDict Type.Other tipe ]
 
 
 valueAnnotation : Name.Dictionary -> String -> Type -> List (List Html)
@@ -267,6 +268,19 @@ longFunctionAnnotation nameDict args result =
   in
     List.map2 (++) starters tipeHtml
 
+
+longFunctionAnnotationSearch : String -> Name.Dictionary -> List Type -> Type -> List (List Html)
+longFunctionAnnotationSearch basePath nameDict args result =
+  let
+    tipeHtml =
+      List.map (Type.toHtmlWithBasePath basePath nameDict Type.Func) (args ++ [result])
+
+    starters =
+      [ text "    ", colon, text "  " ]
+      ::
+      List.repeat (List.length args) [ text "    ", arrow, space ]
+  in
+    List.map2 (++) starters tipeHtml
 
 
 -- UNION ANNOTATIONS

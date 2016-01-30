@@ -100,6 +100,70 @@ toHtml nameDict context tipe =
           text "{ " :: recordInsides ++ [text " }"]
 
 
+-- TODO: avoid the duplication which only exists because of the links with basePath
+toHtmlWithBasePath : String -> Name.Dictionary -> Context -> Type -> List Html
+toHtmlWithBasePath basePath nameDict context tipe =
+  let
+    go ctx t =
+      toHtmlWithBasePath basePath nameDict ctx t
+  in
+  case tipe of
+    Function args result ->
+        let
+          maybeAddParens =
+            case context of
+              Func -> Code.addParens
+              App -> Code.addParens
+              Other -> identity
+
+          argsHtml =
+            List.concatMap (\arg -> go Func arg ++ padded arrow) args
+        in
+          maybeAddParens (argsHtml ++ go Func result)
+
+    Var name ->
+        [ text name ]
+
+    Apply name [] ->
+        [ Name.toBaseLink basePath nameDict name ]
+
+    Apply name args ->
+        let
+          maybeAddParens =
+            case context of
+              Func -> identity
+              App -> Code.addParens
+              Other -> identity
+
+          argsHtml =
+            List.concatMap (\arg -> space :: go App arg) args
+        in
+          maybeAddParens (Name.toBaseLink basePath nameDict name :: argsHtml)
+
+    Tuple args ->
+      List.map (go Other) args
+        |> List.intersperse [text ", "]
+        |> List.concat
+        |> Code.addParens
+
+    Record fields ext ->
+        let
+          fieldsHtml =
+            List.map (fieldToHtml nameDict) fields
+              |> List.intersperse [text ", "]
+              |> List.concat
+
+          recordInsides =
+            case ext of
+              Nothing ->
+                fieldsHtml
+
+              Just extName ->
+                text extName :: text " | " :: fieldsHtml
+        in
+          text "{ " :: recordInsides ++ [text " }"]
+
+
 fieldToHtml : Name.Dictionary -> (String, Type) -> List Html
 fieldToHtml nameDict (field, tipe) =
   text field :: space :: colon :: space :: toHtml nameDict Other tipe
@@ -196,6 +260,7 @@ distance a b =
       (Var nameA, Var nameB) ->
           compareNames 5 nameA nameB
 
+      -- TODO: should we take `Canonical.home` into account?
       (Apply canonicalA [], Apply canonicalB []) ->
           compareNames 2 canonicalA.name canonicalB.name
 
@@ -213,11 +278,8 @@ distance a b =
       _ -> 100
 
 
-
--- NORMALIZING
-
-
 type alias Mapping = Dict.Dict String String
+
 
 defaultMapping : Mapping
 defaultMapping =
