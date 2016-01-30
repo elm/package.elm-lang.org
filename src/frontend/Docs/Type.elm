@@ -235,36 +235,36 @@ length context tipe =
 
 
 distance : Type -> Type -> Int
-distance a b =
+distance needle hay =
   let
     defaultPenalty = 10
   in
-    case (a, b) of
+    case (needle, hay) of
 
-      (Function argsA resultA, Function argsB resultB) ->
-          if List.length argsA == List.length argsB then
-            List.sum (List.map2 distance argsA argsB)
-              + distance resultA resultB
+      (Function argsNeedle resultNeedle, Function argsHay resultHay) ->
+          if List.length argsNeedle == List.length argsHay then
+            List.sum (List.map2 distance argsNeedle argsHay)
+              + distance resultNeedle resultHay
           else
-            defaultPenalty * (abs (List.length argsA - List.length argsB))
+            1 * (abs (List.length argsNeedle - List.length argsHay))
 
-      (Var nameA, Var nameB) ->
-          compareNamesWithPenalty defaultPenalty nameA nameB
+      (Var nameNeedle, Var nameHay) ->
+          compareNamesWithPenalty defaultPenalty nameNeedle nameHay
 
-      (Apply canonicalA [], Apply canonicalB []) ->
-          compareNamesWithPenalty 2 canonicalA.home canonicalB.home
-          + compareNamesWithPenalty 2 canonicalA.name canonicalB.name
+      (Apply canonicalNeedle [], Apply canonicalHay []) ->
+          compareNamesWithPenalty 2 canonicalNeedle.home canonicalHay.home
+          + compareNamesWithPenalty 2 canonicalNeedle.name canonicalHay.name
 
-      (Apply canonicalA argsA, Apply canonicalB argsB) ->
-          if List.length argsA == List.length argsB then
-            compareNamesWithPenalty 2 canonicalA.home canonicalB.home
-              + compareNamesWithPenalty 2 canonicalA.name canonicalB.name
-              + List.sum (List.map2 distance argsA argsB)
+      (Apply canonicalNeedle argsNeedle, Apply canonicalHay argsHay) ->
+          if List.length argsNeedle == List.length argsHay then
+            compareNamesWithPenalty 2 canonicalNeedle.home canonicalHay.home
+              + compareNamesWithPenalty 2 canonicalNeedle.name canonicalHay.name
+              + List.sum (List.map2 distance argsNeedle argsHay)
           else
-            defaultPenalty * (abs (List.length argsA - List.length argsB))
+            1 * (abs (List.length argsNeedle - List.length argsHay))
 
-      (Tuple argsA, Tuple argsB) ->
-          List.sum (List.map2 distance argsA argsB)
+      (Tuple argsNeedle, Tuple argsHay) ->
+          List.sum (List.map2 distance argsNeedle argsHay)
 
       _ -> 100
 
