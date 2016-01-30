@@ -267,10 +267,9 @@ view addr model =
             Docs info ->
                 [ viewSearchInput addr info
                 , if String.isEmpty info.query then
-                    viewSearchIntro addr
+                    viewSearchIntro addr info
                   else
                     viewSearchResults addr info
-                , viewPackesInfo info
                 ]
 
 
@@ -284,78 +283,38 @@ viewSearchInput addr info =
     []
 
 
-viewSearchIntro : Signal.Address Action -> Html
-viewSearchIntro addr =
+viewSearchIntro : Signal.Address Action -> Info -> Html
+viewSearchIntro addr info =
   div
     []
     [ h1 [] [ text "Welcome to the Elm API Search" ]
     , p [] [ text "Search the modules of the latest Elm packages by either function name or by approximate type signature." ]
     , h2 [] [ text "Example searches" ]
-    , ul
+    , exampleSearches addr
+    , viewPackesInfo info
+    ]
+
+
+exampleSearches : Signal.Address Action -> Html
+exampleSearches addr =
+  let
+    exampleQueries =
+      [ "map"
+      , "(a -> b -> b) -> b -> List a -> b"
+      , "Result x a -> (a -> Result x b) -> Result x b"
+      , "(a -> b -> c) -> b -> a -> c"
+      ]
+
+    exampleSearchItem query =
+      li
         []
-        (List.map
-            (\query ->
-                li [] [ a [ href "#", onClick addr (Query query) ] [ text query ] ]
-            )
-            exampleSearches
-        )
-    ]
-
-
-exampleSearches : List String
-exampleSearches =
-    [ "map"
-    , "(a -> b -> b) -> b -> List a -> b"
-    , "(a -> b -> c) -> b -> a -> c"
-    , "Result x a -> (a -> Result x b) -> Result x b"
-    ]
-
-
-viewSearchResults : Signal.Address Action -> Info -> Html
-viewSearchResults addr ({ query, chunks } as info) =
-    let
-        queryType = Type.normalize (PDocs.stringToType query)
-
-        filteredChunks =
-            case queryType of
-                Type.Var string ->
-                    chunks
-                        |> List.map (\chunk -> ( Entry.nameDistance query chunk.entry, chunk ))
-                        |> List.filter (\( distance, _ ) -> distance < 10)
-
-                _ ->
-                    chunks
-                        |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entryNormalized, chunk ))
-                        |> List.filter (\( distance, _ ) -> distance < 10)
-
-        filteredChunksPackages =
-            filteredChunks
-                |> List.foldl
-                    (\( _, chunk ) -> Set.insert chunk.package)
-                    Set.empty
-                |> Set.toList
-    in
-      div [] (searchResultsChunks info filteredChunks)
-        -- Disable package filter for now as it needs mor thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI.
-        --[ div [] (searchResultsPackages addr filteredChunksPackages)
-        --, div [] (searchResultsChunks info filteredChunks)
-        --]
-
-
-searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
-searchResultsPackages addr packages =
-    List.map
-      (\ identifier -> button [ onClick addr (ToggleFocus identifier) ] [ text identifier ])
-      packages
-
-
-searchResultsChunks : Info -> List (Int, Chunk) -> List Html
-searchResultsChunks {packageDict, focusedPackage} weightedChunks =
-    weightedChunks
-        |> List.sortBy (\( distance, _ ) -> distance)
-        |> List.filter (\( _, {package} ) -> focusedPackage == Nothing || focusedPackage == Just package)
-        |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation package name (nameDict packageDict package) entry)
-
+        [ a
+          [ style [ ( "cursor", "pointer" ) ]
+          , onClick addr (Query query) ]
+          [ text query ]
+        ]
+  in
+    ul [] (List.map exampleSearchItem exampleQueries)
 
 viewPackesInfo : Info -> Html
 viewPackesInfo info =
@@ -386,6 +345,60 @@ viewPackesInfo info =
       else
         text ""
     ]
+
+
+viewSearchResults : Signal.Address Action -> Info -> Html
+viewSearchResults addr ({ query, chunks } as info) =
+    let
+        queryType = Type.normalize (PDocs.stringToType query)
+
+        filteredChunks =
+            case queryType of
+                Type.Var string ->
+                    chunks
+                        |> List.map (\chunk -> ( Entry.nameDistance query chunk.entry, chunk ))
+                        |> List.filter (\( distance, _ ) -> distance < 10)
+
+                _ ->
+                    chunks
+                        |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entryNormalized, chunk ))
+                        |> List.filter (\( distance, _ ) -> distance < 10)
+
+        filteredChunksPackages =
+            filteredChunks
+                |> List.foldl
+                    (\( _, chunk ) -> Set.insert chunk.package)
+                    Set.empty
+                |> Set.toList
+    in
+      if List.length filteredChunks == 0 then
+        div
+          []
+          [ p [] [ text "Your search did not yield any results. You can try one of the examples below."]
+          , exampleSearches addr
+          ]
+      else
+        div [] (searchResultsChunks info filteredChunks)
+          -- Disable package filter for now as it needs more thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI.
+          --[ div [] (searchResultsPackages addr filteredChunksPackages)
+          --, div [] (searchResultsChunks info filteredChunks)
+          --]
+
+
+searchResultsChunks : Info -> List (Int, Chunk) -> List Html
+searchResultsChunks {packageDict, focusedPackage} weightedChunks =
+    weightedChunks
+        |> List.sortBy (\( distance, _ ) -> distance)
+        |> List.filter (\( _, {package} ) -> focusedPackage == Nothing || focusedPackage == Just package)
+        |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewAnnotation package name (nameDict packageDict package) entry)
+
+
+searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
+searchResultsPackages addr packages =
+    List.map
+      (\ identifier -> button [ onClick addr (ToggleFocus identifier) ] [ text identifier ])
+      packages
+
 
 
 -- MAKE CHUNKS
