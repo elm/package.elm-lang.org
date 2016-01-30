@@ -288,6 +288,7 @@ defaultMapping =
   Dict.empty
     |> Dict.insert "number" "number"
     |> Dict.insert "comparable" "comparable"
+    |> Dict.insert "appendable" "appendable"
 
 
 nextMappingValue : Mapping -> String
