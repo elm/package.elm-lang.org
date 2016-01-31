@@ -252,7 +252,7 @@ distance needle hay =
 
   in
     case (needle, hay) of
-
+      -- Don't compare the result types explicitely to support incomplete search queries
       (Function argsNeedle resultNeedle, Function argsHay resultHay) ->
         List.sum
           (List.map2

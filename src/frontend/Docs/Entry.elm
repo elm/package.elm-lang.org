@@ -100,7 +100,7 @@ nameDistance query model =
     _ ->
       100
 
-
+-- Only find `Value` entries, no `Union` or `Alias`
 typeDistance : Type -> Model Type -> Int
 typeDistance queryType model =
   case model.info of
