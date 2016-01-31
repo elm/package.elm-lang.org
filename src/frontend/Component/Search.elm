@@ -380,13 +380,6 @@ viewSearchResults addr ({ query, chunks } as info) =
           chunks
             |> List.map (\chunk -> ( Entry.typeDistance queryType chunk.entryNormalized, chunk ))
             |> List.filter (\( distance, _ ) -> distance < 10)
-
-    filteredChunksPackages =
-      filteredChunks
-        |> List.foldl
-            (\( _, chunk ) -> Set.insert chunk.package)
-            Set.empty
-        |> Set.toList
   in
     if List.length filteredChunks == 0 then
       div
@@ -399,14 +392,31 @@ viewSearchResults addr ({ query, chunks } as info) =
 
 
 searchResultsChunks : Info -> List ( Int, Chunk ) -> List Html
-searchResultsChunks { packageDict, focusedPackage } weightedChunks =
+searchResultsChunks { packageDict } weightedChunks =
   weightedChunks
     |> List.sortBy (\( distance, _ ) -> distance)
-    --|> List.filter (\( _, { package } ) -> focusedPackage == Nothing || focusedPackage == Just package)
     |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewSearch package name (nameDict packageDict package) entry)
 
 
-{- Package filters are not used for now as it needs more thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI. -}
+{- Package filters are not used for now as it needs more thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI.
+
+The idea is to have this list of buttons for the packages of the current search results such that a click on each button toggles to include or exclude this package in the results.
+
+To get the packages of the current search results on could write something like
+
+  filteredChunksPackages =
+    filteredChunks
+      |> List.foldl
+          (\( _, chunk ) -> Set.insert chunk.package)
+          Set.empty
+      |> Set.toList
+
+
+The filter then to only show chunks of a specific package would look something like this.
+
+  focusedPackageChunks =
+    List.filter (\( _, { package } ) -> focusedPackage == Nothing || focusedPackage == Just package) weightedChunks
+-}
 searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
 searchResultsPackages addr packages =
   List.map
