@@ -209,6 +209,29 @@ pre {
 
 
 
+/* SEARCH */
+
+
+.search {
+  width: 600px;
+  display: inline-block;
+  vertical-align: top;
+}
+
+
+.search input {
+  width: 578px;
+  font-size: 1.5em;
+  padding: 10px;
+  outline: none;
+  border: 1px solid #eeeeee;
+  border-radius: 8px;
+  margin-top: 40px;
+  margin-bottom: 10px;
+}
+
+
+
 /* CATALOG */
 
 

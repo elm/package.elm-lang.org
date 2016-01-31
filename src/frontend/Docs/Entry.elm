@@ -83,6 +83,34 @@ tagMap func tag =
 
 
 
+-- FILTER
+
+
+nameDistance : String -> Model Type -> Int
+nameDistance query model =
+  case model.info of
+    Value tipe _ ->
+      if query == model.name then
+        0
+      else if String.contains query model.name then
+        1
+      else
+        10
+
+    _ ->
+      100
+
+-- Only find `Value` entries, no `Union` or `Alias`
+typeDistance : Type -> Model Type -> Int
+typeDistance queryType model =
+  case model.info of
+    Value tipe _ ->
+      Type.distance queryType tipe
+
+    _ ->
+      100
+
+
 -- STRING VIEW
 
 
@@ -113,6 +141,41 @@ stringView model =
 
 
 (=>) = (,)
+
+
+-- TODO: DRY this up with the existing "normal" typeView, mainly with regard to support absolute links via the basePath od the Context.
+typeViewSearch : String -> Name.Canonical -> Name.Dictionary -> Model Type -> Html
+typeViewSearch basePath canonical nameDict model =
+  let
+    path = "/packages/" ++ basePath
+
+    annotation =
+      case model.info of
+        Value tipe _ ->
+            valueAnnotationSearch path canonical nameDict model.name tipe
+
+        Union {vars,tags} ->
+            unionAnnotation (Type.toHtml nameDict Type.App) model.name vars tags
+
+        Alias {vars,tipe} ->
+            aliasAnnotation nameDict model.name vars tipe
+
+    description =
+      Maybe.withDefault
+        ""
+        (List.head (String.split "\n\n" model.docs))
+  in
+    div [ class "docs-entry" ]
+      [ annotationBlock annotation
+      , div [] [ Markdown.block description ]
+      , span []
+        [ a
+          [ href path
+          , style ["color" => "#bbb"]
+          ]
+          [ text basePath ]
+        ]
+      ]
 
 
 typeView : Name.Dictionary -> Model Type -> Html
@@ -163,6 +226,21 @@ operator =
 -- VALUE ANNOTATIONS
 
 
+-- TODO: DRY this up with the existing "normal" typeView, mainly with regard to support absolute links via the basePath od the Context.
+valueAnnotationSearch : String -> Name.Canonical -> Name.Dictionary -> String -> Type -> List (List Html)
+valueAnnotationSearch basePath canonical nameDict name tipe =
+  case tipe of
+    Type.Function args result ->
+        if String.length name + 3 + Type.length Type.Other tipe > 64 then
+            [ Name.toBaseLink basePath nameDict canonical ] :: longFunctionAnnotationSearch basePath nameDict args result
+
+        else
+            [ (Name.toBaseLink basePath nameDict canonical) :: padded colon ++ Type.toHtmlWithBasePath basePath nameDict Type.Other tipe ]
+
+    _ ->
+        [ Name.toBaseLink basePath nameDict canonical :: padded colon ++ Type.toHtmlWithBasePath basePath nameDict Type.Other tipe ]
+
+
 valueAnnotation : Name.Dictionary -> String -> Type -> List (List Html)
 valueAnnotation nameDict name tipe =
   case tipe of
@@ -190,6 +268,19 @@ longFunctionAnnotation nameDict args result =
   in
     List.map2 (++) starters tipeHtml
 
+
+longFunctionAnnotationSearch : String -> Name.Dictionary -> List Type -> Type -> List (List Html)
+longFunctionAnnotationSearch basePath nameDict args result =
+  let
+    tipeHtml =
+      List.map (Type.toHtmlWithBasePath basePath nameDict Type.Func) (args ++ [result])
+
+    starters =
+      [ text "    ", colon, text "  " ]
+      ::
+      List.repeat (List.length args) [ text "    ", arrow, space ]
+  in
+    List.map2 (++) starters tipeHtml
 
 
 -- UNION ANNOTATIONS
