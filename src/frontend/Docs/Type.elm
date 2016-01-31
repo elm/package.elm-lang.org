@@ -238,35 +238,51 @@ distance : Type -> Type -> Int
 distance needle hay =
   let
     defaultPenalty = 10
+
+    argsLengthPenalty needleList hayList =
+      let
+        argsLengthDiff = List.length needleList - List.length hayList
+      in
+        if argsLengthDiff > 0 then
+          argsLengthDiff * defaultPenalty
+        else if argsLengthDiff < 0 then
+          argsLengthDiff * -1
+        else
+          0
+
   in
     case (needle, hay) of
 
       (Function argsNeedle resultNeedle, Function argsHay resultHay) ->
-          if List.length argsNeedle == List.length argsHay then
-            List.sum (List.map2 distance argsNeedle argsHay)
-              + distance resultNeedle resultHay
-          else
-            1 * (abs (List.length argsNeedle - List.length argsHay))
+        List.sum
+          (List.map2
+            distance
+            (List.append argsNeedle [resultNeedle])
+            (List.append argsHay [resultHay])
+          )
+        + argsLengthPenalty argsNeedle argsHay
 
       (Var nameNeedle, Var nameHay) ->
-          compareNamesWithPenalty defaultPenalty nameNeedle nameHay
-
-      (Apply canonicalNeedle [], Apply canonicalHay []) ->
-          compareNamesWithPenalty 2 canonicalNeedle.home canonicalHay.home
-          + compareNamesWithPenalty 2 canonicalNeedle.name canonicalHay.name
+          compareVarsWithPenalty defaultPenalty nameNeedle nameHay
 
       (Apply canonicalNeedle argsNeedle, Apply canonicalHay argsHay) ->
-          if List.length argsNeedle == List.length argsHay then
             compareNamesWithPenalty 2 canonicalNeedle.home canonicalHay.home
-              + compareNamesWithPenalty 2 canonicalNeedle.name canonicalHay.name
-              + List.sum (List.map2 distance argsNeedle argsHay)
-          else
-            1 * (abs (List.length argsNeedle - List.length argsHay))
+            + compareNamesWithPenalty 2 canonicalNeedle.name canonicalHay.name
+            + List.sum (List.map2 distance argsNeedle argsHay)
+            + argsLengthPenalty argsNeedle argsHay
 
       (Tuple argsNeedle, Tuple argsHay) ->
           List.sum (List.map2 distance argsNeedle argsHay)
 
       _ -> 100
+
+
+compareVarsWithPenalty : Int -> String -> String -> Int
+compareVarsWithPenalty penalty nameA nameB =
+  if nameA == nameB then
+    0
+  else
+    penalty
 
 
 compareNamesWithPenalty : Int -> String -> String -> Int
