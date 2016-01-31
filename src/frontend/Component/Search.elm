@@ -309,7 +309,7 @@ exampleSearches addr =
       [ "map"
       , "(a -> b -> b) -> b -> List a -> b"
       , "Result x a -> (a -> Result x b) -> Result x b"
-      , "(a -> b -> c) -> b -> a -> c"
+      , "(x -> y -> z) -> y -> x -> z"
       ]
 
     exampleSearchItem query =
