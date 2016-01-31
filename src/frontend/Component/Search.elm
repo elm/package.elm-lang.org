@@ -38,8 +38,6 @@ type alias Info =
   , chunks : List Chunk
   , failed : List Summary.Summary
   , query : String
-  , excludedPackages : Set.Set PackageIdentifier
-  , focusedPackage : Maybe PackageIdentifier
   }
 
 
@@ -87,7 +85,6 @@ type Action
   | FailDocs Summary.Summary
   | LoadDocs Ctx.VersionContext Docs.Package
   | Query String
-  | ToggleFocus PackageIdentifier
 
 
 update : Action -> Model -> ( Model, Effects Action )
@@ -130,7 +127,7 @@ update action model =
           )
 
         _ ->
-          ( Docs (Info (Dict.empty) [] [ summary ] "" Set.empty Nothing)
+          ( Docs (Info (Dict.empty) [] [ summary ] "")
           , Fx.none
           )
 
@@ -161,33 +158,9 @@ update action model =
             )
 
           _ ->
-            ( Docs (Info (Dict.singleton pkgName pkgInfo) chunks [] "" Set.empty Nothing)
+            ( Docs (Info (Dict.singleton pkgName pkgInfo) chunks [] "")
             , Fx.none
             )
-
-    ToggleFocus package ->
-      case model of
-        Docs info ->
-          let
-            newFocusedPackage =
-              case info.focusedPackage of
-                Just currentPackage ->
-                  if currentPackage == package then
-                    Nothing
-                  else
-                    Just package
-
-                Nothing ->
-                  Just package
-          in
-            ( Docs { info | focusedPackage = newFocusedPackage }
-            , Fx.none
-            )
-
-        _ ->
-          ( model
-          , Fx.none
-          )
 
 
 latestVersionContext : Summary.Summary -> Result String Ctx.VersionContext
@@ -396,32 +369,6 @@ searchResultsChunks { packageDict } weightedChunks =
   weightedChunks
     |> List.sortBy (\( distance, _ ) -> distance)
     |> List.map (\( _, { package, name, entry } ) -> Entry.typeViewSearch package name (nameDict packageDict package) entry)
-
-
-{- Package filters are not used for now as it needs more thought, e.g. what happens when the currently focused pagckage is not in new search results. It also needs a nice UI.
-
-The idea is to have this list of buttons for the packages of the current search results such that a click on each button toggles to include or exclude this package in the results.
-
-To get the packages of the current search results on could write something like
-
-  filteredChunksPackages =
-    filteredChunks
-      |> List.foldl
-          (\( _, chunk ) -> Set.insert chunk.package)
-          Set.empty
-      |> Set.toList
-
-
-The filter then to only show chunks of a specific package would look something like this.
-
-  focusedPackageChunks =
-    List.filter (\( _, { package } ) -> focusedPackage == Nothing || focusedPackage == Just package) weightedChunks
--}
-searchResultsPackages : Signal.Address Action -> List PackageIdentifier -> List Html
-searchResultsPackages addr packages =
-  List.map
-    (\identifier -> button [ onClick addr (ToggleFocus identifier) ] [ text identifier ])
-    packages
 
 
 
