@@ -234,6 +234,13 @@ length context tipe =
 -- SEARCH
 
 
+{-| Calculate a numerical distance between a query Type (needle) and a target Type (hay). The order of the arguments are significant. The arguments should get `normalize`d (see below) before passed in.
+A calculated distance of `0` means that the types are the same.
+
+The function calls itself recursively and checks if the passed types are of the same general structure. If the base types do not match it returns with a maximum penalty. If they match it compares the names of the type and if applicable the child types recursively.
+
+The number of the arguments in needle functions don't have to match the number of the arguments in hay functions. This is to support "incomplete" searches. Comparisons with needle functions with too many arguments get a havy penalty, though.
+-}
 distance : Type -> Type -> Int
 distance needle hay =
   let
