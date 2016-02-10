@@ -237,7 +237,7 @@ aliasAnnotation nameDict name vars tipe =
                       )
 
                     Just extName ->
-                      ( [ [ text "    { ", text extName, text " |" ] ]
+                      ( [ [ text "    { ", text extName ] ]
                       , text "      | " :: List.repeat (List.length fields) (text "      , ")
                       )
             in
