@@ -294,7 +294,7 @@ allPackages =
 
       let allPackagesPath =
             case maybeVersion of
-              Just "0.16" ->
+              Just "0.17" ->
                   PkgSummary.allPackages
 
               Nothing ->
@@ -313,7 +313,7 @@ allPackages =
               do  localTime <- liftIO (getModificationTime allPackagesPath)
                   return (remoteTime < localTime)
 
-      if needsUpdate || maybeVersion == Just "0.16"
+      if needsUpdate
         then
           serveFile allPackagesPath
         else
