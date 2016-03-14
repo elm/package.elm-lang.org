@@ -29,7 +29,7 @@ elm title elmModuleName =
 -- SPECIAL PAGES
 
 
-pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Name -> Snap ()
+pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
 pkgDocs pkg@(Pkg.Name user project) version maybeName =
   let
     versionString =
@@ -101,11 +101,7 @@ pkgPreview =
 
 
 makeHtml :: String -> [String] -> Snap (Maybe (String, String)) -> Snap ()
-makeHtml title elmModuleName makePorts =
-  let
-    elmModule =
-      Module.Name elmModuleName
-  in
+makeHtml title elmModule makePorts =
   do  maybePorts <- makePorts
       writeBuilder $ Blaze.renderHtmlBuilder $ docTypeHtml $ do
         H.head $ do

@@ -106,18 +106,16 @@ compileElmFiles =
               exitFailure
 
 
-publicModules :: [Module.Name]
+publicModules :: [Module.Raw]
 publicModules =
-  map
-    Module.Name
-    [ ["Page","Catalog"]
-    , ["Page","DesignGuidelines"]
-    , ["Page","DocumentationFormat"]
-    , ["Page","PreviewDocumentation"]
-    , ["Page","NotFound"]
-    , ["Page","Package"]
-    , ["Page","PackageOverview"]
-    ]
+  [ ["Page","Catalog"]
+  , ["Page","DesignGuidelines"]
+  , ["Page","DocumentationFormat"]
+  , ["Page","PreviewDocumentation"]
+  , ["Page","NotFound"]
+  , ["Page","Package"]
+  , ["Page","PackageOverview"]
+  ]
 
 
 directoryConfig :: MonadSnap m => DirectoryConfig m
