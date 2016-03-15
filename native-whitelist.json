@@ -16,7 +16,6 @@
     "jwmerrill/elm-animation-frame",
     "laszlopandy/elm-console",
     "maxsnew/lazy",
-    "mgold/elm-socketio",
     "NoRedInk/elm-rails",
     "seliopou/elm-d3",
     "ThomasWeiser/elmfire"
