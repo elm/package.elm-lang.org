@@ -1,7 +1,6 @@
-module Component.PackageDocs where
+module Component.PackageDocs exposing (..)
 
 import Dict
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
@@ -47,7 +46,7 @@ type Chunk tipe
 -- INIT
 
 
-init : Ctx.VersionContext -> (Model, Effects Action)
+init : Ctx.VersionContext -> (Model, Cmd Msg)
 init context =
   ( Loading
   , getContext context
@@ -58,7 +57,7 @@ init context =
 -- UPDATE
 
 
-type Action
+type Msg
     = LoadDocs String Docs.Package
     | LoadParsedDocs (List (Chunk Type.Type))
     | LoadReadme String
@@ -66,22 +65,22 @@ type Action
     | NoOp
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
     NoOp ->
         ( model
-        , Fx.none
+        , Cmd.none
         )
 
     Fail httpError ->
         ( Failed httpError
-        , Fx.none
+        , Cmd.none
         )
 
     LoadReadme readme ->
         ( Readme readme
-        , Fx.none
+        , Cmd.none
         )
 
     LoadDocs moduleName docs ->
@@ -97,7 +96,7 @@ update action model =
 
           Nothing ->
               ( Failed (Http.UnexpectedPayload ("Could not find module '" ++ moduleName ++ "'"))
-              , Fx.none
+              , Cmd.none
               )
 
     LoadParsedDocs newChunks ->
@@ -109,7 +108,7 @@ update action model =
 
           _ ->
               ( Failed (Http.UnexpectedPayload ("Something went wrong parsing types."))
-              , Fx.none
+              , Cmd.none
               )
 
 
@@ -122,27 +121,20 @@ toNameDict pkg =
 -- EFFECTS
 
 
-getContext : Ctx.VersionContext -> Effects Action
+getContext : Ctx.VersionContext -> Cmd Msg
 getContext context =
   case context.moduleName of
     Nothing ->
-      Ctx.getReadme context
-        |> Task.map LoadReadme
-        |> flip Task.onError (Task.succeed << Fail)
-        |> Fx.task
+      Task.perform Fail LoadReadme (Ctx.getReadme context)
 
     Just name ->
-      Ctx.getDocs context
-        |> Task.map (LoadDocs name)
-        |> flip Task.onError (Task.succeed << Fail)
-        |> Fx.task
+      Task.perform Fail (LoadDocs name) (Ctx.getDocs context)
 
 
-delayedTypeParse : List (Chunk String) -> Effects Action
+delayedTypeParse : List (Chunk String) -> Cmd Msg
 delayedTypeParse chunks =
-  Fx.task <|
-    Task.succeed () `Task.andThen` \_ ->
-        Task.succeed (LoadParsedDocs (List.map (chunkMap stringToType) chunks))
+  Task.perform (\_ -> Debug.crash "impossible") LoadParsedDocs <|
+    Task.succeed (List.map (chunkMap stringToType) chunks)
 
 
 chunkMap : (a -> b) -> Chunk a -> Chunk b
@@ -165,11 +157,9 @@ stringToType str =
       Type.Var str
 
 
-jumpToHash : Effects Action
+jumpToHash : Cmd Msg
 jumpToHash =
-  Native.Jump.jump
-    |> Task.map (always NoOp)
-    |> Fx.task
+  Task.perform (\_ -> Debug.crash "impossible") (always NoOp) Native.Jump.jump
 
 
 
@@ -179,8 +169,8 @@ jumpToHash =
 (=>) = (,)
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
+view : Model -> Html msg
+view model =
   div [ class "entry-list" ] <|
     case model of
       Loading ->
@@ -205,7 +195,7 @@ view addr model =
           :: List.map (viewChunk (Entry.typeView nameDict)) chunks
 
 
-viewChunk : (Entry.Model tipe -> Html) -> Chunk tipe -> Html
+viewChunk : (Entry.Model tipe -> Html msg) -> Chunk tipe -> Html msg
 viewChunk entryView chunk =
   case chunk of
     Markdown md ->

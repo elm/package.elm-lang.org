@@ -1,7 +1,6 @@
-module Component.PackageSidebar where
+module Component.PackageSidebar exposing (..)
 
 import Dict
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -39,7 +38,7 @@ type alias LinkInfo =
 -- INIT
 
 
-init : Ctx.VersionContext -> (Model, Effects Action)
+init : Ctx.VersionContext -> (Model, Cmd Msg)
 init context =
   ( Loading
   , loadDocs context
@@ -50,17 +49,17 @@ init context =
 -- UPDATE
 
 
-type Action
+type Msg
     = Fail Http.Error
     | Load Ctx.VersionContext SearchDict
     | Query String
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
     Query query ->
-      flip (,) Fx.none <|
+      flip (,) Cmd.none <|
         case model of
           Success facts ->
               Success { facts | query = query }
@@ -73,7 +72,7 @@ update action model =
 
     Fail httpError ->
         ( Failed httpError
-        , Fx.none
+        , Cmd.none
         )
 
     Load context searchDict ->
@@ -82,7 +81,7 @@ update action model =
             , searchDict = searchDict
             , query = ""
             }
-        , Fx.none
+        , Cmd.none
         )
 
 
@@ -90,12 +89,9 @@ update action model =
 -- EFFECTS
 
 
-loadDocs : Ctx.VersionContext -> Effects Action
+loadDocs : Ctx.VersionContext -> Cmd Msg
 loadDocs context =
-  Ctx.getDocs context
-    |> Task.map (Load context << toSearchDict)
-    |> flip Task.onError (Task.succeed << Fail)
-    |> Fx.task
+  Task.perform Fail (Load context << toSearchDict) (Ctx.getDocs context)
 
 
 toSearchDict : Docs.Package -> SearchDict
@@ -147,8 +143,8 @@ gatherTagInfo topLevelNames entry =
 (=>) = (,)
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
+view : Model -> Html Msg
+view model =
   div [class "pkg-nav"] <|
     case model of
       Loading ->
@@ -168,14 +164,14 @@ view addr model =
           , input
               [ placeholder "Search"
               , value query
-              , on "input" targetValue (Signal.message addr << Query)
+              , onInput Query
               ]
               []
           , viewSearchDict context query searchDict
           ]
 
 
-viewSearchDict : Ctx.VersionContext -> String -> SearchDict -> Html
+viewSearchDict : Ctx.VersionContext -> String -> SearchDict -> Html msg
 viewSearchDict context query searchDict =
   if String.isEmpty query then
     ul [] (List.map (li [] << singleton << moduleLink context << Just) (Dict.keys searchDict))
@@ -197,7 +193,7 @@ viewSearchDict context query searchDict =
       ul [] (List.map (viewModuleLinks context) searchResults)
 
 
-viewModuleLinks : Ctx.VersionContext -> (String, List LinkInfo) -> Html
+viewModuleLinks : Ctx.VersionContext -> (String, List LinkInfo) -> Html msg
 viewModuleLinks context (name, values) =
   li
     [ class "pkg-nav-search-chunk" ]
@@ -206,7 +202,7 @@ viewModuleLinks context (name, values) =
     ]
 
 
-githubLink : Ctx.VersionContext -> Html
+githubLink : Ctx.VersionContext -> Html msg
 githubLink context =
   a [ class "pkg-nav-module"
     , href ("https://github.com" </> context.user </> context.project </> "tree" </> context.version)
@@ -214,7 +210,7 @@ githubLink context =
     [ text "Browse source" ]
 
 
-moduleLink : Ctx.VersionContext -> Maybe String -> Html
+moduleLink : Ctx.VersionContext -> Maybe String -> Html msg
 moduleLink context name =
   let
     visibleName =
@@ -233,7 +229,7 @@ moduleLink context name =
     a [ class "pkg-nav-module", href url ] [ visibleText ]
 
 
-valueLink : Ctx.VersionContext -> String -> LinkInfo -> Html
+valueLink : Ctx.VersionContext -> String -> LinkInfo -> Html msg
 valueLink context moduleName {name, owner} =
   let
     url =

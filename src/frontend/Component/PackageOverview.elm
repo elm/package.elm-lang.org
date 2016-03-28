@@ -1,7 +1,6 @@
-module Component.PackageOverview where
+module Component.PackageOverview exposing (..)
 
 import Dict
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -26,7 +25,7 @@ type alias Model =
 -- INIT
 
 
-init : Ctx.OverviewContext -> (Model, Effects Action)
+init : Ctx.OverviewContext -> (Model, Cmd Msg)
 init context =
   case Vsn.fromStringList context.versions of
     Err msg ->
@@ -41,7 +40,7 @@ init context =
           List.sum (List.map (\{others} -> 1 + List.length others) (Dict.values vsnDict))
       in
         ( Model context vsnDict (total < 10)
-        , Fx.none
+        , Cmd.none
         )
 
 
@@ -49,16 +48,16 @@ init context =
 -- UPDATE
 
 
-type Action
+type Msg
     = ExpandVersions Bool
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
     ExpandVersions bool ->
         ( { model | versionsAreExpanded = bool }
-        , Fx.none
+        , Cmd.none
         )
 
 
@@ -69,34 +68,34 @@ update action model =
 (=>) = (,)
 
 
-view : Signal.Address Action -> Model -> Html
-view addr {context, versionDict, versionsAreExpanded} =
+view : Model -> Html Msg
+view {context, versionDict, versionsAreExpanded} =
   div [ class "pkg-overview" ]
     [ h1 [] [text "Published Versions"]
     , p [] <|
         viewVersions context.user context.project versionsAreExpanded versionDict
-        ++ expando addr versionsAreExpanded
+        ++ expando versionsAreExpanded
     ]
 
 
-expando : Signal.Address Action -> Bool -> List Html
-expando addr isExpanded =
+expando : Bool -> List (Html Msg)
+expando isExpanded =
   let
     msg =
       if isExpanded then "show fewer" else "show all"
   in
     text " — "
-    :: [ a [ class "grey-link", onClick addr (ExpandVersions (not isExpanded)) ] [ text msg ] ]
+    :: [ a [ class "grey-link", onClick (ExpandVersions (not isExpanded)) ] [ text msg ] ]
 
 
-viewVersions : String -> String -> Bool -> Vsn.Dictionary -> List Html
+viewVersions : String -> String -> Bool -> Vsn.Dictionary -> List (Html msg)
 viewVersions user project isExpanded dict =
   Dict.toList dict
     |> List.concatMap (toRange user project isExpanded)
     |> List.intersperse (text (if isExpanded then ", " else " "))
 
 
-toRange : String -> String -> Bool -> (Int, Vsn.MinorPatch) -> List Html
+toRange : String -> String -> Bool -> (Int, Vsn.MinorPatch) -> List (Html msg)
 toRange user project isExpanded (major, {latest, others}) =
   if isExpanded then
     List.map (minorPatchToLink user project False major) others
@@ -109,7 +108,7 @@ toRange user project isExpanded (major, {latest, others}) =
     [ text "…", minorPatchToLink user project False major latest ]
 
 
-minorPatchToLink : String -> String -> Bool -> Int -> (Int, Int) -> Html
+minorPatchToLink : String -> String -> Bool -> Int -> (Int, Int) -> Html msg
 minorPatchToLink user project isBold major (minor, patch) =
   let
     version =
