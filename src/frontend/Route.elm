@@ -1,4 +1,4 @@
-module Route where
+module Route exposing (..)
 
 import Page.Context as Ctx
 
