@@ -1,41 +1,41 @@
-module Utils.Code where
+module Utils.Code exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
 
 
-keyword : String -> Html
+keyword : String -> Html msg
 keyword kw =
   span [class "hljs-keyword"] [text kw]
 
 
-addParens : List Html -> List Html
+addParens : List (Html msg) -> List (Html msg)
 addParens list =
   text "(" :: list ++ [text ")"]
 
 
-space : Html
+space : Html msg
 space =
   text " "
 
 
-padded : Html -> List Html
+padded : Html msg -> List (Html msg)
 padded html =
   [ space, html, space ]
 
 
-arrow : Html
+arrow : Html msg
 arrow =
   span [] [text "->"]
 
 
-colon : Html
+colon : Html msg
 colon =
   span [] [text ":"]
 
 
-equals : Html
+equals : Html msg
 equals =
   span [] [text "="]
 

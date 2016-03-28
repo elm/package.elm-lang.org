@@ -1,4 +1,4 @@
-module Utils.Path where
+module Utils.Path exposing (..)
 
 import String
 
