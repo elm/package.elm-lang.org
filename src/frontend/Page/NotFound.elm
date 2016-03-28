@@ -1,4 +1,4 @@
-module Page.NotFound where
+module Page.NotFound exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (style)
@@ -11,7 +11,7 @@ import Route
 
 
 main =
-  Header.view (Signal.mailbox ()).address (Header.Model (Route.Packages Nothing))
+  Header.view (Header.Model (Route.Packages Nothing))
     [ div
         [ style
             [ "height" => "100%"

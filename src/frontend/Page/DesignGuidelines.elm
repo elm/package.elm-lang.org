@@ -1,32 +1,19 @@
-module Page.DesignGuidelines where
+module Page.DesignGuidelines exposing (..)
 
-import Effects as Fx
-import StartApp
+import Html.App as Html
 import Task
 
 import Component.Blog as Blog
 
 
 
--- WIRES
-
-
-app =
-  StartApp.start
+main =
+  Html.program
     { init = Blog.init content
     , view = Blog.view
     , update = Blog.update
-    , inputs = []
+    , subscriptions = \_ -> Sub.none
     }
-
-
-main =
-  app.html
-
-
-port worker : Signal (Task.Task Fx.Never ())
-port worker =
-  app.tasks
 
 
 

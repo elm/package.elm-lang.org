@@ -1,9 +1,8 @@
-module Page.Catalog where
+module Page.Catalog exposing (..)
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
+import Html.App as Html
 import Html.Attributes exposing (..)
-import StartApp
 import Task
 
 import Component.Catalog as Catalog
@@ -16,22 +15,13 @@ import Route
 -- WIRES
 
 
-app =
-  StartApp.start
+main =
+  Html.program
     { init = init
     , view = view
     , update = update
-    , inputs = []
+    , subscriptions = \_ -> Sub.none
     }
-
-
-main =
-  app.html
-
-
-port worker : Signal (Task.Task Fx.Never ())
-port worker =
-  app.tasks
 
 
 
@@ -49,67 +39,63 @@ type alias Model =
 -- INIT
 
 
-init : (Model, Effects Action)
+init : (Model, Cmd Msg)
 init =
   let
-    (header, headerFx) =
+    (header, headerCmd) =
       Header.init (Route.Packages Nothing)
 
-    (catalog, catalogFx) =
+    (catalog, catalogCmd) =
       Catalog.init
 
-    (sidebar, sidebarFx) =
+    (sidebar, sidebarCmd) =
       Sidebar.init
   in
-    ( Model header catalog sidebar
-    , Fx.batch
-        [ headerFx
-        , Fx.map UpdateCatalog catalogFx
-        , Fx.map UpdateSidebar sidebarFx
+    Model header catalog sidebar
+      ! [ headerCmd
+        , Cmd.map UpdateCatalog catalogCmd
+        , Cmd.map UpdateSidebar sidebarCmd
         ]
-    )
 
 
 
 -- UPDATE
 
 
-type Action
-    = UpdateCatalog Catalog.Action
-    | UpdateSidebar Sidebar.Action
+type Msg
+    = UpdateCatalog Catalog.Msg
+    | UpdateSidebar Sidebar.Msg
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
-    UpdateCatalog act ->
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
+    UpdateCatalog catMsg ->
         let
           (newCatalog, fx) =
-            Catalog.update act model.catalog
+            Catalog.update catMsg model.catalog
         in
-          ( { model | catalog = newCatalog }
-          , Fx.map UpdateCatalog fx
-          )
+          { model | catalog = newCatalog }
+            ! [ Cmd.map UpdateCatalog fx ]
 
-    UpdateSidebar act ->
+    UpdateSidebar sideMsg ->
         let
           (newSidebar, fx) =
-            Sidebar.update act model.sidebar
+            Sidebar.update sideMsg model.sidebar
         in
-          ( { model | sidebar = newSidebar }
-          , Fx.map UpdateSidebar fx
-          )
+          { model | sidebar = newSidebar }
+            ! [ Cmd.map UpdateSidebar fx ]
 
 
 
 -- VIEW
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
-  Header.view addr model.header
-    [ Catalog.view (Signal.forwardTo addr UpdateCatalog) model.catalog
-    , Sidebar.view (Signal.forwardTo addr UpdateSidebar) model.sidebar
+view : Model -> Html Msg
+view model =
+  Header.view model.header
+    [ Html.map UpdateCatalog (Catalog.view model.catalog)
+    , Html.map UpdateSidebar (Sidebar.view model.sidebar)
     ]
 
 
