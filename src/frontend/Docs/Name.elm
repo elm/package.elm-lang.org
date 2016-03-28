@@ -1,4 +1,4 @@
-module Docs.Name where
+module Docs.Name exposing (..)
 
 import Dict
 import Html exposing (..)
@@ -17,7 +17,7 @@ type alias Dictionary =
     Dict.Dict String (Set.Set String)
 
 
-toLink : Dictionary -> Canonical -> Html
+toLink : Dictionary -> Canonical -> Html msg
 toLink dict ({home,name} as canonical) =
   case Maybe.map (Set.member name) (Dict.get home dict) of
     Just True ->
