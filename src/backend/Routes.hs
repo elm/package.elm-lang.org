@@ -7,6 +7,7 @@ import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.Char as Char
 import qualified Data.Either as Either
 import qualified Data.List as List
 import qualified Data.Map as Map
