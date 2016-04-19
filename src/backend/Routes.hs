@@ -289,33 +289,20 @@ versions =
 
 allPackages :: Snap ()
 allPackages =
-  do  maybeValue <- getParam "since"
-      maybeVersion <- fmap BS.unpack <$> getParam "elm-package-version"
+  do  maybeString <- fmap BS.unpack <$> getParam "since"
 
-      let allPackagesPath =
-            case maybeVersion of
-              Just "0.17" ->
-                  PkgSummary.allPackages
-
-              Nothing ->
-                  PkgSummary.allPackages
-
-              Just _ ->
-                  PkgSummary.allPackagesOld
-
-      let maybeString = fmap BS.unpack maybeValue
       needsUpdate <-
           case Read.readMaybe =<< maybeString of
             Nothing ->
               return True
 
             Just remoteTime ->
-              do  localTime <- liftIO (getModificationTime allPackagesPath)
+              do  localTime <- liftIO (getModificationTime PkgSummary.allPackages)
                   return (remoteTime < localTime)
 
       if needsUpdate
         then
-          serveFile allPackagesPath
+          serveFile PkgSummary.allPackages
         else
           writeLBS "null"
 

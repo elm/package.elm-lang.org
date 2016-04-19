@@ -13,6 +13,7 @@ import qualified Elm.Package as Pkg
 import qualified Elm.Package.Description as Desc
 
 
+
 data Summary = Summary
     { name     :: Pkg.Name
     , summary  :: String
@@ -25,12 +26,9 @@ allPackages =
     "all-packages.json"
 
 
-allPackagesOld :: String
-allPackagesOld =
-    "all-packages-old.json"
-
 
 -- ADD A SUMMARY
+
 
 add :: Desc.Description -> IO ()
 add desc =
@@ -60,7 +58,9 @@ insert summary summaries =
                     summary { versions = vs } : rest
 
 
+
 -- READING SUMMARIES
+
 
 readAllSummaries :: IO [Summary]
 readAllSummaries =
@@ -89,7 +89,9 @@ readVersionsOf packageName =
       return (fmap versions maybeSummary)
 
 
+
 -- JSON
+
 
 jsonEncode :: Json.ToJSON a => a -> LBS.ByteString
 jsonEncode value =
