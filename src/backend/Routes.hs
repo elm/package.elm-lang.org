@@ -123,6 +123,7 @@ register =
   do  name <- getParameter "name" Pkg.fromString
       version <- getParameter "version" Pkg.versionFromString
 
+      verifyName name
       verifyVersion name version
 
       let directory = packageRoot name version
@@ -144,6 +145,31 @@ register =
         Left err ->
           do  liftIO (removeDirectoryRecursive directory)
               httpStringError 400 err
+
+
+verifyName :: Pkg.Name -> Snap ()
+verifyName pkg@(Pkg.Name _ project) =
+  if any Char.isUpper project then
+    httpStringError 400 (badName pkg)
+
+  else
+    return ()
+
+
+badName :: Pkg.Name -> String
+badName pkg@(Pkg.Name _ project) =
+  unlines
+    [ "Package names cannot have upper case letters as of Elm 0.16, so the name"
+    , "`" ++ project ++ "` is no good."
+    , ""
+    , "You should keep the existing `" ++ Pkg.toString pkg ++ "` repo exactly"
+    , "as it is. Do not change the name or any of the tags. You may still have users"
+    , "who are on Elm 0.16, and they need this stuff."
+    , ""
+    , "Instead, create a NEW project on GitHub with a valid package name and no tags."
+    , "You can migrate the git history over from your existing project, but be sure"
+    , "to remove any tags (or rename them like `old-2.0.1` if you really care)."
+    ]
 
 
 verifyVersion :: Pkg.Name -> Pkg.Version -> Snap ()
