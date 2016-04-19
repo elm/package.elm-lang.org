@@ -56,6 +56,7 @@ main =
             [ ( "packages", Route.packages )
             , ( "versions", Route.versions )
             , ( "register", Route.register )
+            , ( "permissions", Route.permissions )
             , ( "description", Route.description )
             , ( "documentation", Route.documentation )
             , ( "all-packages", Route.allPackages )

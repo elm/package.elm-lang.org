@@ -24,7 +24,7 @@ import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Paths as Path
 import qualified GitHub
 import qualified NewPackageList
-import qualified NativeWhitelist
+import qualified Whitelists
 import qualified PackageSummary as PkgSummary
 import qualified ServeFile
 
@@ -172,10 +172,8 @@ verifyWhitelist allowNatives name =
       return ()
 
     True ->
-      do  whitelist <- liftIO NativeWhitelist.read
-          case name `elem` whitelist of
-            True -> return ()
-            False -> throwError whitelistError
+      do  onList <- liftIO (Whitelists.checkNative name)
+          if onList then return () else throwError whitelistError
 
 
 whitelistError :: String
@@ -281,6 +279,17 @@ versions =
   do  name <- getParameter "name" Pkg.fromString
       versions <- liftIO (PkgSummary.readVersionsOf name)
       writeLBS (Binary.encode versions)
+
+
+
+-- SEE IF A PACKAGE IS ON THE EFFECT MANAGER WHITELIST
+
+
+permissions :: Snap ()
+permissions =
+  do  name <- getParameter "name" Pkg.fromString
+      onList <- liftIO (Whitelists.checkEffect name)
+      writeLBS (Binary.encode onList)
 
 
 
