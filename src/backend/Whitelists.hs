@@ -39,4 +39,5 @@ check path name =
           withBinaryFile path ReadMode $ \handle ->
             do  json <- LBS.hGetContents handle
                 let maybePkgs = (Json.decode json :: Maybe [Pkg.Name])
-                return $ maybe False (elem name) maybePkgs
+                let isWhitelisted = maybe False (elem name) maybePkgs
+                isWhitelisted `seq` return isWhitelisted
