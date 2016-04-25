@@ -7,7 +7,7 @@
     "elm-lang/geolocation",
     "elm-lang/page-visibility",
     "elm-lang/virtual-dom",
-    "elm-lang/websockets",
+    "elm-lang/websocket",
     "evancz/elm-http",
     "evancz/elm-markdown",
     "joefiorini/elm-mousetrap",
