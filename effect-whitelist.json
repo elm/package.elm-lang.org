@@ -1,0 +1,6 @@
+[
+    "elm-lang/core",
+    "elm-lang/geolocation",
+    "elm-lang/page-visibility",
+    "elm-lang/websockets"
+]
