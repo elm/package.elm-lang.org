@@ -57,6 +57,7 @@ view model =
     , ul []
         [ pkgBlock "General" generalPackages
         , pkgBlock "Rendering" renderingPackages
+        , pkgBlock "Effects" effectPackages
         ]
     ]
 
@@ -70,22 +71,30 @@ pkgBlock title pkgs =
 
 
 pkgBlockItem : (String, String) -> Html msg
-pkgBlockItem (user, project) =
+pkgBlockItem (project, niceName) =
   li []
-    [ a [ href ("/packages/" ++ user ++ "/" ++ project ++ "/latest") ] [ text project ]
+    [ a [ href ("/packages/" ++ project ++ "/latest") ] [ text niceName ]
     ]
 
 
 generalPackages : List (String, String)
 generalPackages =
-  [ "elm-lang" => "core"
-  , "evancz" => "elm-http"
+  [ "elm-lang/core" => "core"
   ]
 
 
 renderingPackages : List (String, String)
 renderingPackages =
-  [ "elm-lang" => "html"
-  , "elm-lang" => "svg"
-  , "evancz" => "elm-markdown"
+  [ "elm-lang/html" => "html"
+  , "elm-lang/svg" => "svg"
+  , "evancz/elm-markdown" => "markdown"
+  ]
+
+
+effectPackages : List (String, String)
+effectPackages =
+  [ "evancz/elm-http" => "http"
+  , "elm-lang/geolocation" => "geolocation"
+  , "elm-lang/page-visibility" => "page-visibility"
+  , "elm-lang/websocket" => "websocket"
   ]
