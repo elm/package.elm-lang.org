@@ -1,6 +1,8 @@
 [
     "elm-lang/core",
     "elm-lang/geolocation",
+    "elm-lang/mouse",
     "elm-lang/page-visibility",
-    "elm-lang/websocket"
+    "elm-lang/websocket",
+    "elm-lang/window"
 ]
