@@ -5,6 +5,7 @@
     "elm-community/elm-webgl",
     "elm-lang/core",
     "elm-lang/geolocation",
+    "elm-lang/lazy",
     "elm-lang/page-visibility",
     "elm-lang/virtual-dom",
     "elm-lang/websocket",
@@ -13,7 +14,6 @@
     "joefiorini/elm-mousetrap",
     "jwmerrill/elm-animation-frame",
     "laszlopandy/elm-console",
-    "maxsnew/lazy",
     "NoRedInk/elm-rails",
     "seliopou/elm-d3",
     "ThomasWeiser/elmfire"
