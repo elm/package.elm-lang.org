@@ -1,4 +1,5 @@
 [
+    "elm-lang/animation",
     "elm-lang/core",
     "elm-lang/geolocation",
     "elm-lang/mouse",
