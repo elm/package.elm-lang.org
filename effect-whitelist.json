@@ -1,5 +1,5 @@
 [
-    "elm-lang/animation",
+    "elm-lang/animation-frame",
     "elm-lang/core",
     "elm-lang/geolocation",
     "elm-lang/mouse",
