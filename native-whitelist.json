@@ -12,6 +12,7 @@
     "elm-lang/virtual-dom",
     "elm-lang/websocket",
     "elm-lang/window",
+    "evancz/elm-graphics",
     "evancz/elm-http",
     "evancz/elm-markdown",
     "joefiorini/elm-mousetrap",
