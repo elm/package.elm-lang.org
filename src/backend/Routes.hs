@@ -8,7 +8,6 @@ import qualified Data.Binary as Binary
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Char as Char
-import qualified Data.Either as Either
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Text.Read as Read
@@ -83,17 +82,18 @@ serveModule name version =
 
 redirectToLatest :: Pkg.Name -> Snap ()
 redirectToLatest name =
-  do  rawVersions <- liftIO (getDirectoryContents (packageDirectory </> Pkg.toFilePath name))
-      case Either.rights (map Pkg.versionFromString rawVersions) of
-        [] ->
-          httpStringError 404 $
-            "Could not find any versions of package " ++ Pkg.toString name
-
-        versions ->
+  do  maybeVersions <- liftIO $ PkgSummary.readVersionsOf name
+      case maybeVersions of
+        Just versions@(_:_) ->
           do  let latestVersion = last (List.sort versions)
               let url = "/packages/" ++ Pkg.toUrl name ++ "/" ++ Pkg.versionToString latestVersion ++ "/"
               request <- getRequest
               redirect (BS.append (BS.pack url) (rqPathInfo request))
+
+        _ ->
+          httpStringError 404 $
+            "Could not find any versions of package " ++ Pkg.toString name
+
 
 
 
