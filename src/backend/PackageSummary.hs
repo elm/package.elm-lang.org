@@ -1,5 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-module PackageSummary where
+module PackageSummary
+  ( Summary(..)
+  , allPackages, allPackages16, allPackages15
+  , add
+  , readVersionsOf
+  )
+  where
 
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as Json
@@ -74,14 +80,14 @@ insert summary summaries =
 
 readAllSummaries :: IO [Summary]
 readAllSummaries =
-  do  exists <- Dir.doesFileExist allPackages
+  do  exists <- Dir.doesFileExist allPackages16
       case exists of
         False ->
-          do  LBS.writeFile allPackages (jsonEncode ([] :: [Summary]))
+          do  LBS.writeFile allPackages16 (jsonEncode ([] :: [Summary]))
               return []
 
         True ->
-          withBinaryFile allPackages ReadMode $ \handle ->
+          withBinaryFile allPackages16 ReadMode $ \handle ->
               do  json <- LBS.hGetContents handle
                   case Json.eitherDecode json of
                     Left msg ->
