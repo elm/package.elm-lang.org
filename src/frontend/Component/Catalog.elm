@@ -1,4 +1,4 @@
-module Component.Catalog exposing (..)
+module Component.Catalog exposing (..) -- where
 
 import Html exposing (..)
 import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
@@ -246,5 +246,5 @@ oldMessage =
         , "background-color" => "#eeeeee"
         ]
     ]
-    [ text "The following packages have not been updated for 0.17 yet!"
+    [ text "The following packages have not been updated for 0.16 yet!"
     ]

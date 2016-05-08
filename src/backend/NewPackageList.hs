@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module NewPackageList (newPackages, addIfNew) where
+module NewPackageList (newPackages16, addIfNew) where
 
 import qualified Data.Aeson as Json
 import qualified Data.Aeson.Encode.Pretty as Json
@@ -16,6 +16,11 @@ import qualified Elm.Package.Description as Desc
 newPackages :: String
 newPackages =
     "new-packages.json"
+
+
+newPackages16 :: String
+newPackages16 =
+    "new-packages-16.json"
 
 
 addIfNew :: Desc.Description -> IO ()

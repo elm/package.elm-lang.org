@@ -325,22 +325,37 @@ permissions =
 
 allPackages :: Snap ()
 allPackages =
-  do  maybeString <- fmap BS.unpack <$> getParam "since"
+  do  allPackagesPath <- choosePath <$> getParam "elm-package-version"
 
+      rawTime <- getParam "since"
       needsUpdate <-
-          case Read.readMaybe =<< maybeString of
+          case Read.readMaybe =<< fmap BS.unpack rawTime of
             Nothing ->
               return True
 
             Just remoteTime ->
-              do  localTime <- liftIO (getModificationTime PkgSummary.allPackages)
+              do  localTime <- liftIO (getModificationTime allPackagesPath)
                   return (remoteTime < localTime)
 
       if needsUpdate
-        then
-          serveFile PkgSummary.allPackages
-        else
-          writeLBS "null"
+        then serveFile allPackagesPath
+        else writeLBS "null"
+
+
+choosePath :: Maybe BS.ByteString -> FilePath
+choosePath rawVsn =
+  case BS.unpack <$> rawVsn of
+    Just "0.17" ->
+        PkgSummary.allPackages
+
+    Just "0.16" ->
+        PkgSummary.allPackages16
+
+    Just _ ->
+        PkgSummary.allPackages15
+
+    Nothing ->
+        PkgSummary.allPackages16
 
 
 

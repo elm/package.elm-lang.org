@@ -60,7 +60,7 @@ main =
             , ( "description", Route.description )
             , ( "documentation", Route.documentation )
             , ( "all-packages", Route.allPackages )
-            , ( "new-packages", serveFile NewPackageList.newPackages )
+            , ( "new-packages", serveFile NewPackageList.newPackages16 )
             , ( "assets", serveDirectoryWith directoryConfig "assets" )
             , ( "help/design-guidelines"
               , ifTop $ ServeFile.elm "Design Guidelines" ["Page","DesignGuidelines"]

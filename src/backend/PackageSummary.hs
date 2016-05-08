@@ -26,6 +26,16 @@ allPackages =
     "all-packages.json"
 
 
+allPackages16 :: String
+allPackages16 =
+    "all-packages-16.json"
+
+
+allPackages15 :: String
+allPackages15 =
+    "all-packages-15.json"
+
+
 
 -- ADD A SUMMARY
 
