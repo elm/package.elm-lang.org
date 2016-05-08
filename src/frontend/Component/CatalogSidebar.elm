@@ -1,4 +1,4 @@
-module Component.CatalogSidebar exposing (..)
+module Component.CatalogSidebar exposing (..) -- where
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -85,8 +85,8 @@ generalPackages =
 
 renderingPackages : List (String, String)
 renderingPackages =
-  [ "elm-lang/html" => "html"
-  , "elm-lang/svg" => "svg"
+  [ "evancz/elm-html" => "html"
+  , "evancz/elm-svg" => "svg"
   , "evancz/elm-markdown" => "markdown"
   ]
 
@@ -94,7 +94,6 @@ renderingPackages =
 effectPackages : List (String, String)
 effectPackages =
   [ "evancz/elm-http" => "http"
-  , "elm-lang/geolocation" => "geolocation"
-  , "elm-lang/page-visibility" => "page-visibility"
-  , "elm-lang/websocket" => "websocket"
+  , "evancz/start-app" => "start-app"
+  , "evancz/elm-effects" => "elm-effects"
   ]
