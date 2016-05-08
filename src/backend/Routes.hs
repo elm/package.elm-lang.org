@@ -177,12 +177,12 @@ verifyVersion :: Pkg.Name -> Pkg.Version -> Snap ()
 verifyVersion name version =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf name)
       case maybeVersions of
-        Just localVersions
-          | version `elem` localVersions ->
-                httpStringError 400
-                    ("Version " ++ Pkg.versionToString version ++ " has already been registered.")
+        Just localVersions | version `elem` localVersions ->
+          httpStringError 400 $
+            "Version " ++ Pkg.versionToString version ++ " has already been registered."
 
-        _ -> return ()
+        _ ->
+          return ()
 
       publicVersions <- GitHub.getVersionTags name
       case version `elem` publicVersions of
