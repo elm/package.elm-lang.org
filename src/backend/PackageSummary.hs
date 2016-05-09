@@ -48,7 +48,7 @@ allPackages15 =
 
 add :: Desc.Description -> IO ()
 add desc =
-  do  summaries <- readAllSummaries
+  do  summaries <- readAllSummaries allPackages
       LBS.writeFile allPackages (jsonEncode (insert summary summaries))
   where
     summary =
@@ -78,16 +78,16 @@ insert summary summaries =
 -- READING SUMMARIES
 
 
-readAllSummaries :: IO [Summary]
-readAllSummaries =
-  do  exists <- Dir.doesFileExist allPackages16
+readAllSummaries :: FilePath -> IO [Summary]
+readAllSummaries allPackagesPath =
+  do  exists <- Dir.doesFileExist allPackagesPath
       case exists of
         False ->
-          do  LBS.writeFile allPackages16 (jsonEncode ([] :: [Summary]))
+          do  LBS.writeFile allPackagesPath (jsonEncode ([] :: [Summary]))
               return []
 
         True ->
-          withBinaryFile allPackages16 ReadMode $ \handle ->
+          withBinaryFile allPackagesPath ReadMode $ \handle ->
               do  json <- LBS.hGetContents handle
                   case Json.eitherDecode json of
                     Left msg ->
@@ -99,7 +99,7 @@ readAllSummaries =
 
 readVersionsOf :: Pkg.Name -> IO (Maybe [Pkg.Version])
 readVersionsOf packageName =
-  do  summaries <- readAllSummaries
+  do  summaries <- readAllSummaries allPackages16
       let maybeSummary =
               List.find (\summary -> packageName == name summary) summaries
       return (fmap versions maybeSummary)
