@@ -99,7 +99,7 @@ readAllSummaries allPackagesPath =
 
 readVersionsOf :: Pkg.Name -> IO (Maybe [Pkg.Version])
 readVersionsOf packageName =
-  do  summaries <- readAllSummaries allPackages16
+  do  summaries <- readAllSummaries allPackages
       let maybeSummary =
               List.find (\summary -> packageName == name summary) summaries
       return (fmap versions maybeSummary)
