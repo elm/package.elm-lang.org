@@ -1,7 +1,6 @@
-module Component.PackagePreview where
+module Component.PackagePreview exposing (..)
 
 import Dict
-import Effects as Fx
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -23,10 +22,10 @@ type Model
     | GoodFile (Dict.Dict String Docs.Module) PDocs.Model
 
 
-init : (Model, Fx.Effects Action)
+init : (Model, Cmd Msg)
 init =
   ( AwaitingFile
-  , Fx.none
+  , Cmd.none
   )
 
 
@@ -34,17 +33,17 @@ init =
 -- UPDATE
 
 
-type Action
+type Msg
     = NoOp
     | Fail (Maybe String)
     | LoadDocs (Dict.Dict String Docs.Module)
     | SwitchTo String
 
 
-update : Action -> Model -> ( Model, Fx.Effects Action )
-update action model =
-  flip (,) Fx.none <|
-  case action of
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  flip (,) Cmd.none <|
+  case msg of
     NoOp ->
       model
 
@@ -75,8 +74,8 @@ update action model =
 (=>) = (,)
 
 
-view : Signal.Address Action -> Model -> List Html
-view address model =
+view : Model -> List (Html Msg)
+view model =
   case model of
     AwaitingFile ->
       [ instructions long
@@ -104,34 +103,34 @@ view address model =
               , "margin-top" => "1em"
               ]
           ]
-          [ PDocs.view (Signal.forwardTo address (\_ -> Debug.crash "TODO")) info
-          , viewSidebar address (Dict.keys docs)
+          [ PDocs.view info
+          , viewSidebar (Dict.keys docs)
           ]
       ]
 
 
-viewSidebar : Signal.Address Action -> List String -> Html
-viewSidebar address modulesNames =
+viewSidebar : List String -> Html Msg
+viewSidebar modulesNames =
   div [ class "pkg-nav" ]
     [ ul
       [ class "pkg-nav-value" ]
-      (moduleLinks address modulesNames)
+      (moduleLinks modulesNames)
     ]
 
 
-moduleLinks : Signal.Address Action -> List String -> List Html
-moduleLinks address modulesNames =
+moduleLinks : List String -> List (Html Msg)
+moduleLinks modulesNames =
   let
     moduleItem moduleName =
-      li [] [ moduleLink address moduleName ]
+      li [] [ moduleLink moduleName ]
   in
     List.map moduleItem modulesNames
 
 
-moduleLink : Signal.Address Action -> String -> Html
-moduleLink address moduleName =
+moduleLink : String -> Html Msg
+moduleLink moduleName =
   a
-    [ onClick address (SwitchTo moduleName)
+    [ onClick (SwitchTo moduleName)
     , class "pkg-nav-module"
     , href ("#" ++ Path.hyphenate moduleName)
     ]
@@ -161,7 +160,7 @@ docsForModule moduleName docs =
 -- VIEW INSTRUCTIONS
 
 
-instructions : String -> Html
+instructions : String -> Html msg
 instructions md =
   div
     [ style [ "width" => "600px" ]

@@ -1,7 +1,6 @@
-module Docs.Type where
+module Docs.Type exposing (..)
 
 import Dict
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Set
@@ -36,7 +35,7 @@ type alias Tag =
 type Context = Func | App | Other
 
 
-toHtml : Name.Dictionary -> Context -> Type -> List Html
+toHtml : Name.Dictionary -> Context -> Type -> List (Html msg)
 toHtml nameDict context tipe =
   let
     go ctx t =
@@ -99,7 +98,7 @@ toHtml nameDict context tipe =
           text "{ " :: recordInsides ++ [text " }"]
 
 
-fieldToHtml : Name.Dictionary -> (String, Type) -> List Html
+fieldToHtml : Name.Dictionary -> (String, Type) -> List (Html msg)
 fieldToHtml nameDict (field, tipe) =
   text field :: space :: colon :: space :: toHtml nameDict Other tipe
 

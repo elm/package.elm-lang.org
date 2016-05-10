@@ -7,7 +7,7 @@ import qualified Data.Aeson as Json
 import qualified Data.Binary as Binary
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import qualified Data.Either as Either
+import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Text.Read as Read
@@ -24,7 +24,7 @@ import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Paths as Path
 import qualified GitHub
 import qualified NewPackageList
-import qualified NativeWhitelist
+import qualified Whitelists
 import qualified PackageSummary as PkgSummary
 import qualified ServeFile
 
@@ -82,17 +82,18 @@ serveModule name version =
 
 redirectToLatest :: Pkg.Name -> Snap ()
 redirectToLatest name =
-  do  rawVersions <- liftIO (getDirectoryContents (packageDirectory </> Pkg.toFilePath name))
-      case Either.rights (map Pkg.versionFromString rawVersions) of
-        [] ->
-          httpStringError 404 $
-            "Could not find any versions of package " ++ Pkg.toString name
-
-        versions ->
+  do  maybeVersions <- liftIO $ PkgSummary.readVersionsOf name
+      case maybeVersions of
+        Just versions@(_:_) ->
           do  let latestVersion = last (List.sort versions)
               let url = "/packages/" ++ Pkg.toUrl name ++ "/" ++ Pkg.versionToString latestVersion ++ "/"
               request <- getRequest
               redirect (BS.append (BS.pack url) (rqPathInfo request))
+
+        _ ->
+          httpStringError 404 $
+            "Could not find any versions of package " ++ Pkg.toString name
+
 
 
 
@@ -123,6 +124,7 @@ register =
   do  name <- getParameter "name" Pkg.fromString
       version <- getParameter "version" Pkg.versionFromString
 
+      verifyName name
       verifyVersion name version
 
       let directory = packageRoot name version
@@ -146,16 +148,41 @@ register =
               httpStringError 400 err
 
 
+verifyName :: Pkg.Name -> Snap ()
+verifyName pkg@(Pkg.Name _ project) =
+  if any Char.isUpper project then
+    httpStringError 400 (badName pkg)
+
+  else
+    return ()
+
+
+badName :: Pkg.Name -> String
+badName pkg@(Pkg.Name _ project) =
+  unlines
+    [ "Package names cannot have upper case letters as of Elm 0.16, so the name"
+    , "`" ++ project ++ "` is no good."
+    , ""
+    , "You should keep the existing `" ++ Pkg.toString pkg ++ "` repo exactly"
+    , "as it is. Do not change the name or any of the tags. You may still have users"
+    , "who are on Elm 0.16, and they need this stuff."
+    , ""
+    , "Instead, create a NEW project on GitHub with a valid package name and no tags."
+    , "You can migrate the git history over from your existing project, but be sure"
+    , "to remove any tags (or rename them like `old-2.0.1` if you really care)."
+    ]
+
+
 verifyVersion :: Pkg.Name -> Pkg.Version -> Snap ()
 verifyVersion name version =
   do  maybeVersions <- liftIO (PkgSummary.readVersionsOf name)
       case maybeVersions of
-        Just localVersions
-          | version `elem` localVersions ->
-                httpStringError 400
-                    ("Version " ++ Pkg.versionToString version ++ " has already been registered.")
+        Just localVersions | version `elem` localVersions ->
+          httpStringError 400 $
+            "Version " ++ Pkg.versionToString version ++ " has already been registered."
 
-        _ -> return ()
+        _ ->
+          return ()
 
       publicVersions <- GitHub.getVersionTags name
       case version `elem` publicVersions of
@@ -168,39 +195,37 @@ verifyVersion name version =
 verifyWhitelist :: Bool -> Pkg.Name -> ExceptT String IO ()
 verifyWhitelist allowNatives name =
   case allowNatives of
-    False -> return ()
+    False ->
+      return ()
+
     True ->
-      do  whitelist <- liftIO NativeWhitelist.read
-          case name `elem` whitelist of
-            True -> return ()
-            False -> throwError (whitelistError name)
+      do  onList <- liftIO (Whitelists.checkNative name)
+          if onList then return () else throwError whitelistError
 
 
-whitelistError :: Pkg.Name -> String
-whitelistError name =
-  "You are trying to publish a project that has native modules, but this is not\n\
-  \permitted for now.\n\
-  \\n\
-  \Writing native modules is very important because it will let the Elm community\n\
-  \cover the whole web platform with nice community-driven packages. That said,\n\
-  \it introduces many ways to break the guarantees provided by Elm, so it is very\n\
-  \important that these packages are written in a reliable way.\n\
-  \\n\
-  \Essentially, it is clear that this is very important, but also clear that we do\n\
-  \not have a good mechanism for making sure everyone can write reliable native\n\
-  \modules. This is one of the big issues getting focused on in upcoming releases.\n\
-  \\n\
-  \For now, there is review process to expidite certain things, but it is badly\n\
-  \backed up. If you really cannot wait a few months before publishing, please\n\
-  \open an issue with the title:\n\
-  \\n\
-  \    \"Native review for " ++ Pkg.toString name ++ "\"\n\
-  \\n\
-  \at <https://github.com/elm-lang/package.elm-lang.org/issues>. The issue should\n\
-  \link to the relevant repository and provide sufficient context for evaluation.\n\
-  \But keep in mind that the review process is significantly backed up! The\n\
-  \priority is on making reviews unnecessary, and in the meantime, the fewer\n\
-  \special exceptions the better."
+whitelistError :: String
+whitelistError =
+  unlines
+    [ "It is not possible to publish packages with native modules."
+    , ""
+    , "Elm compiles to JavaScript right now, but that may not always be true. For the"
+    , "long-term health of our package ecosystem, as many packages as possible should"
+    , "be written in Elm. This definitely means we will grow a bit slower, but I am"
+    , "willing to pay that cost if it leads to a better community and ecosystem!"
+    , ""
+    , "Point is: Use ports to talk to JS libraries. If you want that JS library as an"
+    , "Elm package, rewrite it in Elm."
+    , ""
+    , "Now there are a shrinking number of cases where you cannot write the package"
+    , "entirely in Elm. The @elm-lang organization on GitHub is meant to own any Web"
+    , "Platform APIs. So if you are wondering how to make bindings to a Web Platform"
+    , "library for vibration (for example) come talk to folks on elm-dev about it."
+    , ""
+    , "    <https://groups.google.com/forum/#!forum/elm-dev>"
+    , ""
+    , "There is no guarantee that there will be easy contributions that will make it"
+    , "happen quickly, but poor communication definitely makes things more difficult."
+    ]
 
 
 
@@ -220,10 +245,10 @@ uploadFiles directory =
 filesForUpload :: Map.Map BS.ByteString FilePath
 filesForUpload =
   Map.fromList
-  [ ("documentation", documentationPath)
-  , ("description", Path.description)
-  , ("readme", "README.md")
-  ]
+    [ ("documentation", documentationPath)
+    , ("description", Path.description)
+    , ("readme", "README.md")
+    ]
 
 
 handleParts
@@ -284,28 +309,27 @@ versions =
 
 
 
+-- SEE IF A PACKAGE IS ON THE EFFECT MANAGER WHITELIST
+
+
+permissions :: Snap ()
+permissions =
+  do  name <- getParameter "name" Pkg.fromString
+      onList <- liftIO (Whitelists.checkEffect name)
+      writeLBS (Binary.encode onList)
+
+
+
 -- UPDATE REMOTE PACKAGE CACHES
 
 
 allPackages :: Snap ()
 allPackages =
-  do  maybeValue <- getParam "since"
-      maybeVersion <- fmap BS.unpack <$> getParam "elm-package-version"
+  do  allPackagesPath <- choosePath <$> getParam "elm-package-version"
 
-      let allPackagesPath =
-            case maybeVersion of
-              Just "0.16" ->
-                  PkgSummary.allPackages
-
-              Nothing ->
-                  PkgSummary.allPackages
-
-              Just _ ->
-                  PkgSummary.allPackagesOld
-
-      let maybeString = fmap BS.unpack maybeValue
+      rawTime <- getParam "since"
       needsUpdate <-
-          case Read.readMaybe =<< maybeString of
+          case Read.readMaybe =<< fmap BS.unpack rawTime of
             Nothing ->
               return True
 
@@ -313,11 +337,25 @@ allPackages =
               do  localTime <- liftIO (getModificationTime allPackagesPath)
                   return (remoteTime < localTime)
 
-      if needsUpdate || maybeVersion == Just "0.16"
-        then
-          serveFile allPackagesPath
-        else
-          writeLBS "null"
+      if needsUpdate
+        then serveFile allPackagesPath
+        else writeLBS "null"
+
+
+choosePath :: Maybe BS.ByteString -> FilePath
+choosePath rawVsn =
+  case BS.unpack <$> rawVsn of
+    Just "0.17" ->
+        PkgSummary.allPackages
+
+    Just "0.16" ->
+        PkgSummary.allPackages16
+
+    Just _ ->
+        PkgSummary.allPackages15
+
+    Nothing ->
+        PkgSummary.allPackages
 
 
 
@@ -328,9 +366,11 @@ documentation :: Snap ()
 documentation =
   fetch documentationPath
 
+
 description :: Snap ()
 description =
   fetch Path.description
+
 
 fetch :: FilePath -> Snap ()
 fetch filePath =

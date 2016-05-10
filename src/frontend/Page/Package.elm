@@ -1,9 +1,8 @@
-module Page.Package where
+module Page.Package exposing (..)
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
+import Html.App as Html
 import Html.Attributes exposing (..)
-import StartApp
 import Task
 
 import Component.Header as Header
@@ -17,25 +16,13 @@ import Route
 -- WIRES
 
 
-port context : Ctx.VersionContext
-
-
-app =
-  StartApp.start
+main =
+  Html.programWithFlags
     { init = init
     , view = view
     , update = update
-    , inputs = []
+    , subscriptions = \_ -> Sub.none
     }
-
-
-main =
-  app.html
-
-
-port worker : Signal (Task.Task Fx.Never ())
-port worker =
-  app.tasks
 
 
 
@@ -53,23 +40,23 @@ type alias Model =
 -- INIT
 
 
-init : (Model, Effects Action)
-init =
+init : Ctx.VersionContext -> (Model, Cmd Msg)
+init context =
   let
-    (header, headerFx) =
+    (header, headerCmd) =
       Header.init (Route.fromVersionContext context)
 
-    (moduleDocs, moduleFx) =
+    (moduleDocs, moduleCmd) =
       PDocs.init context
 
-    (pkgNav, navFx) =
+    (pkgNav, navCmd) =
       PkgNav.init context
   in
     ( Model header moduleDocs pkgNav
-    , Fx.batch
-        [ headerFx
-        , Fx.map UpdateDocs moduleFx
-        , Fx.map UpdateNav navFx
+    , Cmd.batch
+        [ headerCmd
+        , Cmd.map UpdateDocs moduleCmd
+        , Cmd.map UpdateNav navCmd
         ]
     )
 
@@ -78,30 +65,30 @@ init =
 -- UPDATE
 
 
-type Action
-    = UpdateDocs PDocs.Action
-    | UpdateNav PkgNav.Action
+type Msg
+    = UpdateDocs PDocs.Msg
+    | UpdateNav PkgNav.Msg
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
-    UpdateDocs act ->
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
+    UpdateDocs docsMsg ->
         let
           (newDocs, fx) =
-            PDocs.update act model.moduleDocs
+            PDocs.update docsMsg model.moduleDocs
         in
           ( { model | moduleDocs = newDocs }
-          , Fx.map UpdateDocs fx
+          , Cmd.map UpdateDocs fx
           )
 
-    UpdateNav act ->
+    UpdateNav navMsg ->
         let
           (newPkgNav, fx) =
-            PkgNav.update act model.pkgNav
+            PkgNav.update navMsg model.pkgNav
         in
           ( { model | pkgNav = newPkgNav }
-          , Fx.map UpdateNav fx
+          , Cmd.map UpdateNav fx
           )
 
 
@@ -109,11 +96,11 @@ update action model =
 -- VIEW
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
-  Header.view addr model.header
-    [ PDocs.view (Signal.forwardTo addr UpdateDocs) model.moduleDocs
-    , PkgNav.view (Signal.forwardTo addr UpdateNav) model.pkgNav
+view : Model -> Html Msg
+view model =
+  Header.view model.header
+    [ Html.map UpdateDocs (PDocs.view model.moduleDocs)
+    , Html.map UpdateNav (PkgNav.view model.pkgNav)
     ]
 
 

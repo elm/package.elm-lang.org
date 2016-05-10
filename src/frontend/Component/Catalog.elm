@@ -1,6 +1,5 @@
-module Component.Catalog where
+module Component.Catalog exposing (..)
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
 import Html.Events exposing (..)
@@ -34,7 +33,7 @@ type Model
 -- INIT
 
 
-init : (Model, Effects Action)
+init : (Model, Cmd Msg)
 init =
   ( Loading
   , getPackageInfo
@@ -45,18 +44,18 @@ init =
 -- UPDATE
 
 
-type Action
+type Msg
     = Fail Http.Error
     | Load (List Summary.Summary, List String)
     | Query String
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
     Fail httpError ->
         ( Failed httpError
-        , Fx.none
+        , Cmd.none
         )
 
     Load (allSummaries, updatedPkgs) ->
@@ -72,11 +71,11 @@ update action model =
             , oldSummaries = oldSummaries
             , query = ""
             }
-        , Fx.none
+        , Cmd.none
         )
 
     Query query ->
-      flip (,) Fx.none <|
+      flip (,) Cmd.none <|
         case model of
           Success facts ->
               Success { facts | query = query }
@@ -116,7 +115,7 @@ searchFor query summaries =
 -- EFFECTS
 
 
-getPackageInfo : Effects Action
+getPackageInfo : Cmd Msg
 getPackageInfo =
   let
     getAll =
@@ -125,10 +124,7 @@ getPackageInfo =
     getNew =
       Http.get (Json.list Json.string) "/new-packages"
   in
-    Task.map2 (,) getAll getNew
-      |> Task.map Load
-      |> flip Task.onError (Task.succeed << Fail)
-      |> Fx.task
+    Task.perform Fail Load (Task.map2 (,) getAll getNew)
 
 
 
@@ -138,8 +134,8 @@ getPackageInfo =
 (=>) = (,)
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
+view : Model -> Html Msg
+view model =
   div [class "catalog"] <|
     case model of
       Loading ->
@@ -155,7 +151,7 @@ view addr model =
           [ input
               [ placeholder "Search"
               , value query
-              , on "input" targetValue (Signal.message addr << Query)
+              , onInput Query
               , autofocus True
               ]
               []
@@ -168,7 +164,7 @@ view addr model =
 -- VIEW SUMMARY
 
 
-viewSummary : Summary.Summary -> Html
+viewSummary : Summary.Summary -> Html msg
 viewSummary summary =
   let
     url =
@@ -183,7 +179,7 @@ viewSummary summary =
       ]
 
 
-helpfulLinks : Summary.Summary -> Html
+helpfulLinks : Summary.Summary -> Html msg
 helpfulLinks summary =
   let
     allInterestingVersions =
@@ -215,7 +211,7 @@ helpfulLinks summary =
           ]
 
 
-versionLink : String -> Vsn.Version -> Html
+versionLink : String -> Vsn.Version -> Html msg
 versionLink packageName vsn =
   let
     vsnString =
@@ -230,7 +226,7 @@ versionLink packageName vsn =
 -- VIEW OLD SUMMARIES
 
 
-viewOldSummaries : List Summary.Summary -> Html
+viewOldSummaries : List Summary.Summary -> Html msg
 viewOldSummaries oldSummaries =
   div [ style [ "opacity" => "0.5" ] ] <|
     if List.isEmpty oldSummaries then
@@ -240,7 +236,7 @@ viewOldSummaries oldSummaries =
       oldMessage :: List.map viewSummary oldSummaries
 
 
-oldMessage : Html
+oldMessage : Html msg
 oldMessage =
   p [ style
         [ "color" => "#EA157A"
@@ -250,5 +246,5 @@ oldMessage =
         , "background-color" => "#eeeeee"
         ]
     ]
-    [ text "The following packages have not been updated for 0.16 yet!"
+    [ text "The following packages have not been updated for 0.17 yet!"
     ]

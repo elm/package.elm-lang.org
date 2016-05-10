@@ -56,6 +56,7 @@ main =
             [ ( "packages", Route.packages )
             , ( "versions", Route.versions )
             , ( "register", Route.register )
+            , ( "permissions", Route.permissions )
             , ( "description", Route.description )
             , ( "documentation", Route.documentation )
             , ( "all-packages", Route.allPackages )
@@ -106,18 +107,16 @@ compileElmFiles =
               exitFailure
 
 
-publicModules :: [Module.Name]
+publicModules :: [Module.Raw]
 publicModules =
-  map
-    Module.Name
-    [ ["Page","Catalog"]
-    , ["Page","DesignGuidelines"]
-    , ["Page","DocumentationFormat"]
-    , ["Page","PreviewDocumentation"]
-    , ["Page","NotFound"]
-    , ["Page","Package"]
-    , ["Page","PackageOverview"]
-    ]
+  [ ["Page","Catalog"]
+  , ["Page","DesignGuidelines"]
+  , ["Page","DocumentationFormat"]
+  , ["Page","PreviewDocumentation"]
+  , ["Page","NotFound"]
+  , ["Page","Package"]
+  , ["Page","PackageOverview"]
+  ]
 
 
 directoryConfig :: MonadSnap m => DirectoryConfig m

@@ -1,5 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
-module PackageSummary where
+module PackageSummary
+  ( Summary(..)
+  , allPackages, allPackages16, allPackages15
+  , add
+  , readVersionsOf
+  )
+  where
 
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as Json
@@ -11,6 +17,7 @@ import System.IO
 
 import qualified Elm.Package as Pkg
 import qualified Elm.Package.Description as Desc
+
 
 
 data Summary = Summary
@@ -25,16 +32,23 @@ allPackages =
     "all-packages.json"
 
 
-allPackagesOld :: String
-allPackagesOld =
-    "all-packages-old.json"
+allPackages16 :: String
+allPackages16 =
+    "all-packages-16.json"
+
+
+allPackages15 :: String
+allPackages15 =
+    "all-packages-15.json"
+
 
 
 -- ADD A SUMMARY
 
+
 add :: Desc.Description -> IO ()
 add desc =
-  do  summaries <- readAllSummaries
+  do  summaries <- readAllSummaries allPackages
       LBS.writeFile allPackages (jsonEncode (insert summary summaries))
   where
     summary =
@@ -60,18 +74,20 @@ insert summary summaries =
                     summary { versions = vs } : rest
 
 
+
 -- READING SUMMARIES
 
-readAllSummaries :: IO [Summary]
-readAllSummaries =
-  do  exists <- Dir.doesFileExist allPackages
+
+readAllSummaries :: FilePath -> IO [Summary]
+readAllSummaries allPackagesPath =
+  do  exists <- Dir.doesFileExist allPackagesPath
       case exists of
         False ->
-          do  LBS.writeFile allPackages (jsonEncode ([] :: [Summary]))
+          do  LBS.writeFile allPackagesPath (jsonEncode ([] :: [Summary]))
               return []
 
         True ->
-          withBinaryFile allPackages ReadMode $ \handle ->
+          withBinaryFile allPackagesPath ReadMode $ \handle ->
               do  json <- LBS.hGetContents handle
                   case Json.eitherDecode json of
                     Left msg ->
@@ -83,13 +99,15 @@ readAllSummaries =
 
 readVersionsOf :: Pkg.Name -> IO (Maybe [Pkg.Version])
 readVersionsOf packageName =
-  do  summaries <- readAllSummaries
+  do  summaries <- readAllSummaries allPackages
       let maybeSummary =
               List.find (\summary -> packageName == name summary) summaries
       return (fmap versions maybeSummary)
 
 
+
 -- JSON
+
 
 jsonEncode :: Json.ToJSON a => a -> LBS.ByteString
 jsonEncode value =

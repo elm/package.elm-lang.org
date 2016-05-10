@@ -29,7 +29,7 @@ elm title elmModuleName =
 -- SPECIAL PAGES
 
 
-pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Name -> Snap ()
+pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
 pkgDocs pkg@(Pkg.Name user project) version maybeName =
   let
     versionString =
@@ -67,10 +67,9 @@ makeContext :: [(String, String)] -> (String, String)
 makeContext entries =
   let
     ports =
-      "{\n\
-      \    context: {"
-      ++ List.intercalate "," (List.map (\(k,v) -> "\n        " ++ k ++ ": " ++ v) entries)
-      ++ "\n    }\n}"
+      "{"
+      ++ List.intercalate "," (List.map (\(k,v) -> "\n    " ++ k ++ ": " ++ v) entries)
+      ++ "\n}"
   in
     (ports, "")
 
@@ -101,11 +100,7 @@ pkgPreview =
 
 
 makeHtml :: String -> [String] -> Snap (Maybe (String, String)) -> Snap ()
-makeHtml title elmModuleName makePorts =
-  let
-    elmModule =
-      Module.Name elmModuleName
-  in
+makeHtml title elmModule makePorts =
   do  maybePorts <- makePorts
       writeBuilder $ Blaze.renderHtmlBuilder $ docTypeHtml $ do
         H.head $ do
@@ -122,12 +117,12 @@ makeHtml title elmModuleName makePorts =
           script $ preEscapedToMarkup $
             case maybePorts of
               Nothing ->
-                "\nElm.fullscreen(Elm." ++ Module.nameToString elmModule ++ ")\n"
+                "\nElm." ++ Module.nameToString elmModule ++ ".fullscreen()\n"
 
               Just (ports, postScript) ->
-                "\nvar page = Elm.fullscreen(Elm."
+                "\nvar page = Elm."
                 ++ Module.nameToString elmModule
-                ++ ", "
+                ++ ".fullscreen("
                 ++ ports
                 ++ ");\n\n"
                 ++ postScript

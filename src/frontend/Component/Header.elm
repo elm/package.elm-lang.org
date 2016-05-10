@@ -1,6 +1,5 @@
-module Component.Header where
+module Component.Header exposing (..)
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
@@ -18,10 +17,10 @@ type alias Model =
     }
 
 
-init : Route -> (Model, Effects a)
+init : Route -> (Model, Cmd msg)
 init route =
   ( Model route
-  , Fx.none
+  , Cmd.none
   )
 
 
@@ -29,9 +28,9 @@ init route =
 -- UPDATE
 
 
-update : a -> Model -> (Model, Effects a)
-update action model =
-  (model, Fx.none)
+update : msg -> Model -> (Model, Cmd msg)
+update msg model =
+  (model, Cmd.none)
 
 
 
@@ -41,8 +40,8 @@ update action model =
 (=>) = (,)
 
 
-view : Signal.Address a -> Model -> List Html -> Html
-view _ model contents =
+view : Model -> List (Html msg) -> Html msg
+view model contents =
   div []
     [ center "#eeeeee" [ headerLinks model ]
     , center "#60B5CC" (versionWarning model)
@@ -111,7 +110,7 @@ headerLink url words =
 
 -- route unrolling
 
-unrollRoute : Route -> List Html
+unrollRoute : Route -> List (Html msg)
 unrollRoute route =
   case route of
     Help ->
@@ -121,7 +120,7 @@ unrollRoute route =
         maybe unrollUserRoute userRoute
 
 
-maybe : (a -> List Html) -> Maybe a -> List Html
+maybe : (a -> List (Html msg)) -> Maybe a -> List (Html msg)
 maybe unroll maybeRoute =
   case maybeRoute of
     Nothing ->
@@ -131,27 +130,27 @@ maybe unroll maybeRoute =
         unroll route
 
 
-unrollUserRoute : UserRoute -> List Html
+unrollUserRoute : UserRoute -> List (Html msg)
 unrollUserRoute (User user packageRoute) =
     headerLink ("https://github.com" </> user) user
     :: maybe (unrollPackageRoute user) packageRoute
 
 
-unrollPackageRoute : String -> PackageRoute -> List Html
+unrollPackageRoute : String -> PackageRoute -> List (Html msg)
 unrollPackageRoute user (Package pkg versionRoute) =
     spacey "/"
     :: headerLink ("/packages" </> user </> pkg) pkg
     :: maybe (unrollVersionRoute user pkg) versionRoute
 
 
-unrollVersionRoute : String -> String -> VersionRoute -> List Html
+unrollVersionRoute : String -> String -> VersionRoute -> List (Html msg)
 unrollVersionRoute user pkg (Version vsn _ moduleRoute) =
   spacey "/"
   :: headerLink ("/packages" </> user </> pkg </> vsn) vsn
   :: maybe (unrollModuleeRoute user pkg vsn) moduleRoute
 
 
-unrollModuleeRoute : String -> String -> String -> String -> List Html
+unrollModuleeRoute : String -> String -> String -> String -> List (Html msg)
 unrollModuleeRoute user pkg vsn name =
   [ spacey "/"
   , headerLink ("/packages" </> user </> pkg </> vsn </> Path.hyphenate name) name
@@ -162,7 +161,7 @@ unrollModuleeRoute user pkg vsn name =
 -- version warnings
 
 
-versionWarning : Model -> List Html
+versionWarning : Model -> List (Html msg)
 versionWarning model =
   let
     warning =

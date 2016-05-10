@@ -1,4 +1,4 @@
-module Utils.FluidList where
+module Utils.FluidList exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -7,7 +7,7 @@ import Html.Attributes exposing (..)
 (=>) = (,)
 
 
-fluidList : String -> Int -> Int -> List (List Html) -> Html
+fluidList : String -> Int -> Int -> List (List (Html msg)) -> Html msg
 fluidList itemClass itemWidth maxColumns itemList =
   let
     toPx : Int -> String

@@ -10,6 +10,6 @@ artifactDirectory =
     "artifacts"
 
 
-artifact :: Module.Name -> FilePath
+artifact :: Module.Raw -> FilePath
 artifact name =
     artifactDirectory </> Module.hyphenate name <.> "js"

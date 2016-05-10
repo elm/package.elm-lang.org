@@ -1,6 +1,5 @@
-module Docs.Entry where
+module Docs.Entry exposing (..)
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Regex
@@ -51,9 +50,9 @@ type alias Fixity =
 -- UPDATE
 
 
-update : a -> Model tipe -> (Model tipe, Effects a)
-update action model =
-  (model, Fx.none)
+update : msg -> Model tipe -> (Model tipe, Cmd msg)
+update msg model =
+  (model, Cmd.none)
 
 
 
@@ -86,7 +85,7 @@ tagMap func tag =
 -- STRING VIEW
 
 
-stringView : Model String -> Html
+stringView : Model String -> Html msg
 stringView model =
   let
     annotation =
@@ -115,7 +114,7 @@ stringView model =
 (=>) = (,)
 
 
-typeView : Name.Dictionary -> Model Type -> Html
+typeView : Name.Dictionary -> Model Type -> Html msg
 typeView nameDict model =
   let
     annotation =
@@ -135,13 +134,13 @@ typeView nameDict model =
       ]
 
 
-annotationBlock : List (List Html) -> Html
+annotationBlock : List (List (Html msg)) -> Html msg
 annotationBlock bits =
   div [ class "docs-annotation" ]
     (List.concat (List.intersperse [text "\n"] bits))
 
 
-nameToLink : String -> Html
+nameToLink : String -> Html msg
 nameToLink name =
   let
     humanName =
@@ -163,7 +162,7 @@ operator =
 -- VALUE ANNOTATIONS
 
 
-valueAnnotation : Name.Dictionary -> String -> Type -> List (List Html)
+valueAnnotation : Name.Dictionary -> String -> Type -> List (List (Html msg))
 valueAnnotation nameDict name tipe =
   case tipe of
     Type.Function args result ->
@@ -177,7 +176,7 @@ valueAnnotation nameDict name tipe =
         [ nameToLink name :: padded colon ++ Type.toHtml nameDict Type.Other tipe ]
 
 
-longFunctionAnnotation : Name.Dictionary -> List Type -> Type -> List (List Html)
+longFunctionAnnotation : Name.Dictionary -> List Type -> Type -> List (List (Html msg))
 longFunctionAnnotation nameDict args result =
   let
     tipeHtml =
@@ -195,7 +194,7 @@ longFunctionAnnotation nameDict args result =
 -- UNION ANNOTATIONS
 
 
-unionAnnotation : (tipe -> List Html) -> String -> List String -> List (Tag tipe) -> List (List Html)
+unionAnnotation : (tipe -> List (Html msg)) -> String -> List String -> List (Tag tipe) -> List (List (Html msg))
 unionAnnotation tipeToHtml name vars tags =
   let
     nameLine =
@@ -213,7 +212,7 @@ unionAnnotation tipeToHtml name vars tags =
     nameLine :: tagLines
 
 
-viewTag : (tipe -> List Html) -> Tag tipe -> List Html
+viewTag : (tipe -> List (Html msg)) -> Tag tipe -> List (Html msg)
 viewTag tipeToHtml {tag,args} =
   text tag :: List.concatMap ((::) space) (List.map tipeToHtml args)
 
@@ -222,7 +221,7 @@ viewTag tipeToHtml {tag,args} =
 -- ALIAS ANNOTATIONS
 
 
-aliasAnnotation : Name.Dictionary -> String -> List String -> Type -> List (List Html)
+aliasAnnotation : Name.Dictionary -> String -> List String -> Type -> List (List (Html msg))
 aliasAnnotation nameDict name vars tipe =
   let
     typeLines =
@@ -251,7 +250,7 @@ aliasAnnotation nameDict name vars tipe =
     aliasNameLine name vars :: typeLines
 
 
-aliasNameLine : String -> List String -> List Html
+aliasNameLine : String -> List String -> List (Html msg)
 aliasNameLine name vars =
   [ keyword "type"
   , space

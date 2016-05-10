@@ -1,9 +1,8 @@
-module Page.PackageOverview where
+module Page.PackageOverview exposing (..)
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
+import Html.App as Html
 import Html.Attributes exposing (..)
-import StartApp
 import Task
 
 import Component.Header as Header
@@ -16,25 +15,13 @@ import Route
 -- WIRES
 
 
-port context : Ctx.OverviewContext
-
-
-app =
-  StartApp.start
+main =
+  Html.programWithFlags
     { init = init
     , view = view
     , update = update
-    , inputs = []
+    , subscriptions = \_ -> Sub.none
     }
-
-
-main =
-  app.html
-
-
-port worker : Signal (Task.Task Fx.Never ())
-port worker =
-  app.tasks
 
 
 
@@ -51,41 +38,39 @@ type alias Model =
 -- INIT
 
 
-init : (Model, Effects Action)
-init =
+init : Ctx.OverviewContext -> (Model, Cmd Msg)
+init context =
   let
-    (header, headerFx) =
+    (header, headerCmd) =
       Header.init (Route.fromOverviewContext context)
 
-    (overview, moduleFx) =
+    (overview, moduleCmd) =
       Overview.init context
   in
-    ( Model header overview
-    , Fx.batch
-        [ headerFx
-        , Fx.map UpdateOverview moduleFx
+    Model header overview
+      ! [ headerCmd
+        , Cmd.map UpdateOverview moduleCmd
         ]
-    )
 
 
 
 -- UPDATE
 
 
-type Action
-    = UpdateOverview Overview.Action
+type Msg
+    = UpdateOverview Overview.Msg
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
     UpdateOverview act ->
         let
           (newDocs, fx) =
             Overview.update act model.overview
         in
           ( { model | overview = newDocs }
-          , Fx.map UpdateOverview fx
+          , Cmd.map UpdateOverview fx
           )
 
 
@@ -93,10 +78,10 @@ update action model =
 -- VIEW
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
-  Header.view addr model.header
-    [ Overview.view (Signal.forwardTo addr UpdateOverview) model.overview
+view : Model -> Html Msg
+view model =
+  Header.view model.header
+    [ Html.map UpdateOverview (Overview.view model.overview)
     ]
 
 

@@ -1,0 +1,10 @@
+[
+    "elm-lang/animation-frame",
+    "elm-lang/core",
+    "elm-lang/geolocation",
+    "elm-lang/keyboard",
+    "elm-lang/mouse",
+    "elm-lang/page-visibility",
+    "elm-lang/websocket",
+    "elm-lang/window"
+]

@@ -1,7 +1,6 @@
-module Page.DocumentationFormat where
+module Page.DocumentationFormat exposing (..)
 
-import Effects as Fx
-import StartApp
+import Html.App as Html
 import Task
 
 import Component.Blog as Blog
@@ -11,23 +10,13 @@ import Component.Blog as Blog
 -- WIRES
 
 
-app =
-  StartApp.start
+main =
+  Html.program
     { init = Blog.init content
     , view = Blog.view
     , update = Blog.update
-    , inputs = []
+    , subscriptions = \_ -> Sub.none
     }
-
-
-main =
-  app.html
-
-
-port worker : Signal (Task.Task Fx.Never ())
-port worker =
-  app.tasks
-
 
 
 -- CONTENT
@@ -88,7 +77,7 @@ and writers do not need to argue about style.
 Here is the module documentation for [the `Maybe` library](/packages/elm-lang/core/latest/Maybe):
 
 ```elm
-module Maybe (Maybe(Just,Nothing), andThen, map, withDefault, oneOf) where
+module Maybe exposing (Maybe(Just,Nothing), andThen, map, withDefault, oneOf)
 
 {-| This library fills a bunch of important niches in Elm. A `Maybe` can help
 you with optional arguments, error handling, and records with optional fields.

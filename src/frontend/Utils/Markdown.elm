@@ -1,12 +1,12 @@
-module Utils.Markdown (block) where
+module Utils.Markdown exposing (block)
 
 import Html
 import Markdown
 
 
-block : String -> Html.Html
+block : String -> Html.Html msg
 block raw =
-  Markdown.toHtmlWith myOptions raw
+  Markdown.toHtmlWith myOptions [] raw
 
 
 myOptions =

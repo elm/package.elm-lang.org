@@ -1,6 +1,5 @@
-module Component.Blog where
+module Component.Blog exposing (..)
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
@@ -23,14 +22,14 @@ type alias Model =
 -- INIT
 
 
-init : String -> (Model, Effects a)
+init : String -> (Model, Cmd msg)
 init blog =
   let
-    (header, headerFx) =
+    (header, headerCmd) =
       Header.init Route.Help
   in
     ( Model header blog
-    , headerFx
+    , headerCmd
     )
 
 
@@ -38,18 +37,18 @@ init blog =
 -- UPDATE
 
 
-update : a -> Model -> (Model, Effects a)
-update action model =
-  (model, Fx.none)
+update : msg -> Model -> (Model, Cmd msg)
+update msg model =
+  (model, Cmd.none)
 
 
 
 -- VIEW
 
 
-view : Signal.Address a -> Model -> Html
-view addr model =
-  Header.view addr model.header
+view : Model -> Html msg
+view model =
+  Header.view model.header
     [ div [style [("width", "600px")]] [ Markdown.block model.blog ]
     ]
 

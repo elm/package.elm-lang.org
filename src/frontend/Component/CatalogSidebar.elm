@@ -1,6 +1,5 @@
-module Component.CatalogSidebar where
+module Component.CatalogSidebar exposing (..)
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -13,10 +12,10 @@ type alias Model = ()
 -- INIT
 
 
-init : (Model, Effects Action)
+init : (Model, Cmd Msg)
 init =
   ( ()
-  , Fx.none
+  , Cmd.none
   )
 
 
@@ -24,15 +23,15 @@ init =
 -- UPDATE
 
 
-type Action = Act
+type Msg = Act
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
     Act ->
       ( model
-      , Fx.none
+      , Cmd.none
       )
 
 
@@ -43,8 +42,8 @@ update action model =
 (=>) = (,)
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
+view : Model -> Html Msg
+view model =
   div [class "catalog-sidebar"]
     [ h2 [] [ text "Resources" ]
     , ul []
@@ -58,12 +57,12 @@ view addr model =
     , ul []
         [ pkgBlock "General" generalPackages
         , pkgBlock "Rendering" renderingPackages
-        , pkgBlock "Effects" effectsPackages
+        , pkgBlock "Effects" effectPackages
         ]
     ]
 
 
-pkgBlock : String -> List (String, String) -> Html
+pkgBlock : String -> List (String, String) -> Html msg
 pkgBlock title pkgs =
   li []
     [ text title
@@ -71,31 +70,31 @@ pkgBlock title pkgs =
     ]
 
 
-pkgBlockItem : (String, String) -> Html
-pkgBlockItem (user, project) =
+pkgBlockItem : (String, String) -> Html msg
+pkgBlockItem (project, niceName) =
   li []
-    [ a [ href ("/packages/" ++ user ++ "/" ++ project ++ "/latest") ] [ text project ]
+    [ a [ href ("/packages/" ++ project ++ "/latest") ] [ text niceName ]
     ]
 
 
 generalPackages : List (String, String)
 generalPackages =
-  [ "elm-lang" => "core"
+  [ "elm-lang/core" => "core"
   ]
 
 
 renderingPackages : List (String, String)
 renderingPackages =
-  [ "evancz" => "elm-html"
-  , "evancz" => "elm-svg"
-  , "evancz" => "elm-markdown"
-  , "elm-community" => "elm-webgl"
+  [ "elm-lang/html" => "html"
+  , "elm-lang/svg" => "svg"
+  , "evancz/elm-markdown" => "markdown"
   ]
 
 
-effectsPackages : List (String, String)
-effectsPackages =
-  [ "evancz" => "elm-http"
-  , "evancz" => "start-app"
-  , "evancz" => "elm-effects"
+effectPackages : List (String, String)
+effectPackages =
+  [ "evancz/elm-http" => "http"
+  , "elm-lang/geolocation" => "geolocation"
+  , "elm-lang/page-visibility" => "page-visibility"
+  , "elm-lang/websocket" => "websocket"
   ]

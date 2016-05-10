@@ -1,10 +1,9 @@
-module Page.PreviewDocumentation where
+module Page.PreviewDocumentation exposing (..) -- where
 
-import Effects as Fx exposing (Effects)
 import Html exposing (..)
+import Html.App as Html
 import Html.Attributes exposing (..)
 import Json.Decode as Json
-import StartApp
 import Task
 
 import Component.Header as Header
@@ -17,39 +16,13 @@ import Route
 -- WIRES
 
 
-app =
-  StartApp.start
+main =
+  Html.programWithFlags
     { init = init
     , view = view
     , update = update
-    , inputs = [ docsUploads ]
+    , subscriptions = \_ -> Sub.none
     }
-
-
-main =
-  app.html
-
-
-port worker : Signal (Task.Task Fx.Never ())
-port worker =
-  app.tasks
-
-
-port uploads : Signal String
-
-
-docsUploads : Signal Action
-docsUploads =
-  let
-    toDocs body =
-      case Json.decodeString Docs.decodePackage body of
-        Err _ ->
-          Preview.Fail (Just "Could not parse file contents as Elm docs.")
-
-        Ok dict ->
-          Preview.LoadDocs dict
-  in
-    Signal.map (UpdatePreview << toDocs) uploads
 
 
 
@@ -66,19 +39,19 @@ type alias Model =
 -- INIT
 
 
-init : (Model, Effects Action)
-init =
+init : String -> (Model, Cmd Msg)
+init uploads =
   let
-    (header, headerFx) =
+    (header, headerCmd) =
       Header.init Route.Help
 
-    (preview, previewFx) =
+    (preview, previewCmd) =
       Preview.init
   in
     ( Model header preview
-    , Fx.batch
-        [ headerFx
-        , Fx.map UpdatePreview previewFx
+    , Cmd.batch
+        [ headerCmd
+        , Cmd.map UpdatePreview previewCmd
         ]
     )
 
@@ -87,20 +60,20 @@ init =
 -- UPDATE
 
 
-type Action
-    = UpdatePreview Preview.Action
+type Msg
+    = UpdatePreview Preview.Msg
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
-  case action of
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
+  case msg of
     UpdatePreview act ->
         let
-          (newPreview, fx) =
+          (newPreview, cmd) =
             Preview.update act model.preview
         in
           ( { model | preview = newPreview }
-          , Fx.map UpdatePreview fx
+          , Cmd.map UpdatePreview cmd
           )
 
 
@@ -108,8 +81,8 @@ update action model =
 -- VIEW
 
 
-view : Signal.Address Action -> Model -> Html
-view addr model =
-  Header.view addr model.header
-    (Preview.view (Signal.forwardTo addr UpdatePreview) model.preview)
+view : Model -> Html Msg
+view model =
+  Html.map UpdatePreview
+    (Header.view model.header (Preview.view model.preview))
 
