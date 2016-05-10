@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module NewPackageList (newPackages16, addIfNew) where
+module NewPackageList (newPackages, addIfNew) where
 
 import qualified Data.Aeson as Json
 import qualified Data.Aeson.Encode.Pretty as Json
