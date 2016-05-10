@@ -77,7 +77,7 @@ and writers do not need to argue about style.
 Here is the module documentation for [the `Maybe` library](/packages/elm-lang/core/latest/Maybe):
 
 ```elm
-module Maybe (Maybe(Just,Nothing), andThen, map, withDefault, oneOf) where
+module Maybe exposing (Maybe(Just,Nothing), andThen, map, withDefault, oneOf)
 
 {-| This library fills a bunch of important niches in Elm. A `Maybe` can help
 you with optional arguments, error handling, and records with optional fields.
