@@ -335,7 +335,7 @@ allPackages =
 
             Just remoteTime ->
               do  localTime <- liftIO (getModificationTime allPackagesPath)
-                  return (remoteTime < localTime)
+                  return (remoteTime < localTime || allPackagesPath == PkgSummary.allPackages)
 
       if needsUpdate
         then serveFile allPackagesPath
