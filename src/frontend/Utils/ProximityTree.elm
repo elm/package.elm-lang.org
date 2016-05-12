@@ -5,9 +5,11 @@ module Utils.ProximityTree
     , map
     , lookup
     , nearest
+    , optimizeSpacing
     )
     where
 
+import Utils.ProximityTree.Optimizer as ProxOptimizer
 
 
 -- DEFINITION
@@ -74,7 +76,6 @@ fromListHelp list =
         Node (Entry fraction value) (fromListHelp left) (fromListHelp right)
 
 
-
 -- FLATTEN
 
 
@@ -90,6 +91,12 @@ toList tree =
 
 
 -- UTILITIES
+
+optimizeSpacing : (a -> Float) -> ProximityTree a -> ProximityTree a
+optimizeSpacing toDesiredSpacing tree =
+  toList tree
+    |> ProxOptimizer.layout toDesiredSpacing
+    |> fromListHelp
 
 
 map : (a -> b) -> ProximityTree a -> ProximityTree b

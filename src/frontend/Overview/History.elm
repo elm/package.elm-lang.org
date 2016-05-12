@@ -205,28 +205,37 @@ px n =
 
 major : List (String, String)
 major =
-  [ "background-color" => "#eeeeee"
-  , "border" => "4px solid #bbbbbb"
-  , "width" => "20px"
-  , "height" => "20px"
-  , "line-height" => "20px"
-  , "font-size" => "14px"
-  ]
+  let
+    size = Constants.dotSize Vsn.Major Constants.WithoutBorder
+  in
+    [ "background-color" => "#eeeeee"
+    , "border" => ((px Constants.dotBorderThickness) ++ " solid #bbbbbb")
+    , "width" => px size
+    , "height" => px size
+    , "line-height" => px size
+    , "font-size" => "14px"
+    ]
 
 
 minor : List (String, String)
 minor =
-  [ "background-color" => "#eeeeee"
-  , "border" => "4px solid #bbbbbb"
-  , "width" => "8px"
-  , "height" => "8px"
-  ]
+  let
+    size = Constants.dotSize Vsn.Minor Constants.WithoutBorder
+  in
+    [ "background-color" => "#eeeeee"
+    , "border" => ((px Constants.dotBorderThickness) ++ " solid #bbbbbb")
+    , "width" => px size
+    , "height" => px size
+    ]
 
 
 patch : List (String, String)
 patch =
-  [ "background-color" => "#bbbbbb"
-  , "width" => "10px"
-  , "height" => "10px"
-  ]
+  let
+    size = Constants.dotSize Vsn.Patch Constants.WithoutBorder
+  in
+    [ "background-color" => "#bbbbbb"
+    , "width" => px size
+    , "height" => px size
+    ]
 
