@@ -66,7 +66,7 @@ What concrete benefits are users gaining? Does that align with the concrete
 use case you have in mind for your library?
 
 Abstraction is a tool, not a design goal. Unless abstraction is
-making someones life easier, it is not a good idea. If you cannot
+making someone’s life easier, it is not a good idea. If you cannot
 *demonstrate* why your abstraction is helpful, there is a problem with your API.
 
 
