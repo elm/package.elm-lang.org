@@ -1,4 +1,4 @@
-module Page.PreviewDocumentation exposing (..) -- where
+port module Page.PreviewDocumentation exposing (..) -- where
 
 import Html exposing (..)
 import Html.App as Html
@@ -21,10 +21,23 @@ main =
     { init = init
     , view = view
     , update = update
-    , subscriptions = \_ -> Sub.none
+    , subscriptions = \_ -> docsUploads
     }
 
+port uploads : (String -> msg) -> Sub msg
 
+docsUploads : Sub Msg
+docsUploads =
+  let
+    toDocs body =
+      case Json.decodeString Docs.decodePackage body of
+        Err _ ->
+          Preview.Fail (Just "Could not parse file contents as Elm docs.")
+
+        Ok dict ->
+          Preview.LoadDocs dict
+  in
+    Sub.map UpdatePreview (uploads toDocs)
 
 -- MODEL
 
@@ -34,13 +47,15 @@ type alias Model =
     , preview : Preview.Model
     }
 
-
+type alias Flags =
+    { uploads : String
+    }
 
 -- INIT
 
 
-init : String -> (Model, Cmd Msg)
-init uploads =
+init : Flags -> (Model, Cmd Msg)
+init {uploads} =
   let
     (header, headerCmd) =
       Header.init Route.Help
