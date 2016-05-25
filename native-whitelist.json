@@ -8,6 +8,7 @@
     "elm-lang/dom",
     "elm-lang/geolocation",
     "elm-lang/lazy",
+    "elm-lang/navigation",
     "elm-lang/page-visibility",
     "elm-lang/virtual-dom",
     "elm-lang/websocket",
