@@ -4,6 +4,7 @@
     "elm-lang/geolocation",
     "elm-lang/keyboard",
     "elm-lang/mouse",
+    "elm-lang/navigation",
     "elm-lang/page-visibility",
     "elm-lang/websocket",
     "elm-lang/window"
