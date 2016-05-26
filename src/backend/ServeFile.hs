@@ -92,7 +92,9 @@ pkgPreview =
       \    };\n\
       \}\n\
       \\n\
-      \document.getElementById('fileLoader').addEventListener('change', handleFileSelect, false);\n"
+      \setTimeout(function() {\n\
+      \  document.getElementById('fileLoader').addEventListener('change', handleFileSelect, false);\n\
+      \}, 0)\n"
 
 
 
