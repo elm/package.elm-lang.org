@@ -1,4 +1,4 @@
-port module Page.PreviewDocumentation exposing (..) -- where
+port module Page.PreviewDocumentation exposing (..)
 
 import Html exposing (..)
 import Html.App as Html
@@ -13,31 +13,15 @@ import Route
 
 
 
--- WIRES
-
-
 main =
-  Html.programWithFlags
+  Html.program
     { init = init
     , view = view
     , update = update
-    , subscriptions = \_ -> docsUploads
+    , subscriptions = subscriptions
     }
 
-port uploads : (String -> msg) -> Sub msg
 
-docsUploads : Sub Msg
-docsUploads =
-  let
-    toDocs body =
-      case Json.decodeString Docs.decodePackage body of
-        Err _ ->
-          Preview.Fail (Just "Could not parse file contents as Elm docs.")
-
-        Ok dict ->
-          Preview.LoadDocs dict
-  in
-    Sub.map UpdatePreview (uploads toDocs)
 
 -- MODEL
 
@@ -47,15 +31,13 @@ type alias Model =
     , preview : Preview.Model
     }
 
-type alias Flags =
-    { uploads : String
-    }
+
 
 -- INIT
 
 
-init : Flags -> (Model, Cmd Msg)
-init {uploads} =
+init : (Model, Cmd Msg)
+init =
   let
     (header, headerCmd) =
       Header.init Route.Help
@@ -83,13 +65,35 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     UpdatePreview act ->
-        let
-          (newPreview, cmd) =
-            Preview.update act model.preview
-        in
-          ( { model | preview = newPreview }
-          , Cmd.map UpdatePreview cmd
-          )
+      let
+        (newPreview, cmd) =
+          Preview.update act model.preview
+      in
+        ( { model | preview = newPreview }
+        , Cmd.map UpdatePreview cmd
+        )
+
+
+
+-- SUBSCRIPTIONS
+
+
+port uploads : (String -> msg) -> Sub msg
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  uploads (UpdatePreview << toDocs)
+
+
+toDocs : String -> Preview.Msg
+toDocs body =
+  case Json.decodeString Docs.decodePackage body of
+    Err _ ->
+      Preview.Fail (Just "Could not parse file contents as Elm docs.")
+
+    Ok dict ->
+      Preview.LoadDocs dict
 
 
 
