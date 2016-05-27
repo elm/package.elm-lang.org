@@ -8,6 +8,10 @@ var jump = _elm_lang$core$Native_Scheduler.nativeBinding(function(callback)
 	{
 		var id = hash.slice(1);
 		var target = document.getElementById(id);
+		if (target === null)
+		{
+			window.location.hash = "";
+		}
 		if (typeof target.scrollIntoView === 'function')
 		{
 			target.scrollIntoView(true);
