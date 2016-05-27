@@ -184,7 +184,7 @@ To generate documentation for your package, run this command in the root of
 your package:
 
 ```bash
-elm make --docs=documentation.json
+elm-make --docs=documentation.json
 ```
 
 That will create a file called `documentation.json`. Give me that file.
