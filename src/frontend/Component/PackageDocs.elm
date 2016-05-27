@@ -4,6 +4,7 @@ import Dict
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
+import Process
 import Regex
 import Set
 import String
@@ -159,7 +160,8 @@ stringToType str =
 
 jumpToHash : Cmd Msg
 jumpToHash =
-  Task.perform (\_ -> Debug.crash "impossible") (always NoOp) Native.Jump.jump
+  Task.perform (\_ -> Debug.crash "impossible") (always NoOp) <|
+    Process.sleep 0 `Task.andThen` \_ -> Native.Jump.jump
 
 
 
