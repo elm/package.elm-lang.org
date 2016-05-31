@@ -145,7 +145,7 @@ gatherTagInfo topLevelNames entry =
 
 view : Model -> Html Msg
 view model =
-  div [class "pkg-nav"] <|
+  div [] <|
     case model of
       Loading ->
           [ p [] [text "Loading..."]
