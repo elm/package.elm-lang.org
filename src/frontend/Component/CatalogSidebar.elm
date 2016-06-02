@@ -95,6 +95,7 @@ effectPackages : List (String, String)
 effectPackages =
   [ "evancz/elm-http" => "http"
   , "elm-lang/geolocation" => "geolocation"
+  , "elm-lang/navigation" => "navigation"
   , "elm-lang/page-visibility" => "page-visibility"
   , "elm-lang/websocket" => "websocket"
   ]
