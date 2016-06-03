@@ -137,7 +137,7 @@ Instead, use a union type where the type is exported but the tags are not, known
 as an _opaque_ type. It's not hidden since you can see that it's there, but you
 can't see into it, hence it's opaque. To create such a type, you include it in
 the list of values that the module exports. So the first line of your file might
-be `module MyModule (myFunction, MyType) where`. In this example, `MyType` (if
+be `module MyModule exposing (myFunction, MyType)`. In this example, `MyType` (if
 it is a union type) will be opaque. Then `myFunction` can take or return the
 opaque type.
 
