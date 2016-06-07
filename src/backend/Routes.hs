@@ -345,6 +345,9 @@ allPackages =
 choosePath :: Maybe BS.ByteString -> FilePath
 choosePath rawVsn =
   case BS.unpack <$> rawVsn of
+    Just "0.17.1" ->
+        PkgSummary.allPackages
+
     Just "0.17" ->
         PkgSummary.allPackages
 
