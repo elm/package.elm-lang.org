@@ -6,6 +6,11 @@ import Docs.Package as Docs
 import Utils.Path exposing ((</>))
 
 
+type alias CatalogContext =
+  { query : Maybe String
+  }
+
+
 type alias OverviewContext =
   { user : String
   , project : String

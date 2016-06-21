@@ -4,10 +4,11 @@ module ServeFile (elm, pkgDocs, pkgOverview, pkgPreview) where
 import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Snap.Core (Snap, writeBuilder)
+import Snap.Core (Snap, writeBuilder, getParam)
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Blaze.Html5 as H
 import Text.Blaze.Html5.Attributes as A
+import qualified Data.ByteString.Char8 as BS
 import qualified Text.Blaze.Html.Renderer.Utf8 as Blaze
 
 import qualified Elm.Compiler.Module as Module
@@ -21,9 +22,12 @@ import qualified Path
 
 
 elm :: String -> [String] -> Snap ()
-elm title elmModuleName =
-  makeHtml title elmModuleName (return Nothing)
-
+elm title elmModuleName = do
+  maybeQuery <- getParam "q"
+  makeHtml title elmModuleName (return (Just (ctx maybeQuery)))
+  where
+    quotes str = '"' : BS.unpack str ++ "\""
+    ctx maybeQuery = makeContext [("query", maybe "null" quotes maybeQuery)]
 
 
 -- SPECIAL PAGES

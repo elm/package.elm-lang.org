@@ -5,6 +5,8 @@ import Html.Attributes exposing (autofocus, class, href, placeholder, style, val
 import Html.Events exposing (..)
 import Http
 import Json.Decode as Json
+import Maybe
+import Page.Context as Ctx
 import Set
 import String
 import Task
@@ -33,11 +35,8 @@ type Model
 -- INIT
 
 
-init : (Model, Cmd Msg)
-init =
-  ( Loading
-  , getPackageInfo
-  )
+init : Ctx.CatalogContext -> (Model, Cmd Msg)
+init context = (Loading, getPackageInfo context.query)
 
 
 
@@ -46,7 +45,7 @@ init =
 
 type Msg
     = Fail Http.Error
-    | Load (List Summary.Summary, List String)
+    | Load (List Summary.Summary, List String, Maybe String)
     | Query String
 
 
@@ -58,18 +57,18 @@ update msg model =
         , Cmd.none
         )
 
-    Load (allSummaries, updatedPkgs) ->
+    Load (allSummaries, updatedPkgs, initialQuery) ->
       let
         updatedSet =
           Set.fromList updatedPkgs
 
         (summaries, oldSummaries) =
-          List.partition (\{name} -> Set.member name updatedSet) allSummaries
+          List.partition (\ {name} -> Set.member name updatedSet) allSummaries
       in
         ( Success
             { summaries = summaries
             , oldSummaries = oldSummaries
-            , query = ""
+            , query = Maybe.withDefault "" initialQuery
             }
         , Cmd.none
         )
@@ -115,8 +114,8 @@ searchFor query summaries =
 -- EFFECTS
 
 
-getPackageInfo : Cmd Msg
-getPackageInfo =
+getPackageInfo : Maybe String -> Cmd Msg
+getPackageInfo maybeQuery =
   let
     getAll =
       Http.get Summary.decoder "/all-packages"
@@ -124,7 +123,8 @@ getPackageInfo =
     getNew =
       Http.get (Json.list Json.string) "/new-packages"
   in
-    Task.perform Fail Load (Task.map2 (,) getAll getNew)
+    Task.perform Fail Load (Task.map3 (\ a b c -> (a, b, c))
+                                      getAll getNew (Task.succeed maybeQuery))
 
 
 

@@ -8,6 +8,7 @@ import Task
 import Component.Catalog as Catalog
 import Component.CatalogSidebar as Sidebar
 import Component.Header as Header
+import Page.Context as Ctx
 import Route
 
 
@@ -16,7 +17,7 @@ import Route
 
 
 main =
-  Html.program
+  Html.programWithFlags
     { init = init
     , view = view
     , update = update
@@ -39,14 +40,14 @@ type alias Model =
 -- INIT
 
 
-init : (Model, Cmd Msg)
-init =
+init : Ctx.CatalogContext -> (Model, Cmd Msg)
+init context =
   let
     (header, headerCmd) =
       Header.init (Route.Packages Nothing)
 
     (catalog, catalogCmd) =
-      Catalog.init
+      Catalog.init context
 
     (sidebar, sidebarCmd) =
       Sidebar.init
