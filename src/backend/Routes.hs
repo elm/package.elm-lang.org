@@ -130,7 +130,7 @@ register =
       let directory = packageRoot name version
       liftIO (createDirectoryIfMissing True directory)
       uploadFiles directory
-      description <- Desc.read (directory </> Path.description)
+      description <- Desc.read id (directory </> Path.description)
 
       result <-
           liftIO $ runExceptT $ do
@@ -184,12 +184,17 @@ verifyVersion name version =
         _ ->
           return ()
 
-      publicVersions <- GitHub.getVersionTags name
-      case version `elem` publicVersions of
-        True -> return ()
-        False ->
-           httpStringError 400
-              ("The tag " ++ Pkg.versionToString version ++ " has not been pushed to GitHub.")
+      eitherPublicVersions <- liftIO $ GitHub.publicGetVersionTags name
+      case eitherPublicVersions of
+        Left msg ->
+          httpStringError 500 msg
+
+        Right publicVersions ->
+          if elem version publicVersions then
+            return ()
+          else
+            httpStringError 400 $
+              "The tag " ++ Pkg.versionToString version ++ " has not been pushed to GitHub."
 
 
 verifyWhitelist :: Bool -> Pkg.Name -> ExceptT String IO ()
