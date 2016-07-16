@@ -18,11 +18,6 @@ newPackages =
     "new-packages.json"
 
 
-newPackages16 :: String
-newPackages16 =
-    "new-packages-16.json"
-
-
 addIfNew :: Desc.Description -> IO ()
 addIfNew desc =
   case C.isSatisfied (Desc.elmVersion desc) Compiler.version of
