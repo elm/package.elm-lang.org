@@ -1,4 +1,4 @@
-@import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700,400italic,700italic|Source+Code+Pro);
+@import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700,400italic,700italic);
 
 html, head, body {
   margin: 0;
@@ -148,7 +148,7 @@ pre {
 
 .docs-annotation {
   white-space: pre;
-  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
   padding-top: 10px;
   padding-bottom: 10px;
 }
@@ -199,12 +199,12 @@ pre {
 }
 
 .pkg-nav-module {
-  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
   text-overflow: ellipsis;
 }
 
 .pkg-nav-value {
-  font-family: 'Source Code Pro', consolas, inconsolata, monospace;
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
   text-overflow: ellipsis;
 }
 
@@ -292,4 +292,31 @@ pre {
   list-style-type: none;
   margin: 0;
   padding-left: 20px;
+}
+
+
+
+/* CODE */
+
+
+code {
+  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+
+/* I heard using :not() is slow for reflows.
+Not really any of those on the website though AFAIK.
+*/
+:not(pre) > code {
+  padding: 0;
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(0,0,0,0.04);
+  border-radius: 3px;
+}
+
+:not(pre) > code::before, :not(pre) > code::after {
+  letter-spacing: -0.2em;
+  content: "\00a0";
 }
