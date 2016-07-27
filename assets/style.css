@@ -1,4 +1,4 @@
-@import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700,400italic,700italic);
+@import url(http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700,400italic,700italic|Source+Code+Pro);
 
 html, head, body {
   margin: 0;
@@ -148,7 +148,7 @@ pre {
 
 .docs-annotation {
   white-space: pre;
-  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-family: 'Source Code Pro', Consolas, "Liberation Mono", Menlo, Courier, monospace;
   padding-top: 10px;
   padding-bottom: 10px;
 }
@@ -199,12 +199,12 @@ pre {
 }
 
 .pkg-nav-module {
-  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-family: 'Source Code Pro', Consolas, "Liberation Mono", Menlo, Courier, monospace;
   text-overflow: ellipsis;
 }
 
 .pkg-nav-value {
-  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-family: 'Source Code Pro', Consolas, "Liberation Mono", Menlo, Courier, monospace;
   text-overflow: ellipsis;
 }
 
@@ -300,7 +300,7 @@ pre {
 
 
 code {
-  font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-family: 'Source Code Pro', Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }
 
 /* I heard using :not() is slow for reflows.
