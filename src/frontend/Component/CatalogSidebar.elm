@@ -58,6 +58,7 @@ view model =
         [ pkgBlock "General" generalPackages
         , pkgBlock "Rendering" renderingPackages
         , pkgBlock "Effects" effectPackages
+        , pkgBlock "User Input" inputPackages
         ]
     ]
 
@@ -98,4 +99,12 @@ effectPackages =
   , "elm-lang/navigation" => "navigation"
   , "elm-lang/page-visibility" => "page-visibility"
   , "elm-lang/websocket" => "websocket"
+  ]
+
+
+inputPackages : List (String, String)
+inputPackages =
+  [ "elm-lang/mouse" => "mouse"
+  , "elm-lang/window" => "window"
+  , "elm-lang/keyboard" => "keyboard"
   ]
