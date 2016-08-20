@@ -2,7 +2,8 @@ module Page.Context exposing (..)
 
 import Http
 import Task
-import Docs.Package as Docs
+import Docs.Package as Package
+import Docs.Description as Description
 import Utils.Path exposing ((</>))
 
 
@@ -27,9 +28,17 @@ getReadme context =
   Http.getString (pathTo context "README.md")
 
 
-getDocs : VersionContext -> Task.Task Http.Error Docs.Package
+getDocs : VersionContext -> Task.Task Http.Error Package.Package
 getDocs context =
-  Http.get Docs.decodePackage (pathTo context "documentation.json")
+  Http.get Package.decodePackage (pathTo context "documentation.json")
+
+
+getDescription : VersionContext -> Task.Task Http.Error Description.Description
+getDescription {user,project,version} =
+  let
+    path = "/description?name=" ++ user </> project ++ "&version=" ++ version
+  in
+    Http.get Description.decoder path
 
 
 pathTo : VersionContext -> String -> String

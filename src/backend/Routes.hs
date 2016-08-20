@@ -20,6 +20,7 @@ import System.FilePath
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Docs as Docs
 import qualified Elm.Package as Pkg
+import qualified Elm.Package.Constraint as Constraint
 import qualified Elm.Package.Description as Desc
 import qualified Elm.Package.Paths as Path
 import qualified GitHub
@@ -47,6 +48,7 @@ package =
         <|>
         route
           [ ("latest", redirectToLatest pkg)
+          , ("constraint/:constraint", redirectToConstraint pkg)
           , (":version", servePackageInfo pkg)
           ]
 
@@ -86,15 +88,34 @@ redirectToLatest name =
       case maybeVersions of
         Just versions@(_:_) ->
           do  let latestVersion = last (List.sort versions)
-              let url = "/packages/" ++ Pkg.toUrl name ++ "/" ++ Pkg.versionToString latestVersion ++ "/"
-              request <- getRequest
-              redirect (BS.append (BS.pack url) (rqPathInfo request))
+              redirectToPkgPage name latestVersion
 
         _ ->
-          httpStringError 404 $
-            "Could not find any versions of package " ++ Pkg.toString name
+          noPkgError name
 
 
+redirectToConstraint :: Pkg.Name -> Snap ()
+redirectToConstraint name =
+  do  maybeVersions <- liftIO $ PkgSummary.readVersionsOf name
+      rawConstraint <- getParameter "constraint" Right
+      case maybeVersions of
+        Just versions@(_:_) ->
+          case Constraint.fromString(rawConstraint) of
+            Just constraint ->
+              do  let validVersions =  List.sort (filter (Constraint.isSatisfied constraint) versions)
+                  if length validVersions > 0
+                    then do
+                      redirectToPkgPage name (last validVersions)
+                    else
+                      httpStringError 404 $
+                        "No packages satisfy the given constraint " ++ Pkg.toString name ++ " " ++ rawConstraint
+
+            Nothing ->
+              httpStringError 404 $
+                "Invalid constraint " ++ rawConstraint
+
+        _ ->
+          noPkgError name
 
 
 -- DIRECTORIES
@@ -395,6 +416,19 @@ fetch filePath =
 
 
 -- HELPERS
+
+
+noPkgError :: Pkg.Name -> Snap a
+noPkgError name =
+  httpStringError 404 $
+    "Could not find any versions of package " ++ Pkg.toString name
+
+
+redirectToPkgPage :: Pkg.Name -> Pkg.Version -> Snap a
+redirectToPkgPage name version =
+  do  let url = "/packages/" ++ Pkg.toUrl name ++ "/" ++ Pkg.versionToString version ++ "/"
+      request <- getRequest
+      redirect (BS.append (BS.pack url) (rqPathInfo request))
 
 
 getParameter :: BS.ByteString -> (String -> Either String a) -> Snap a
