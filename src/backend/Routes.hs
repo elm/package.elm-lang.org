@@ -46,16 +46,14 @@ package =
       ifTop (ServeFile.pkgOverview pkg)
         <|>
         route
-          [ ("latest", redirectToLatest pkg)
-          , (":version", servePackageInfo pkg)
+          [ ("latest", serveLatestInfo pkg)
+          , (":version", servePackageInfo pkg =<< getParameter "version" Pkg.versionFromString)
           ]
 
 
-servePackageInfo :: Pkg.Name -> Snap ()
-servePackageInfo name =
-  do  version <- getParameter "version" Pkg.versionFromString
-
-      let pkgDir = packageRoot name version
+servePackageInfo :: Pkg.Name -> Pkg.Version -> Snap ()
+servePackageInfo name version =
+  do  let pkgDir = packageRoot name version
       exists <- liftIO $ doesDirectoryExist pkgDir
       when (not exists) pass
 
@@ -80,20 +78,16 @@ serveModule name version =
             ServeFile.pkgDocs name version (Just moduleName)
 
 
-redirectToLatest :: Pkg.Name -> Snap ()
-redirectToLatest name =
+serveLatestInfo :: Pkg.Name -> Snap ()
+serveLatestInfo name =
   do  maybeVersions <- liftIO $ PkgSummary.readVersionsOf name
       case maybeVersions of
         Just versions@(_:_) ->
-          do  let latestVersion = last (List.sort versions)
-              let url = "/packages/" ++ Pkg.toUrl name ++ "/" ++ Pkg.versionToString latestVersion ++ "/"
-              request <- getRequest
-              redirect (BS.append (BS.pack url) (rqPathInfo request))
+          servePackageInfo name (last (List.sort versions))
 
         _ ->
           httpStringError 404 $
             "Could not find any versions of package " ++ Pkg.toString name
-
 
 
 
