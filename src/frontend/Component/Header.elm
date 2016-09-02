@@ -191,7 +191,7 @@ versionWarning model =
                 in
                   [ p [ class "version-warning" ]
                       [ text "Warning! The latest version of this package is "
-                      , a [ href ("/packages" </> user </> project </> maxVersion </> moduleName) ]
+                      , a [ href ("/packages" </> user </> project </> "latest" </> moduleName) ]
                           [ text maxVersion ]
                       ]
                   ]
