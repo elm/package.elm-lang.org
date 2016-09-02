@@ -96,8 +96,9 @@ renderingPackages =
 effectPackages : List (String, String)
 effectPackages =
   [ "evancz/elm-http" => "http"
-  , "elm-lang/geolocation" => "geolocation"
+  , "elm-lang/dom" => "dom"
   , "elm-lang/navigation" => "navigation"
+  , "elm-lang/geolocation" => "geolocation"
   , "elm-lang/page-visibility" => "page-visibility"
   , "elm-lang/websocket" => "websocket"
   ]
