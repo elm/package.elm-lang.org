@@ -98,35 +98,35 @@ fail =
 
 map : (a -> b) -> Parser a -> Parser b
 map func parser =
-  parser `andThen` \a ->
-    succeed (func a)
+  parser
+    |> andThen (\a -> succeed (func a))
 
 
 map2 : (a -> b -> c) -> Parser a -> Parser b -> Parser c
 map2 func parserA parserB =
-  parserA `andThen` \a ->
-  parserB `andThen` \b ->
-    succeed (func a b)
+  parserA
+    |> andThen (\a -> parserB
+    |> andThen (\b -> succeed (func a b)))
 
 
 map3 : (a -> b -> c -> d) -> Parser a -> Parser b -> Parser c -> Parser d
 map3 func parserA parserB parserC =
-  parserA `andThen` \a ->
-  parserB `andThen` \b ->
-  parserC `andThen` \c ->
-    succeed (func a b c)
+  parserA
+    |> andThen (\a -> parserB
+    |> andThen (\b -> parserC
+    |> andThen (\c -> succeed (func a b c))))
 
 
 map4 : (a -> b -> c -> d -> e) -> Parser a -> Parser b -> Parser c -> Parser d -> Parser e
 map4 func parserA parserB parserC parserD =
-  parserA `andThen` \a ->
-  parserB `andThen` \b ->
-  parserC `andThen` \c ->
-  parserD `andThen` \d ->
-    succeed (func a b c d)
+  parserA
+    |> andThen (\a -> parserB
+    |> andThen (\b -> parserC
+    |> andThen (\c -> parserD
+    |> andThen (\d -> succeed (func a b c d)))))
 
 
-andThen : Parser a -> (a -> Parser b) -> Parser b
+andThen : (a -> Parser b) -> Parser a -> Parser b
 andThen =
   Native.Parse.andThen
 
@@ -134,7 +134,8 @@ andThen =
 zeroOrMore : Parser a -> Parser (List a)
 zeroOrMore parser =
   oneOf
-    [ parser `andThen` \a -> map ((::) a) (zeroOrMore parser)
+    [ parser
+        |> andThen (\a -> map ((::) a) (zeroOrMore parser))
     , succeed []
     ]
 
@@ -146,7 +147,7 @@ oneOrMore parser =
 
 lazy : (() -> Parser a) -> Parser a
 lazy thunk =
-  succeed () `andThen` thunk
+  andThen thunk (succeed ())
 
 
 ignore1 : Parser x -> Parser a -> Parser a

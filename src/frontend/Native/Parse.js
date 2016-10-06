@@ -87,7 +87,7 @@ function oneOf(parserList)
 
 // AND THEN
 
-function andThen(parser, callback)
+function andThen(callback, parser)
 {
 	return function(input, index)
 	{

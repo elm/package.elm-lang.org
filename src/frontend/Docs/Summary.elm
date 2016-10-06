@@ -19,9 +19,9 @@ decoder =
 
 decodeSummary : Decoder Summary
 decodeSummary =
-  object3
+  map3
     Summary
-    ("name" := string)
-    ("summary" := string)
-    ("versions" := list Vsn.decoder)
+    (field "name" string)
+    (field "summary" string)
+    (field "versions" (list Vsn.decoder))
 

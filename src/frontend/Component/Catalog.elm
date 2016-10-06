@@ -45,20 +45,19 @@ init =
 
 
 type Msg
-    = Fail Http.Error
-    | Load (List Summary.Summary, List String)
+    = GetInfo (Result Http.Error (List Summary.Summary, List String))
     | Query String
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    Fail httpError ->
+    GetInfo (Err httpError) ->
         ( Failed httpError
         , Cmd.none
         )
 
-    Load (allSummaries, updatedPkgs) ->
+    GetInfo (Ok (allSummaries, updatedPkgs)) ->
       let
         updatedSet =
           Set.fromList updatedPkgs
@@ -119,12 +118,13 @@ getPackageInfo : Cmd Msg
 getPackageInfo =
   let
     getAll =
-      Http.get Summary.decoder "/all-packages"
+      Http.get "/all-packages" Summary.decoder
 
     getNew =
-      Http.get (Json.list Json.string) "/new-packages"
+      Http.get "/new-packages" (Json.list Json.string)
   in
-    Task.perform Fail Load (Task.map2 (,) getAll getNew)
+    Task.attempt GetInfo <|
+      Task.map2 (,) (Http.toTask getAll) (Http.toTask getNew)
 
 
 

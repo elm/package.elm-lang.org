@@ -1,7 +1,6 @@
 module Page.Catalog exposing (..)
 
 import Html exposing (..)
-import Html.App as Html
 import Html.Attributes exposing (..)
 import Task
 

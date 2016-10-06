@@ -26,7 +26,7 @@ import Utils.Markdown as Markdown
 
 type Model
     = Loading
-    | Failed Http.Error
+    | Failed String
     | Readme String
     | RawDocs (Info String)
     | ParsedDocs (Info Type.Type)
@@ -59,10 +59,9 @@ init context =
 
 
 type Msg
-    = LoadDocs String Docs.Package
+    = LoadDocs String (Result Http.Error Docs.Package)
     | LoadParsedDocs (List (Chunk Type.Type))
-    | LoadReadme String
-    | Fail Http.Error
+    | LoadReadme (Result Http.Error String)
     | NoOp
 
 
@@ -74,17 +73,22 @@ update msg model =
         , Cmd.none
         )
 
-    Fail httpError ->
-        ( Failed httpError
+    LoadReadme (Err _) ->
+        ( Failed "The README did not load."
         , Cmd.none
         )
 
-    LoadReadme readme ->
+    LoadReadme (Ok readme) ->
         ( Readme readme
         , Cmd.none
         )
 
-    LoadDocs moduleName docs ->
+    LoadDocs _ (Err _) ->
+        ( Failed "The documentation did not load."
+        , Cmd.none
+        )
+
+    LoadDocs moduleName (Ok docs) ->
         case Dict.get moduleName docs of
           Just moduleDocs ->
               let
@@ -96,7 +100,7 @@ update msg model =
                 )
 
           Nothing ->
-              ( Failed (Http.UnexpectedPayload ("Could not find module '" ++ moduleName ++ "'"))
+              ( Failed ("Could not find module '" ++ moduleName ++ "'")
               , Cmd.none
               )
 
@@ -108,7 +112,7 @@ update msg model =
               )
 
           _ ->
-              ( Failed (Http.UnexpectedPayload ("Something went wrong parsing types."))
+              ( Failed "Something went wrong parsing types."
               , Cmd.none
               )
 
@@ -126,15 +130,15 @@ getContext : Ctx.VersionContext -> Cmd Msg
 getContext context =
   case context.moduleName of
     Nothing ->
-      Task.perform Fail LoadReadme (Ctx.getReadme context)
+      Http.send LoadReadme (Ctx.getReadme context)
 
     Just name ->
-      Task.perform Fail (LoadDocs name) (Ctx.getDocs context)
+      Http.send (LoadDocs name) (Ctx.getDocs context)
 
 
 delayedTypeParse : List (Chunk String) -> Cmd Msg
 delayedTypeParse chunks =
-  Task.perform (\_ -> Debug.crash "impossible") LoadParsedDocs <|
+  Task.perform LoadParsedDocs <|
     Task.succeed (List.map (chunkMap stringToType) chunks)
 
 
@@ -160,8 +164,10 @@ stringToType str =
 
 jumpToHash : Cmd Msg
 jumpToHash =
-  Task.perform (\_ -> Debug.crash "impossible") (always NoOp) <|
-    Process.sleep 0 `Task.andThen` \_ -> Native.Jump.jump
+  Task.perform (always NoOp) (
+    Process.sleep 0
+      |> Task.andThen (\_ -> Native.Jump.jump)
+  )
 
 
 

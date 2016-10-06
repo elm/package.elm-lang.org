@@ -1,7 +1,6 @@
 port module Page.PreviewDocumentation exposing (..)
 
 import Html exposing (..)
-import Html.App as Html
 import Html.Attributes exposing (..)
 import Json.Decode as Json
 import Task

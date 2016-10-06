@@ -50,8 +50,7 @@ init context =
 
 
 type Msg
-    = Fail Http.Error
-    | Load Ctx.VersionContext SearchDict
+    = LoadDocs Ctx.VersionContext (Result Http.Error SearchDict)
     | Query String
 
 
@@ -70,12 +69,12 @@ update msg model =
           Failed err ->
               model
 
-    Fail httpError ->
+    LoadDocs _ (Err httpError) ->
         ( Failed httpError
         , Cmd.none
         )
 
-    Load context searchDict ->
+    LoadDocs context (Ok searchDict) ->
         ( Success
             { context = context
             , searchDict = searchDict
@@ -91,7 +90,7 @@ update msg model =
 
 loadDocs : Ctx.VersionContext -> Cmd Msg
 loadDocs context =
-  Task.perform Fail (Load context << toSearchDict) (Ctx.getDocs context)
+  Http.send (LoadDocs context << Result.map toSearchDict) (Ctx.getDocs context)
 
 
 toSearchDict : Docs.Package -> SearchDict

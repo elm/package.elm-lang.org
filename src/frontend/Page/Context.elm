@@ -1,7 +1,6 @@
 module Page.Context exposing (..)
 
 import Http
-import Task
 import Docs.Package as Docs
 import Utils.Path exposing ((</>))
 
@@ -22,14 +21,14 @@ type alias VersionContext =
     }
 
 
-getReadme : VersionContext -> Task.Task Http.Error String
+getReadme : VersionContext -> Http.Request String
 getReadme context =
   Http.getString (pathTo context "README.md")
 
 
-getDocs : VersionContext -> Task.Task Http.Error Docs.Package
+getDocs : VersionContext -> Http.Request Docs.Package
 getDocs context =
-  Http.get Docs.decodePackage (pathTo context "documentation.json")
+  Http.get (pathTo context "documentation.json") Docs.decodePackage
 
 
 pathTo : VersionContext -> String -> String

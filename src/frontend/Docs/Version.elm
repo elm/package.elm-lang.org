@@ -11,7 +11,7 @@ module Docs.Version exposing
   )
 
 import Dict
-import Json.Decode as Json exposing (..)
+import Json.Decode as Decode exposing (Decoder)
 import String
 
 
@@ -24,7 +24,18 @@ type alias Version = (Int, Int, Int)
 
 decoder : Decoder Version
 decoder =
-  customDecoder string fromString
+  Decode.string
+    |> Decode.andThen (fromString >> resultToDecoder)
+
+
+resultToDecoder : Result String a -> Decoder a
+resultToDecoder result =
+  case result of
+    Ok a ->
+      Decode.succeed a
+
+    Err err ->
+      Decode.fail err
 
 
 fromString : String -> Result String Version

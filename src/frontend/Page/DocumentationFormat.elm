@@ -1,7 +1,6 @@
 module Page.DocumentationFormat exposing (..)
 
-import Html.App as Html
-import Task
+import Html
 
 import Component.Blog as Blog
 

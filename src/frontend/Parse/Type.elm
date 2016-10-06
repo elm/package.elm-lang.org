@@ -62,11 +62,15 @@ name =
 
 nameHelp : List String -> Parser Name.Canonical
 nameHelp seen =
-  elmVarWith upper `andThen` \str ->
-    oneOf
-      [ ignore1 (char '.') (nameHelp (str :: seen))
-      , succeed (Name.Canonical (String.join "." (List.reverse seen)) str)
-      ]
+  let
+    tryMore str =
+      oneOf
+        [ ignore1 (char '.') (nameHelp (str :: seen))
+        , succeed (Name.Canonical (String.join "." (List.reverse seen)) str)
+        ]
+  in
+    elmVarWith upper
+      |> andThen tryMore
 
 
 apply : Parser Type
@@ -92,7 +96,8 @@ record =
       (ignore1 (char '{') spaces)
       (
         oneOf
-          [ elmVarWith lower `andThen` recordHelp
+          [ elmVarWith lower
+              |> andThen recordHelp
           , succeed (Record [] Nothing)
           ]
       )
