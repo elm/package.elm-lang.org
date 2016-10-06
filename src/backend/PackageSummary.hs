@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module PackageSummary
   ( Summary(..)
-  , allPackages, allPackages16, allPackages15
+  , allPackages, allPackages17, allPackages16, allPackages15
   , add
   , readVersionsOf
   )
