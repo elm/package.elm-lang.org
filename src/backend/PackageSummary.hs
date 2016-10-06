@@ -32,6 +32,11 @@ allPackages =
     "all-packages.json"
 
 
+allPackages17 :: String
+allPackages17 =
+    "all-packages-17.json"
+
+
 allPackages16 :: String
 allPackages16 =
     "all-packages-16.json"
