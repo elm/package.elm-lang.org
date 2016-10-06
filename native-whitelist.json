@@ -1,6 +1,5 @@
 [
     "coreytrampe/elm-vendor",
-    "elm-community/elm-history",
     "elm-community/elm-linear-algebra",
     "elm-community/elm-webgl",
     "elm-lang/animation-frame",
