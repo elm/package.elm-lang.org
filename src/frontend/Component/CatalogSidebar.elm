@@ -82,6 +82,7 @@ pkgBlockItem (project, niceName) =
 generalPackages : List (String, String)
 generalPackages =
   [ "elm-lang/core" => "core"
+  , "elm-lang/http" => "http"
   ]
 
 
@@ -95,8 +96,7 @@ renderingPackages =
 
 effectPackages : List (String, String)
 effectPackages =
-  [ "evancz/elm-http" => "http"
-  , "elm-lang/dom" => "dom"
+  [ "elm-lang/dom" => "dom"
   , "elm-lang/navigation" => "navigation"
   , "elm-lang/geolocation" => "geolocation"
   , "elm-lang/page-visibility" => "page-visibility"
