@@ -171,6 +171,7 @@ pre {
   padding: 20px;
   margin: 20px 20px 20px 40px;
   border-left: 1px solid #eeeeee;
+  position: fixed;
 }
 
 .pkg-nav h2 {
