@@ -236,9 +236,10 @@ uploadFiles directory =
     handleFileUploads "/tmp" defaultUploadPolicy perPartPolicy (handleParts directory)
   where
     perPartPolicy info =
-      if Map.member (partFieldName info) filesForUpload
-          then allowWithMaximumSize $ 2^(19::Int)
-          else disallow
+      if Map.member (partFieldName info) filesForUpload then
+        allowWithMaximumSize $ 2^(19::Int)
+      else
+        disallow
 
 
 filesForUpload :: Map.Map BS.ByteString FilePath
@@ -369,7 +370,8 @@ choosePath rawVsn =
 
 documentation :: Snap ()
 documentation =
-  fetch documentationPath
+  do  modifyResponse $ addHeader "Access-Control-Allow-Origin" "http://elm-lang.org"
+      fetch documentationPath
 
 
 description :: Snap ()
