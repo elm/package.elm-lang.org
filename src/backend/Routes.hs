@@ -58,7 +58,13 @@ servePackageInfo name version =
 
       ifTop (ServeFile.pkgDocs name version Nothing)
         <|> serveModule name version
-        <|> serveDirectory pkgDir
+        <|> serveAssets pkgDir
+
+
+serveAssets :: FilePath -> Snap ()
+serveAssets pkgDir =
+  do  modifyResponse $ addHeader "Access-Control-Allow-Origin" "http://elm-lang.org"
+      serveDirectory pkgDir
 
 
 serveModule :: Pkg.Name -> Pkg.Version -> Snap ()
