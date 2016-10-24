@@ -370,8 +370,7 @@ choosePath rawVsn =
 
 documentation :: Snap ()
 documentation =
-  do  modifyResponse $ addHeader "Access-Control-Allow-Origin" "http://elm-lang.org"
-      fetch documentationPath
+  fetch documentationPath
 
 
 description :: Snap ()
