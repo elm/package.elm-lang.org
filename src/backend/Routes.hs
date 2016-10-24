@@ -34,7 +34,6 @@ packages :: Snap ()
 packages =
     ifTop (redirect' "/" 301)
     <|> route [ (":user/:name", package) ]
-    <|> serveDirectory "packages"
 
 
 package :: Snap ()
@@ -59,6 +58,7 @@ servePackageInfo name version =
 
       ifTop (ServeFile.pkgDocs name version Nothing)
         <|> serveModule name version
+        <|> serveDirectory pkgDir
 
 
 serveModule :: Pkg.Name -> Pkg.Version -> Snap ()
