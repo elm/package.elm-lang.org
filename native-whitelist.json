@@ -20,5 +20,6 @@
     "NoRedInk/elm-rails",
     "seliopou/elm-d3",
     "thebritican/elm-autocomplete",
-    "ThomasWeiser/elmfire"
+    "ThomasWeiser/elmfire",
+    "Skinney/elm-array-exploration"
 ]
