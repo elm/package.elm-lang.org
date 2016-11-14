@@ -3,7 +3,7 @@ module PackageSummary
   ( Summary(..)
   , allPackages, allPackages17, allPackages16, allPackages15
   , add
-  , readVersionsOf, readOldVersionsOf
+  , readVersionsOf
   )
   where
 
@@ -105,14 +105,6 @@ readAllSummaries allPackagesPath =
 readVersionsOf :: Pkg.Name -> IO (Maybe [Pkg.Version])
 readVersionsOf packageName =
   do  summaries <- readAllSummaries allPackages
-      let maybeSummary =
-              List.find (\summary -> packageName == name summary) summaries
-      return (fmap versions maybeSummary)
-
-
-readOldVersionsOf :: Pkg.Name -> IO (Maybe [Pkg.Version])
-readOldVersionsOf packageName =
-  do  summaries <- readAllSummaries allPackages17
       let maybeSummary =
               List.find (\summary -> packageName == name summary) summaries
       return (fmap versions maybeSummary)

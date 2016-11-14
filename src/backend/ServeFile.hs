@@ -76,7 +76,7 @@ makeContext entries =
 
 getAllVersions :: Pkg.Name -> Snap [String]
 getAllVersions pkg =
-  do  maybeVersions <- liftIO (PkgSummary.readOldVersionsOf pkg)
+  do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
       return $ maybe [] (List.map Pkg.versionToString) maybeVersions
 
 

@@ -86,7 +86,7 @@ serveModule name version =
 
 serveLatestInfo :: Pkg.Name -> Snap ()
 serveLatestInfo name =
-  do  maybeVersions <- liftIO $ PkgSummary.readOldVersionsOf name
+  do  maybeVersions <- liftIO $ PkgSummary.readVersionsOf name
       case maybeVersions of
         Just versions@(_:_) ->
           servePackageInfo name (last (List.sort versions))
