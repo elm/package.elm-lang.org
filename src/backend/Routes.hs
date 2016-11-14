@@ -367,7 +367,7 @@ choosePath rawVsn =
         PkgSummary.allPackages15
 
     Nothing ->
-        PkgSummary.allPackages17
+        PkgSummary.allPackages
 
 
 
