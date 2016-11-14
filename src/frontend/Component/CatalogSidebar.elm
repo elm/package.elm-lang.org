@@ -82,7 +82,7 @@ pkgBlockItem (project, niceName) =
 generalPackages : List (String, String)
 generalPackages =
   [ "elm-lang/core" => "core"
-  , "elm-lang/http" => "http"
+  , "evancz/elm-http" => "http"
   ]
 
 
