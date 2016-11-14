@@ -15,6 +15,11 @@ import qualified Elm.Package.Description as Desc
 
 newPackages :: String
 newPackages =
+    "new-packages-17.json"
+
+
+privateNewPackages :: String
+privateNewPackages =
     "new-packages.json"
 
 
@@ -26,17 +31,17 @@ addIfNew desc =
 
     True ->
         do  let name = Desc.name desc
-            exists <- Dir.doesFileExist newPackages
+            exists <- Dir.doesFileExist privateNewPackages
             case exists of
               False ->
-                  LBS.writeFile newPackages (Json.encodePretty [name])
+                  LBS.writeFile privateNewPackages (Json.encodePretty [name])
 
               True ->
-                withBinaryFile newPackages ReadMode $ \handle ->
+                withBinaryFile privateNewPackages ReadMode $ \handle ->
                     do  json <- LBS.hGetContents handle
                         case Json.decode json of
                           Nothing ->
                               error "new-package.json is corrupted! do not modify them manually."
 
                           Just names ->
-                              LBS.writeFile newPackages (Json.encodePretty (Set.insert name names))
+                              LBS.writeFile privateNewPackages (Json.encodePretty (Set.insert name names))

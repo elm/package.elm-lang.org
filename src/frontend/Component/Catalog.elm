@@ -246,5 +246,5 @@ oldMessage =
         , "background-color" => "#eeeeee"
         ]
     ]
-    [ text "The following packages have not been updated for 0.18 yet!"
+    [ text "The following packages have not been updated for 0.17 yet!"
     ]
