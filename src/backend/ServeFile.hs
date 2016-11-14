@@ -3,6 +3,8 @@ module ServeFile (elm, pkgDocs, pkgOverview, pkgPreview) where
 
 import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
+import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
 import System.IO.Unsafe (unsafePerformIO)
@@ -22,11 +24,11 @@ import qualified Path
 
 elm :: String -> [String] -> Snap ()
 elm title elmModuleName =
-  makeHtml title elmModuleName (return Nothing)
+  makeHtml title elmModuleName Nothing (return Nothing)
 
 
 
--- SPECIAL PAGES
+-- DOCUMENTATION FOR A PARTICULAR VERSION
 
 
 pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
@@ -40,8 +42,11 @@ pkgDocs pkg@(Pkg.Name user project) version maybeName =
 
     title =
       maybe "" (++" - ") maybeStringName ++ project ++ " " ++ versionString
+
+    maybeLink =
+      Just (canonicalLink pkg maybeName)
   in
-    makeHtml title ["Page","Package"] $
+    makeHtml title ["Page","Package"] maybeLink $
       do  allVersions <- getAllVersions pkg
           return $ Just $ makeContext $
             [ ("user", show user)
@@ -52,9 +57,49 @@ pkgDocs pkg@(Pkg.Name user project) version maybeName =
             ]
 
 
+canonicalLink :: Pkg.Name -> Maybe Module.Raw -> H.Html
+canonicalLink pkg maybeName =
+  let
+    (Pkg.Name user project) =
+      Map.findWithDefault pkg pkg renames
+
+    ending =
+      maybe "" (\name -> "/" ++ Module.nameToString name) maybeName
+
+    url =
+      "/packages/" ++ user ++ "/" ++ project ++ "/latest" ++ ending
+  in
+    link ! rel "canonical" ! href (toValue url)
+
+
+renames :: Map.Map Pkg.Name Pkg.Name
+renames =
+  Map.fromList
+    [ Pkg.Name "evancz" "elm-http" ==> Pkg.Name "elm-lang" "http"
+    , Pkg.Name "evancz" "elm-html" ==> Pkg.Name "elm-lang" "html"
+    , Pkg.Name "evancz" "elm-svg" ==> Pkg.Name "elm-lang" "svg"
+    , Pkg.Name "evancz" "virtual-dom" ==> Pkg.Name "elm-lang" "virtual-dom"
+    , Pkg.Name "evancz" "start-app" ==> Pkg.Name "elm-lang" "html"
+    , Pkg.Name "evancz" "elm-effects" ==> Pkg.Name "elm-lang" "core"
+    , Pkg.Name "elm-community" "elm-list-extra" ==> Pkg.Name "elm-community" "list-extra"
+    , Pkg.Name "elm-community" "elm-linear-algebra" ==> Pkg.Name "elm-community" "linear-algebra"
+    , Pkg.Name "elm-community" "elm-lazy-list" ==> Pkg.Name "elm-community" "lazy-list"
+    , Pkg.Name "elm-community" "elm-json-extra" ==> Pkg.Name "elm-community" "json-extra"
+    ]
+
+
+(==>) :: a -> b -> (a, b)
+(==>) =
+  (,)
+
+
+
+-- SHOW ALL THE DIFFERENT VERSIONS OF A PACKAGE
+
+
 pkgOverview :: Pkg.Name -> Snap ()
 pkgOverview pkg@(Pkg.Name user project) =
-  makeHtml (user ++ "/" ++ project) ["Page","PackageOverview"] $
+  makeHtml (user ++ "/" ++ project) ["Page","PackageOverview"] Nothing $
     do  allVersions <- getAllVersions pkg
         return $ Just $ makeContext $
           [ ("user", show user)
@@ -80,9 +125,13 @@ getAllVersions pkg =
       return $ maybe [] (List.map Pkg.versionToString) maybeVersions
 
 
+
+-- PREVIEW DOCUMENTATION
+
+
 pkgPreview :: Snap ()
 pkgPreview =
-  makeHtml "Preview your Docs" ["Page","PreviewDocumentation"] $
+  makeHtml "Preview your Docs" ["Page","PreviewDocumentation"] Nothing $
     return $ Just $ (,) "" $
       "function handleFileSelect(evt) {\n\
       \    var reader = new FileReader();\n\
@@ -101,8 +150,8 @@ pkgPreview =
 -- SKELETON
 
 
-makeHtml :: String -> [String] -> Snap (Maybe (String, String)) -> Snap ()
-makeHtml title elmModule makePorts =
+makeHtml :: String -> [String] -> Maybe H.Html -> Snap (Maybe (String, String)) -> Snap ()
+makeHtml title elmModule maybeLink makePorts =
   do  maybePorts <- makePorts
       writeBuilder $ Blaze.renderHtmlBuilder $ docTypeHtml $ do
         H.head $ do
@@ -110,6 +159,7 @@ makeHtml title elmModule makePorts =
           favicon
           H.title (toHtml title)
           googleAnalytics
+          Maybe.fromMaybe (return ()) maybeLink
           link ! rel "stylesheet" ! href (cacheBuster "/assets/highlight/styles/default.css")
           link ! rel "stylesheet" ! href (cacheBuster "/assets/style.css")
           script ! src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
