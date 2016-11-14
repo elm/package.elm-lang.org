@@ -18,5 +18,6 @@
     "laszlopandy/elm-console",
     "NoRedInk/elm-rails",
     "seliopou/elm-d3",
-    "ThomasWeiser/elmfire"
+    "ThomasWeiser/elmfire",
+    "Skinney/elm-array-exploration"
 ]
