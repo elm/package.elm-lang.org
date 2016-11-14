@@ -2,6 +2,7 @@
     "coreytrampe/elm-vendor",
     "elm-community/elm-linear-algebra",
     "elm-community/elm-webgl",
+    "elm-community/linear-algebra",
     "elm-lang/animation-frame",
     "elm-lang/core",
     "elm-lang/dom",
