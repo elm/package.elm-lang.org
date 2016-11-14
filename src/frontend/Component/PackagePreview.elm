@@ -167,7 +167,7 @@ instructions md =
     ]
     [ Markdown.block md
     , input
-        [ type' "file"
+        [ type_ "file"
         , id "fileLoader"
         , style [ "margin-left" => "1em" ]
         ]
