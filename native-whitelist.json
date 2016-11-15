@@ -3,6 +3,7 @@
     "elm-community/elm-linear-algebra",
     "elm-community/elm-webgl",
     "elm-community/linear-algebra",
+    "elm-community/webgl",
     "elm-lang/animation-frame",
     "elm-lang/core",
     "elm-lang/dom",
