@@ -68,7 +68,7 @@ center color kids =
 headerLinks model =
   h1 [ class "header" ] <|
     a [href "/", style ["text-decoration" => "none"]] [logo]
-    :: unrollRoute model.route
+    :: [ span [ style ["padding-left" => "20px", "margin-left" => "-20px"]] (unrollRoute model.route) ]
 
 
 -- helpers
