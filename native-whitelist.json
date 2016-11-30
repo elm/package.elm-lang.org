@@ -15,6 +15,7 @@
     "elm-lang/virtual-dom",
     "elm-lang/websocket",
     "elm-lang/window",
+    "eeue56/elm-html-test",
     "evancz/elm-graphics",
     "evancz/elm-markdown",
     "laszlopandy/elm-console",
