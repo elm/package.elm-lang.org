@@ -185,17 +185,17 @@ infix operators are typically a bad idea.
   * They usually offer no insight into what they actually do. To the uninitiated,
     things like `(<*>)` and `(!?)` are meaningless.
 
-Now lets assume you have a really great infix operator, an operator that actually
+Now let's assume you have a really great infix operator, an operator that actually
 represents its meaning in a very direct way, like `(<~)`. In this case, it is still
 recommended that you do not add the infix operator.
 
-Okay, but lets say you want to do it anyway. One way to do it is to provide a
+Okay, but let's say you want to do it anyway. One way to do it is to provide a
 recommended set of infix operators at the end of your library documentation.
 Experienced users can go see if they like them and define them if they really want.
 That way the API can be nice and human readable *and* encourage its users to write code
 that is nice and human readable.
 
-Okay, but lets say you just don't care about recommendations and you have a great
+Okay, but let's say you just don't care about recommendations and you have a great
 infix operator. Add them in a separate module. When someone sees an infix operator
 they are unfamiliar with, they can scan the imports for a `Whatever.Infix` module
 and limit the scope of their annoying search for your dumb operator.
