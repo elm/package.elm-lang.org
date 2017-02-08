@@ -2,7 +2,7 @@
     "version": "1.0.0",
     "summary": "website for browsing packages and exploring documentation",
     "repository": "https://github.com/elm-lang/pkgs.git",
-    "license": "BSD3",
+    "license": "BSD-3-Clause",
     "source-directories": [
         "src/frontend"
     ],
@@ -12,6 +12,7 @@
         "elm-lang/core": "5.0.0 <= v < 6.0.0",
         "elm-lang/html": "2.0.0 <= v < 3.0.0",
         "elm-lang/http": "1.0.0 <= v < 2.0.0",
+        "elm-tools/documentation": "1.0.0 <= v < 2.0.0",
         "evancz/elm-markdown": "3.0.0 <= v < 4.0.0"
     },
     "elm-version": "0.18.0 <= v < 0.19.0"
