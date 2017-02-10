@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module ServeFile (elm, pkgDocs, pkgOverview, pkgPreview) where
 
@@ -5,6 +6,7 @@ import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
+import qualified Data.Text as Text
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
 import System.IO.Unsafe (unsafePerformIO)
@@ -14,15 +16,16 @@ import qualified Text.Blaze.Html.Renderer.Utf8 as Blaze
 
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
+
+import qualified Artifacts
 import qualified PackageSummary as PkgSummary
-import qualified Path
 
 
 
 -- TYPICAL PAGES / NO PORTS
 
 
-elm :: String -> [String] -> Snap ()
+elm :: String -> Module.Raw -> Snap ()
 elm title elmModuleName =
   makeHtml title elmModuleName Nothing (return Nothing)
 
@@ -41,33 +44,34 @@ pkgDocs pkg@(Pkg.Name user project) version maybeName =
       fmap Module.nameToString maybeName
 
     title =
-      maybe "" (++" - ") maybeStringName ++ project ++ " " ++ versionString
+      maybe "" (++" - ") maybeStringName
+      ++ Text.unpack project ++ " " ++ versionString
 
     maybeLink =
       Just (canonicalLink pkg maybeName)
   in
-    makeHtml title ["Page","Package"] maybeLink $
+    makeHtml title "Page.Package" maybeLink $
       do  allVersions <- getAllVersions pkg
           return $ Just $ makeContext $
-            [ ("user", show user)
-            , ("project", show project)
-            , ("version", show versionString)
-            , ("allVersions", show allVersions)
-            , ("moduleName", maybe "null" show maybeStringName)
+            [ "user" ==> show user
+            , "project" ==> show project
+            , "version" ==> show versionString
+            , "allVersions" ==> show allVersions
+            , "moduleName" ==> maybe "null" show maybeStringName
             ]
 
 
 canonicalLink :: Pkg.Name -> Maybe Module.Raw -> H.Html
 canonicalLink pkg maybeName =
   let
-    (Pkg.Name user project) =
+    canonicalPackage =
       Map.findWithDefault pkg pkg renames
 
     ending =
       maybe "" (\name -> "/" ++ Module.nameToString name) maybeName
 
     url =
-      "/packages/" ++ user ++ "/" ++ project ++ "/latest" ++ ending
+      "/packages/" ++ Pkg.toUrl canonicalPackage ++ "/latest" ++ ending
   in
     link ! rel "canonical" ! href (toValue url)
 
@@ -97,15 +101,14 @@ renames =
 -- SHOW ALL THE DIFFERENT VERSIONS OF A PACKAGE
 
 
-pkgOverview :: Pkg.Name -> Snap ()
-pkgOverview pkg@(Pkg.Name user project) =
-  makeHtml (user ++ "/" ++ project) ["Page","PackageOverview"] Nothing $
-    do  allVersions <- getAllVersions pkg
-        return $ Just $ makeContext $
-          [ ("user", show user)
-          , ("project", show project)
-          , ("versions", show allVersions)
-          ]
+pkgOverview :: Pkg.Name -> [Pkg.Version] -> Snap ()
+pkgOverview pkg@(Pkg.Name user project) allVersions =
+  makeHtml (Pkg.toString pkg) "Page.PackageOverview" Nothing $
+    return $ Just $ makeContext $
+      [ "user" ==> show user
+      , "project" ==> show project
+      , "versions" ==> show (List.map Pkg.versionToString allVersions)
+      ]
 
 
 makeContext :: [(String, String)] -> (String, String)
@@ -131,7 +134,7 @@ getAllVersions pkg =
 
 pkgPreview :: Snap ()
 pkgPreview =
-  makeHtml "Preview your Docs" ["Page","PreviewDocumentation"] Nothing $
+  makeHtml "Preview your Docs" "Page.PreviewDocumentation" Nothing $
     return $ Just $ (,) "" $
       "function handleFileSelect(evt) {\n\
       \    var reader = new FileReader();\n\
@@ -150,7 +153,7 @@ pkgPreview =
 -- SKELETON
 
 
-makeHtml :: String -> [String] -> Maybe H.Html -> Snap (Maybe (String, String)) -> Snap ()
+makeHtml :: String -> Module.Raw -> Maybe H.Html -> Snap (Maybe (String, String)) -> Snap ()
 makeHtml title elmModule maybeLink makePorts =
   do  maybePorts <- makePorts
       writeBuilder $ Blaze.renderHtmlBuilder $ docTypeHtml $ do
@@ -163,7 +166,7 @@ makeHtml title elmModule maybeLink makePorts =
           link ! rel "stylesheet" ! href (cacheBuster "/assets/highlight/styles/default.css")
           link ! rel "stylesheet" ! href (cacheBuster "/assets/style.css")
           script ! src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
-          script ! src (cacheBuster ("/" ++ Path.artifact elmModule)) $ ""
+          script ! src (cacheBuster (Artifacts.url elmModule)) $ ""
 
         body $
           script $ preEscapedToMarkup $
