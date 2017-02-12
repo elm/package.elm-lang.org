@@ -18,7 +18,6 @@ import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
 
 import qualified Artifacts
-import qualified PackageSummary as PkgSummary
 
 
 
@@ -34,8 +33,8 @@ elm title elmModuleName =
 -- DOCUMENTATION FOR A PARTICULAR VERSION
 
 
-pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
-pkgDocs pkg@(Pkg.Name user project) version maybeName =
+pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> [Pkg.Version] -> Snap ()
+pkgDocs pkg@(Pkg.Name user project) version maybeName allVersions =
   let
     versionString =
       Pkg.versionToString version
@@ -51,14 +50,13 @@ pkgDocs pkg@(Pkg.Name user project) version maybeName =
       Just (canonicalLink pkg maybeName)
   in
     makeHtml title "Page.Package" maybeLink $
-      do  allVersions <- getAllVersions pkg
-          return $ Just $ makeContext $
-            [ "user" ==> show user
-            , "project" ==> show project
-            , "version" ==> show versionString
-            , "allVersions" ==> show allVersions
-            , "moduleName" ==> maybe "null" show maybeStringName
-            ]
+      return $ Just $ makeContext $
+        [ "user" ==> show user
+        , "project" ==> show project
+        , "version" ==> show versionString
+        , "allVersions" ==> show (List.map Pkg.versionToString allVersions)
+        , "moduleName" ==> maybe "null" show maybeStringName
+        ]
 
 
 canonicalLink :: Pkg.Name -> Maybe Module.Raw -> H.Html
@@ -120,12 +118,6 @@ makeContext entries =
       ++ "\n}"
   in
     (ports, "")
-
-
-getAllVersions :: Pkg.Name -> Snap [String]
-getAllVersions pkg =
-  do  maybeVersions <- liftIO (PkgSummary.readVersionsOf pkg)
-      return $ maybe [] (List.map Pkg.versionToString) maybeVersions
 
 
 

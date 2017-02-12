@@ -130,17 +130,17 @@ servePackage memory user project info =
               if notElem version versions then
                 pass
               else
-                servePackageHelp name version asset
+                servePackageHelp name version versions asset
 
             Docs Latest asset ->
-              servePackageHelp name (last (List.sort versions)) asset
+              servePackageHelp name (last (List.sort versions)) versions asset
 
 
-servePackageHelp :: Pkg.Name -> Pkg.Version -> Maybe Text -> Snap ()
-servePackageHelp name version maybeAsset =
+servePackageHelp :: Pkg.Name -> Pkg.Version -> [Pkg.Version] -> Maybe Text -> Snap ()
+servePackageHelp name version allVersions maybeAsset =
   case maybeAsset of
     Nothing ->
-      ServeFile.pkgDocs name version Nothing
+      ServeFile.pkgDocs name version Nothing allVersions
 
     Just "docs.json" ->
       error "TODO"
