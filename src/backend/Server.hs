@@ -20,10 +20,10 @@ import Snap.Util.FileServe
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
 
-import qualified Memory
 import Memory (Memory)
+import qualified Memory
 import qualified Router
-import Router (Route, top, s, int, text, custom, (</>), (==>), oneOf)
+import Router (Route, top, s, int, text, custom, (</>), (==>))
 import qualified ServeFile
 
 
@@ -41,7 +41,7 @@ serve memory =
 
 route :: Memory -> Route (Snap () -> b) b
 route memory =
-  oneOf
+  Router.oneOf
     [ top ==> home
     , s "packages" </> packages memory
     , s "all-packages" </> allPackages memory
@@ -66,7 +66,7 @@ home =
 
 help :: Route (Snap () -> a) a
 help =
-  oneOf
+  Router.oneOf
     [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines" "Page.DesignGuidelines"
     , s "documentation-format" ==> ServeFile.elm "Documentation Format" "Page.DocumentationFormat"
     , s "docs-preview" ==> ServeFile.pkgPreview
@@ -79,7 +79,7 @@ help =
 
 packages :: Memory -> Route (Snap () -> a) a
 packages memory =
-  oneOf
+  Router.oneOf
     [ top ==> redirect' "/" 301
     , text </> text </> versionStuff ==> servePackage memory
     ]
@@ -96,20 +96,16 @@ data Vsn = Latest | Exactly Pkg.Version
 versionStuff :: Route (PkgInfo -> a) a
 versionStuff =
   let
+    version = custom (either (\_ -> Nothing) Just . Pkg.versionFromText)
     latest = s "latest" ==> Latest
     exactly = version ==> Exactly
-    asset = oneOf [ top ==> Nothing, text ==> Just ]
+    asset = Router.oneOf [ top ==> Nothing, text ==> Just ]
   in
-    oneOf
+    Router.oneOf
       [ top ==> Overview
       , latest </> asset ==> Docs
       , exactly </> asset ==> Docs
       ]
-
-
-version :: Route (Pkg.Version -> a) a
-version =
-  custom (either (\_ -> Nothing) Just . Pkg.versionFromText)
 
 
 servePackage :: Memory -> Text -> Text -> PkgInfo -> Snap ()
@@ -164,7 +160,7 @@ servePackageHelp name version maybeAsset =
 
 allPackages :: Memory -> Route (Snap () -> a) a
 allPackages memory =
-  oneOf
+  Router.oneOf
     [ top ==> error "TODO"
     , s "since" </> int ==> serveNewPackages memory
     ]
