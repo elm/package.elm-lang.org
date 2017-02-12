@@ -46,8 +46,9 @@ main =
       setupLogging
       cargs <- cmdArgs flags
 
-      when (not (bootstrap cargs))
-        Artifacts.compile
+      if bootstrap cargs
+        then return ()
+        else Artifacts.compile
 
       memory <- Memory.init
 

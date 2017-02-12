@@ -44,7 +44,8 @@ url name =
 
 compile :: IO ()
 compile =
-  do  createDirectoryIfMissing True "artifacts"
+  do  putStrLn "Compiling artifacts..."
+      createDirectoryIfMissing True "artifacts"
       result <- runExceptT (mapM runElmMake publicModules)
       case result of
         Right _ ->
