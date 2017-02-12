@@ -2,9 +2,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Memory.History
   ( History
-  , Event(..)
+  , Event
   , since
   , add
+  , toDict
+  , append
   , read
   )
   where
@@ -18,10 +20,14 @@ import Data.Binary.Put (Put, runPut)
 import Data.ByteString (hGet, null)
 import Data.ByteString.Lazy (hPut)
 import Data.ByteString.Lazy.Internal (defaultChunkSize)
+import qualified Data.List as List
+import qualified Data.Map as Map
 import Data.Monoid ((<>))
+import System.Directory (doesFileExist)
 import System.IO (Handle, IOMode(AppendMode, ReadMode), withBinaryFile)
 
 import qualified Elm.Package as Pkg
+import Elm.Package (Name, Version)
 
 
 
@@ -37,8 +43,8 @@ data History =
 
 data Event =
   Event
-    { _name :: !Pkg.Name
-    , _vsn :: !Pkg.Version
+    { _name :: !Name
+    , _vsn :: !Version
     }
 
 
@@ -49,6 +55,32 @@ data Event =
 since :: Int -> History -> [Event]
 since index (History size events) =
   take (size - index) events
+
+
+
+-- ADD
+
+
+add :: Name -> Version -> History -> History
+add name version (History size events) =
+  History (size + 1) (Event name version : events)
+
+
+
+-- TO DICT
+
+
+type Dict = Map.Map Name [Version]
+
+
+toDict :: History -> Dict
+toDict (History _ events) =
+  List.foldl' insert Map.empty events
+
+
+insert :: Dict -> Event -> Dict
+insert dict (Event name version) =
+  Map.insertWith (++) name [version] dict
 
 
 
@@ -94,22 +126,39 @@ putEvent (Event name version) =
 
 
 
--- WRITE
+-- APPEND
 
 
-add :: FilePath -> Event -> IO ()
-add filePath event =
-  withBinaryFile filePath AppendMode $ \handle ->
-    hPut handle (runPut (putEvent event))
+historyFile :: FilePath
+historyFile =
+  "history.dat"
+
+
+append :: Name -> Version -> IO ()
+append name version =
+  withBinaryFile historyFile AppendMode $ \handle ->
+    hPut handle (runPut (putEvent (Event name version)))
 
 
 
 -- READ
 
 
-read :: FilePath -> IO (Maybe History)
-read filePath =
-  withBinaryFile filePath ReadMode $ \handle ->
+read :: IO History
+read =
+  do  exists <- doesFileExist historyFile
+      result <- if exists then readHelp else return Nothing
+      case result of
+        Just history ->
+          return history
+
+        Nothing ->
+          build
+
+
+readHelp :: IO (Maybe History)
+readHelp =
+  withBinaryFile historyFile ReadMode $ \handle ->
     chompHandle (runGetIncremental getHistory) handle
 
 
@@ -127,3 +176,13 @@ chompHandle decoder handle =
           if null chunk
             then chompHandle (k Nothing) handle
             else chompHandle (k (Just chunk)) handle
+
+
+
+-- REBUILD
+
+
+build :: IO History
+build =
+  error "TODO"
+
