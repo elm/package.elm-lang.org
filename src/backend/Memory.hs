@@ -19,8 +19,9 @@ import Snap.Core (Snap)
 
 import Elm.Package (Name, Version)
 
-import qualified Memory.History as History
 import Memory.History (History)
+import qualified Memory.History as History
+import qualified Memory.Timeline as Timeline
 
 
 
@@ -63,8 +64,11 @@ addPackage memory name version =
 
 init :: IO Memory
 init =
-  do  history <- History.read
+  do  timeline <- Timeline.read
+
+      let history = History.fromTimeline timeline
       let packages = History.toDict history
+
       chan <- newChan
 
       _ <- forkIO $ loop chan history packages
@@ -103,7 +107,6 @@ loop chan history packages =
               loop chan history packages
 
         AddEvent name version ->
-          do  History.append name version
-              loop chan
-                (History.add name version history)
-                (Map.insertWith (++) name [version] packages)
+          loop chan
+            (History.add name version history)
+            (Map.insertWith (++) name [version] packages)

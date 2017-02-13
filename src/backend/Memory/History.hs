@@ -6,28 +6,19 @@ module Memory.History
   , since
   , add
   , toDict
-  , append
-  , read
+  , fromTimeline
   )
   where
 
 
-import Prelude hiding (init, null, read)
 import qualified Data.Aeson as Json
-import Data.Binary (get, put)
-import Data.Binary.Get (Get, Decoder(..), isEmpty, runGetIncremental)
-import Data.Binary.Put (Put, runPut)
-import Data.ByteString (hGet, null)
-import Data.ByteString.Lazy (hPut)
-import Data.ByteString.Lazy.Internal (defaultChunkSize)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Monoid ((<>))
-import System.Directory (doesFileExist)
-import System.IO (Handle, IOMode(AppendMode, ReadMode), withBinaryFile)
 
 import qualified Elm.Package as Pkg
-import Elm.Package (Name, Version)
+
+import qualified Memory.Timeline as Timeline
 
 
 
@@ -43,8 +34,8 @@ data History =
 
 data Event =
   Event
-    { _name :: !Name
-    , _vsn :: !Version
+    { _name :: !Pkg.Name
+    , _vsn :: !Pkg.Version
     }
 
 
@@ -61,7 +52,7 @@ since index (History size events) =
 -- ADD
 
 
-add :: Name -> Version -> History -> History
+add :: Pkg.Name -> Pkg.Version -> History -> History
 add name version (History size events) =
   History (size + 1) (Event name version : events)
 
@@ -70,7 +61,7 @@ add name version (History size events) =
 -- TO DICT
 
 
-type Dict = Map.Map Name [Version]
+type Dict = Map.Map Pkg.Name [Pkg.Version]
 
 
 toDict :: History -> Dict
@@ -94,95 +85,14 @@ instance Json.ToJSON Event where
 
 
 
--- BINARY
+-- FROM TIMELINE
 
 
-getEvent :: Get Event
-getEvent =
-  Event <$> get <*> get
+fromTimeline :: Timeline.Timeline -> History
+fromTimeline timeline =
+  History (Map.size timeline) (Map.foldl addEvent [] timeline)
 
 
-getHistory :: Get History
-getHistory =
-  getHistoryHelp 0 []
-
-
-getHistoryHelp :: Int -> [Event] -> Get History
-getHistoryHelp size events =
-  do  empty <- isEmpty
-      case empty of
-        True ->
-          return (History size events)
-
-        False ->
-          do  event <- getEvent
-              getHistoryHelp (size + 1) (event : events)
-
-
-putEvent :: Event -> Put
-putEvent (Event name version) =
-  do  put name
-      put version
-
-
-
--- APPEND
-
-
-historyFile :: FilePath
-historyFile =
-  "history.dat"
-
-
-append :: Name -> Version -> IO ()
-append name version =
-  withBinaryFile historyFile AppendMode $ \handle ->
-    hPut handle (runPut (putEvent (Event name version)))
-
-
-
--- READ
-
-
-read :: IO History
-read =
-  do  exists <- doesFileExist historyFile
-      result <- if exists then readHelp else return Nothing
-      case result of
-        Just history ->
-          return history
-
-        Nothing ->
-          build
-
-
-readHelp :: IO (Maybe History)
-readHelp =
-  withBinaryFile historyFile ReadMode $ \handle ->
-    chompHandle (runGetIncremental getHistory) handle
-
-
-chompHandle :: Decoder a -> Handle -> IO (Maybe a)
-chompHandle decoder handle =
-  case decoder of
-    Done _ _ value ->
-      return (Just value)
-
-    Fail _ _ _ ->
-      return Nothing
-
-    Partial k ->
-      do  chunk <- hGet handle defaultChunkSize
-          if null chunk
-            then chompHandle (k Nothing) handle
-            else chompHandle (k (Just chunk)) handle
-
-
-
--- REBUILD
-
-
-build :: IO History
-build =
-  error "TODO"
-
+addEvent :: [Event] -> (Pkg.Name, Pkg.Version) -> [Event]
+addEvent events (name, version) =
+  Event name version : events
