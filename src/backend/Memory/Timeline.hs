@@ -65,12 +65,13 @@ addInfo name timeline (Overview.Info version date) =
 getSubDirs :: FilePath -> IO [FilePath]
 getSubDirs dir =
   do  contents <- Dir.getDirectoryContents dir
-      foldM addSubDir [] (map (dir </>) contents)
+      foldM (addSubDir dir) [] contents
 
 
-addSubDir :: [FilePath] -> FilePath -> IO [FilePath]
-addSubDir dirs dir =
-  do  exists <- Dir.doesDirectoryExist dir
-      if exists && not (List.isPrefixOf "." dir)
-        then return (dir : dirs)
-        else return dirs
+addSubDir :: FilePath -> [FilePath] -> FilePath -> IO [FilePath]
+addSubDir dir subs subDir =
+  do  let path = dir </> subDir
+      exists <- Dir.doesDirectoryExist path
+      if exists && not (List.isPrefixOf "." path)
+        then return (subDir : subs)
+        else return subs
