@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module GetDates where
+module Main where
 
 import qualified Control.Exception as E
 import Control.Monad
@@ -52,7 +52,7 @@ checkPackage user project =
       timeless <- filterM (liftIO . noKnownTime) versions
 
       when (not (null timeless)) $
-        do  tags <- fetch $ "https://api.github.com/repos/" ++ user ++ "/" ++ project ++ "/tags"
+        do  tags <- fetch $ "https://api.github.com/repos/" ++ user ++ "/" ++ project ++ "/tags?per_page=100"
 
             forM_ (tags :: [Tag]) $ \(Tag name url) ->
               when (elem name timeless) $
