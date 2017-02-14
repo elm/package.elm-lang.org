@@ -56,27 +56,28 @@ Executable run-server
     unordered-containers
 
 
-Executable get-dates
-  hs-source-dirs:
-    src/utils
-
-  Main-is:
-    GetDates.hs
-
-  ghc-options:
-    -threaded -O2 -W -rtsopts
-
-  Build-depends:
-    aeson,
-    base >=4.2 && <5,
-    bytestring,
-    containers,
-    directory,
-    filepath,
-    http-client,
-    http-client-tls,
-    iso8601-time,
-    mtl,
-    network,
-    text,
-    time
+--Executable get-dates
+--  hs-source-dirs:
+--    src/utils
+--
+--  Main-is:
+--    GetDates.hs
+--
+--  ghc-options:
+--    -threaded -O2 -W -rtsopts
+--
+--  Build-depends:
+--    aeson,
+--    base >=4.2 && <5,
+--    bytestring,
+--    containers,
+--    directory,
+--    filepath,
+--    http-client,
+--    http-client-tls,
+--    iso8601-time,
+--    mtl,
+--    network,
+--    text,
+--    time
+--
