@@ -72,6 +72,6 @@ addSubDir :: FilePath -> [FilePath] -> FilePath -> IO [FilePath]
 addSubDir dir subs subDir =
   do  let path = dir </> subDir
       exists <- Dir.doesDirectoryExist path
-      if exists && not (List.isPrefixOf "." path)
+      if exists && not (List.isPrefixOf "." subDir)
         then return (subDir : subs)
         else return subs
