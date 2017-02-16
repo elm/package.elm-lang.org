@@ -1,23 +1,42 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module ServeFile (elm, pkgDocs, pkgOverview, pkgPreview) where
+module ServeFile
+  ( static
+  , elm
+  , pkgDocs
+  , pkgOverview
+  , pkgPreview
+  )
+  where
 
-import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
+import Snap.Util.FileServe (serveFile)
+import System.FilePath ((</>))
 import System.IO.Unsafe (unsafePerformIO)
-import Text.Blaze.Html5 as H
-import Text.Blaze.Html5.Attributes as A
+import Text.Blaze.Html5 ((!))
+import qualified Text.Blaze.Html5 as H
+import qualified Text.Blaze.Html5.Attributes as A
 import qualified Text.Blaze.Html.Renderer.Utf8 as Blaze
 
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
 
 import qualified Artifacts
+
+
+
+-- SERVE FILE
+
+
+static :: Pkg.Name -> Pkg.Version -> FilePath -> Snap ()
+static name version filePath =
+  serveFile
+    ("packages" </> Pkg.toFilePath name </> Pkg.versionToString version </> filePath)
 
 
 
@@ -71,7 +90,7 @@ canonicalLink pkg maybeName =
     url =
       "/packages/" ++ Pkg.toUrl canonicalPackage ++ "/latest" ++ ending
   in
-    link ! rel "canonical" ! href (toValue url)
+    H.link ! A.rel "canonical" ! A.href (H.toValue url)
 
 
 renames :: Map.Map Pkg.Name Pkg.Name
@@ -148,20 +167,20 @@ pkgPreview =
 makeHtml :: String -> Module.Raw -> Maybe H.Html -> Snap (Maybe (String, String)) -> Snap ()
 makeHtml title elmModule maybeLink makePorts =
   do  maybePorts <- makePorts
-      writeBuilder $ Blaze.renderHtmlBuilder $ docTypeHtml $ do
+      writeBuilder $ Blaze.renderHtmlBuilder $ H.docTypeHtml $ do
         H.head $ do
-          meta ! charset "UTF-8"
+          H.meta ! A.charset "UTF-8"
           favicon
-          H.title (toHtml title)
+          H.title (H.toHtml title)
           googleAnalytics
           Maybe.fromMaybe (return ()) maybeLink
-          link ! rel "stylesheet" ! href (cacheBuster "/assets/highlight/styles/default.css")
-          link ! rel "stylesheet" ! href (cacheBuster "/assets/style.css")
-          script ! src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
-          script ! src (cacheBuster (Artifacts.url elmModule)) $ ""
+          H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/highlight/styles/default.css")
+          H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/style.css")
+          H.script ! A.src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
+          H.script ! A.src (cacheBuster (Artifacts.url elmModule)) $ ""
 
-        body $
-          script $ preEscapedToMarkup $
+        H.body $
+          H.script $ H.preEscapedToMarkup $
             case maybePorts of
               Nothing ->
                 "\nElm." ++ Module.nameToString elmModule ++ ".fullscreen()\n"
@@ -175,9 +194,9 @@ makeHtml title elmModule maybeLink makePorts =
                 ++ postScript
 
 
-googleAnalytics :: Html
+googleAnalytics :: H.Html
 googleAnalytics =
-  script ! type_ "text/javascript" $
+  H.script ! A.type_ "text/javascript" $
     "(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){\n\
     \(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),\n\
     \m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)\n\
@@ -195,9 +214,9 @@ favicon =
     ! A.href "/assets/favicon.ico"
 
 
-cacheBuster :: String -> AttributeValue
+cacheBuster :: String -> H.AttributeValue
 cacheBuster url =
-  toValue (url ++ "?" ++ uniqueToken)
+  H.toValue (url ++ "?" ++ uniqueToken)
 
 
 uniqueToken :: String
