@@ -14,7 +14,7 @@ import Snap.Core
   , setResponseStatus, writeLBS
   )
 import Snap.Util.FileServe
-  ( serveDirectoryWith
+  ( serveFile, serveDirectoryWith
   , DirectoryConfig(..), fancyDirectoryConfig
   , defaultIndexGenerator, defaultMimeTypes
   )
@@ -142,11 +142,14 @@ servePackageHelp name version allVersions maybeAsset =
     Nothing ->
       ServeFile.pkgDocs name version Nothing allVersions
 
+    Just "elm.json" ->
+      ServeFile.static name version "elm.json"
+
     Just "docs.json" ->
-      error "TODO"
+      ServeFile.static name version "docs.json"
 
     Just "README.md" ->
-      error "TODO"
+      ServeFile.static name version "README.md"
 
     Just asset ->
       case Module.dehyphenate asset of
@@ -164,7 +167,7 @@ servePackageHelp name version allVersions maybeAsset =
 allPackages :: Memory -> Route (Snap () -> a) a
 allPackages memory =
   Router.oneOf
-    [ top ==> error "TODO"
+    [ top ==> serveFile "all-packages.json"
     , s "since" </> int ==> serveNewPackages memory
     ]
 
