@@ -23,5 +23,6 @@
     "NoRedInk/elm-rails",
     "seliopou/elm-d3",
     "ThomasWeiser/elmfire",
-    "Skinney/elm-array-exploration"
+    "Skinney/elm-array-exploration",
+    "BrianHicks/elm-benchmark"
 ]
