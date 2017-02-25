@@ -49,7 +49,7 @@ Executable run-server
     directory,
     filepath,
     mtl,
-    snap-core,
+    snap-core < 1.0.0.0,
     snap-server,
     text,
     time,
