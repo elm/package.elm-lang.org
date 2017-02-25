@@ -24,5 +24,6 @@
     "seliopou/elm-d3",
     "ThomasWeiser/elmfire",
     "Skinney/elm-array-exploration",
-    "BrianHicks/elm-benchmark"
+    "BrianHicks/elm-benchmark",
+    "libreirc/elm-crypto"
 ]
