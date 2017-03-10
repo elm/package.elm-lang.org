@@ -27,6 +27,7 @@ import qualified Elm.Package as Pkg
 import Memory.History (History)
 import qualified Memory.History as History
 import qualified Memory.Timeline as Timeline
+import qualified Sitemap
 
 
 
@@ -137,6 +138,8 @@ replaceAllPackages allPackages =
         map toPair $ Map.toList allPackages
 
       Dir.renameFile temp "all-packages.json"
+
+      Sitemap.generate allPackages
 
 
 toPair :: (Name, [Version]) -> (Text, Json.Value)

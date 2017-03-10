@@ -9,6 +9,7 @@ import qualified Data.HashMap.Lazy as HashMap
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Text (Text)
+import qualified Snap.Core as Snap
 import Snap.Core
   ( Snap, MonadSnap, modifyResponse, pass, redirect'
   , setResponseStatus, writeLBS
@@ -37,9 +38,8 @@ import qualified ServeFile
 serve :: Memory -> Snap ()
 serve memory =
   Router.serve (route memory)
-  <|>
-  do  modifyResponse $ setResponseStatus 404 "Not Found"
-      (ServeFile.elm "???" "Page.NotFound")
+  <|> robots
+  <|> notFound
 
 
 route :: Memory -> Route (Snap () -> b) b
@@ -53,6 +53,19 @@ route memory =
     , s "help" </> help
     ]
 
+
+robots :: Snap ()
+robots =
+  Snap.route
+    [ ("robots.txt", serveFile "robots.txt")
+    , ("sitemap.xml", serveFile "sitemap.xml")
+    ]
+
+
+notFound :: Snap ()
+notFound =
+  do  modifyResponse $ setResponseStatus 404 "Not Found"
+      (ServeFile.elm "Not Found" "Page.NotFound")
 
 
 -- HOME
