@@ -1,7 +1,7 @@
 {
     "version": "1.0.0",
     "summary": "website for browsing packages and exploring documentation",
-    "repository": "https://github.com/elm-lang/pkgs.git",
+    "repository": "https://github.com/elm-lang/package.elm-lang.org.git",
     "license": "BSD3",
     "source-directories": [
         "src/frontend"
