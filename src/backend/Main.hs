@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
-import Control.Monad (when)
 import GHC.Conc
 import Snap.Http.Server (httpServe, setPort, defaultConfig)
 import System.Console.CmdArgs
@@ -71,4 +70,6 @@ setupLogging =
 createIfMissing :: FilePath -> IO ()
 createIfMissing path =
   do  exists <- doesFileExist path
-      when (not exists) $ writeFile path ""
+      if exists
+        then return ()
+        else writeFile path ""
