@@ -38,8 +38,10 @@ serve memory =
     router =
       Router.oneOf
         [ top ==> ServeFile.elm "Elm Packages" "Page.Catalog"
-        , s "packages" </> packages memory
-        , s "all-packages" </> allPackages memory
+        , s "packages" ==> S.redirect' "/" 301
+        , s "packages" </> text </> text </> versionStuff ==> servePackage memory
+        , s "all-packages" ==> serveFile "all-packages.json"
+        , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "assets" ==> serveDirectoryWith directoryConfig "assets"
         , s "artifacts" ==> serveDirectoryWith directoryConfig "artifacts"
         , s "help" </>
@@ -62,14 +64,6 @@ serve memory =
 
 
 -- PACKAGES
-
-
-packages :: Memory -> Route (Snap () -> a) a
-packages memory =
-  Router.oneOf
-    [ top ==> S.redirect' "/" 301
-    , text </> text </> versionStuff ==> servePackage memory
-    ]
 
 
 data PkgInfo
@@ -146,14 +140,6 @@ servePackageHelp name version allVersions maybeAsset =
 
 
 -- NEW PACKAGES
-
-
-allPackages :: Memory -> Route (Snap () -> a) a
-allPackages memory =
-  Router.oneOf
-    [ top ==> serveFile "all-packages.json"
-    , s "since" </> int ==> serveNewPackages memory
-    ]
 
 
 serveNewPackages :: Memory -> Int -> Snap ()
