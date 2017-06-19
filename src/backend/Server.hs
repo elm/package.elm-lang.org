@@ -3,18 +3,11 @@
 module Server (serve) where
 
 import Control.Applicative ((<|>))
-import qualified Data.ByteString as BS
-import qualified Data.HashMap.Lazy as HashMap
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Text (Text)
 import qualified Snap.Core as S
-import Snap.Core (Snap, MonadSnap)
-import Snap.Util.FileServe
-  ( serveFile, serveDirectoryWith
-  , DirectoryConfig(..), fancyDirectoryConfig
-  , defaultIndexGenerator, defaultMimeTypes
-  )
+import Snap.Util.FileServe (serveFile, serveDirectory)
 
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
@@ -32,7 +25,7 @@ import qualified ServeFile
 -- SERVE
 
 
-serve :: Memory -> Snap ()
+serve :: Memory -> S.Snap ()
 serve memory =
   let
     router =
@@ -42,8 +35,8 @@ serve memory =
         , s "packages" </> text </> text </> versionStuff ==> servePackage memory
         , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
-        , s "assets" ==> serveDirectoryWith directoryConfig "assets"
-        , s "artifacts" ==> serveDirectoryWith directoryConfig "artifacts"
+        , s "assets" ==> serveDirectory "assets"
+        , s "artifacts" ==> serveDirectory "artifacts"
         , s "help" </>
             Router.oneOf
               [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines" "Page.DesignGuidelines"
@@ -89,7 +82,7 @@ versionStuff =
       ]
 
 
-servePackage :: Memory -> Text -> Text -> PkgInfo -> Snap ()
+servePackage :: Memory -> Text -> Text -> PkgInfo -> S.Snap ()
 servePackage memory user project info =
   do  let name = Pkg.Name user project
 
@@ -114,7 +107,7 @@ servePackage memory user project info =
               servePackageHelp name (last (List.sort versions)) versions asset
 
 
-servePackageHelp :: Pkg.Name -> Pkg.Version -> [Pkg.Version] -> Maybe Text -> Snap ()
+servePackageHelp :: Pkg.Name -> Pkg.Version -> [Pkg.Version] -> Maybe Text -> S.Snap ()
 servePackageHelp name version allVersions maybeAsset =
   case maybeAsset of
     Nothing ->
@@ -142,39 +135,8 @@ servePackageHelp name version allVersions maybeAsset =
 -- NEW PACKAGES
 
 
-serveNewPackages :: Memory -> Int -> Snap ()
+serveNewPackages :: Memory -> Int -> S.Snap ()
 serveNewPackages memory index =
   do  history <- Memory.getHistory memory
       S.writeBuilder $ Encode.encode $ Encode.list History.encodeEvent $
         History.since index history
-
-
-
--- DIRECTORY CONFIG
-
-
-directoryConfig :: MonadSnap m => DirectoryConfig m
-directoryConfig =
-  fancyDirectoryConfig
-    { indexGenerator =
-        defaultIndexGenerator defaultMimeTypes indexStyle
-    , mimeTypes =
-        HashMap.insert ".elm" "text/plain" $
-        HashMap.insert ".ico" "image/x-icon" $
-          defaultMimeTypes
-    }
-
-
-indexStyle :: BS.ByteString
-indexStyle =
-    "body { margin:0; font-family:sans-serif; background:rgb(245,245,245);\
-    \       font-family: calibri, verdana, helvetica, arial; }\
-    \div.header { padding: 40px 50px; font-size: 24px; }\
-    \div.content { padding: 0 40px }\
-    \div.footer { display:none; }\
-    \table { width:100%; border-collapse:collapse; }\
-    \td { padding: 6px 10px; }\
-    \tr:nth-child(odd) { background:rgb(216,221,225); }\
-    \td { font-family:monospace }\
-    \th { background:rgb(90,99,120); color:white; text-align:left;\
-    \     padding:10px; font-weight:normal; }"
