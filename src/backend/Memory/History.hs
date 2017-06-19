@@ -12,9 +12,7 @@ module Memory.History
   where
 
 
-import Control.Monad (foldM, forM)
-import qualified Data.ByteString.Lazy as BS
-import qualified Data.HashMap.Lazy as HashMap
+import Control.Monad (foldM)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Monoid ((<>))
@@ -110,10 +108,10 @@ crawlProject :: String -> TimeDict -> String -> IO TimeDict
 crawlProject user dict project =
   do  let name = Pkg.Name (Text.pack user) (Text.pack project)
 
-      let add d (Releases.Release version time) =
+      let addRelease d (Releases.Release version time) =
             Map.insert time (name, version) d
 
-      List.foldl' add dict <$> Releases.read name
+      List.foldl' addRelease dict <$> Releases.read name
 
 
 
