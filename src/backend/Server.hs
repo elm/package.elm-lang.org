@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Server (serve) where
 
-import Control.Applicative ((<|>))
+import Data.Foldable (asum)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Text (Text)
@@ -27,32 +27,35 @@ import qualified ServeFile
 
 serve :: Memory -> S.Snap ()
 serve memory =
-  let
-    router =
-      Router.oneOf
+  asum
+    [
+      -- NORMAL ROUTES
+      Router.serve $ Router.oneOf $
         [ top ==> ServeFile.elm "Elm Packages" "Page.Catalog"
         , s "packages" ==> S.redirect' "/" 301
         , s "packages" </> text </> text </> versionStuff ==> servePackage memory
         , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
-        , s "assets" ==> serveDirectory "assets"
-        , s "artifacts" ==> serveDirectory "artifacts"
         , s "help" </>
             Router.oneOf
               [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines" "Page.DesignGuidelines"
               , s "documentation-format" ==> ServeFile.elm "Documentation Format" "Page.DocumentationFormat"
               , s "docs-preview" ==> ServeFile.previewHtml
               ]
-        , s "robots.txt" ==> serveFile "robots.txt"
-        , s "sitemap.xml" ==> serveFile "sitemap.xml"
         ]
-
-    notFound =
+    ,
+      -- STATIC STUFF
+      S.route
+        [ ("assets", serveDirectory "assets")
+        , ("artifacts", serveDirectory "artifacts")
+        , ("robots.txt", serveFile "robots.txt")
+        , ("sitemap.xml", serveFile "sitemap.xml")
+        ]
+    ,
+      -- NOT FOUND
       do  S.modifyResponse $ S.setResponseStatus 404 "Not Found"
           ServeFile.elm "Not Found" "Page.NotFound"
-  in
-    Router.serve router <|> notFound
-
+    ]
 
 
 
