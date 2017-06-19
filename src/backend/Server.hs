@@ -8,11 +8,8 @@ import qualified Data.HashMap.Lazy as HashMap
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Text (Text)
-import qualified Snap.Core as Snap
-import Snap.Core
-  ( Snap, MonadSnap, modifyResponse, pass, redirect'
-  , setResponseStatus, writeBuilder
-  )
+import qualified Snap.Core as S
+import Snap.Core (Snap, MonadSnap)
 import Snap.Util.FileServe
   ( serveFile, serveDirectoryWith
   , DirectoryConfig(..), fancyDirectoryConfig
@@ -37,56 +34,30 @@ import qualified ServeFile
 
 serve :: Memory -> Snap ()
 serve memory =
-  Router.serve (route memory)
-  <|> robots
-  <|> notFound
+  let
+    router =
+      Router.oneOf
+        [ top ==> ServeFile.elm "Elm Packages" "Page.Catalog"
+        , s "packages" </> packages memory
+        , s "all-packages" </> allPackages memory
+        , s "assets" ==> serveDirectoryWith directoryConfig "assets"
+        , s "artifacts" ==> serveDirectoryWith directoryConfig "artifacts"
+        , s "help" </>
+            Router.oneOf
+              [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines" "Page.DesignGuidelines"
+              , s "documentation-format" ==> ServeFile.elm "Documentation Format" "Page.DocumentationFormat"
+              , s "docs-preview" ==> ServeFile.previewHtml
+              ]
+        , s "robots.txt" ==> serveFile "robots.txt"
+        , s "sitemap.xml" ==> serveFile "sitemap.xml"
+        ]
 
+    notFound =
+      do  S.modifyResponse $ S.setResponseStatus 404 "Not Found"
+          ServeFile.elm "Not Found" "Page.NotFound"
+  in
+    Router.serve router <|> notFound
 
-route :: Memory -> Route (Snap () -> b) b
-route memory =
-  Router.oneOf
-    [ top ==> home
-    , s "packages" </> packages memory
-    , s "all-packages" </> allPackages memory
-    , s "assets" ==> serveDirectoryWith directoryConfig "assets"
-    , s "artifacts" ==> serveDirectoryWith directoryConfig "artifacts"
-    , s "help" </> help
-    ]
-
-
-robots :: Snap ()
-robots =
-  Snap.route
-    [ ("robots.txt", serveFile "robots.txt")
-    , ("sitemap.xml", serveFile "sitemap.xml")
-    ]
-
-
-notFound :: Snap ()
-notFound =
-  do  modifyResponse $ setResponseStatus 404 "Not Found"
-      (ServeFile.elm "Not Found" "Page.NotFound")
-
-
--- HOME
-
-
-home :: Snap ()
-home =
-  ServeFile.elm "Elm Packages" "Page.Catalog"
-
-
-
--- HELP
-
-
-help :: Route (Snap () -> a) a
-help =
-  Router.oneOf
-    [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines" "Page.DesignGuidelines"
-    , s "documentation-format" ==> ServeFile.elm "Documentation Format" "Page.DocumentationFormat"
-    , s "docs-preview" ==> ServeFile.pkgPreview
-    ]
 
 
 
@@ -96,7 +67,7 @@ help =
 packages :: Memory -> Route (Snap () -> a) a
 packages memory =
   Router.oneOf
-    [ top ==> redirect' "/" 301
+    [ top ==> S.redirect' "/" 301
     , text </> text </> versionStuff ==> servePackage memory
     ]
 
@@ -132,16 +103,16 @@ servePackage memory user project info =
 
       case Map.lookup name pkgs of
         Nothing ->
-          pass
+          S.pass
 
         Just versions ->
           case info of
             Overview ->
-              ServeFile.pkgOverview name versions
+              ServeFile.overviewHtml name versions
 
             Docs (Exactly version) asset ->
               if notElem version versions then
-                pass
+                S.pass
               else
                 servePackageHelp name version versions asset
 
@@ -153,21 +124,21 @@ servePackageHelp :: Pkg.Name -> Pkg.Version -> [Pkg.Version] -> Maybe Text -> Sn
 servePackageHelp name version allVersions maybeAsset =
   case maybeAsset of
     Nothing ->
-      ServeFile.pkgDocs name version Nothing allVersions
+      ServeFile.docsHtml name version Nothing allVersions
 
     Just "elm.json" ->
-      ServeFile.static name version "elm.json"
+      ServeFile.metadata name version "elm.json"
 
     Just "docs.json" ->
-      ServeFile.static name version "docs.json"
+      ServeFile.metadata name version "docs.json"
 
     Just "README.md" ->
-      ServeFile.static name version "README.md"
+      ServeFile.metadata name version "README.md"
 
     Just asset ->
       case Module.dehyphenate asset of
         Nothing ->
-          pass
+          S.pass
 
         Just _ ->
           error "TODO"
@@ -188,7 +159,7 @@ allPackages memory =
 serveNewPackages :: Memory -> Int -> Snap ()
 serveNewPackages memory index =
   do  history <- Memory.getHistory memory
-      writeBuilder $ Encode.encode $ Encode.list History.encodeEvent $
+      S.writeBuilder $ Encode.encode $ Encode.list History.encodeEvent $
         History.since index history
 
 

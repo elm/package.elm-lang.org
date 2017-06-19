@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module ServeFile
-  ( static
+  ( metadata
   , elm
-  , pkgDocs
-  , pkgOverview
-  , pkgPreview
+  , docsHtml
+  , overviewHtml
+  , previewHtml
   )
   where
 
@@ -33,8 +33,8 @@ import qualified Artifacts
 -- SERVE FILE
 
 
-static :: Pkg.Name -> Pkg.Version -> FilePath -> Snap ()
-static name version filePath =
+metadata :: Pkg.Name -> Pkg.Version -> FilePath -> Snap ()
+metadata name version filePath =
   serveFile
     ("packages" </> Pkg.toFilePath name </> Pkg.versionToString version </> filePath)
 
@@ -52,8 +52,8 @@ elm title elmModuleName =
 -- DOCUMENTATION FOR A PARTICULAR VERSION
 
 
-pkgDocs :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> [Pkg.Version] -> Snap ()
-pkgDocs pkg@(Pkg.Name user project) version maybeName allVersions =
+docsHtml :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> [Pkg.Version] -> Snap ()
+docsHtml pkg@(Pkg.Name user project) version maybeName allVersions =
   let
     versionString =
       Pkg.versionToString version
@@ -118,8 +118,8 @@ renames =
 -- SHOW ALL THE DIFFERENT VERSIONS OF A PACKAGE
 
 
-pkgOverview :: Pkg.Name -> [Pkg.Version] -> Snap ()
-pkgOverview pkg@(Pkg.Name user project) allVersions =
+overviewHtml :: Pkg.Name -> [Pkg.Version] -> Snap ()
+overviewHtml pkg@(Pkg.Name user project) allVersions =
   makeHtml (Pkg.toString pkg) "Page.PackageOverview" Nothing $
     return $ Just $ makeContext $
       [ "user" ==> show user
@@ -143,8 +143,8 @@ makeContext entries =
 -- PREVIEW DOCUMENTATION
 
 
-pkgPreview :: Snap ()
-pkgPreview =
+previewHtml :: Snap ()
+previewHtml =
   makeHtml "Preview your Docs" "Page.PreviewDocumentation" Nothing $
     return $ Just $ (,) "" $
       "function handleFileSelect(evt) {\n\
