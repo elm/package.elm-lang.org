@@ -59,6 +59,17 @@ serve memory =
 
 
 
+-- NEW PACKAGES
+
+
+serveNewPackages :: Memory -> Int -> S.Snap ()
+serveNewPackages memory index =
+  do  history <- Memory.getHistory memory
+      S.writeBuilder $ Encode.encodeUgly $ Encode.list History.encodeEvent $
+        History.since index history
+
+
+
 -- PACKAGES
 
 
@@ -132,14 +143,3 @@ servePackageHelp name version allVersions maybeAsset =
 
         Just _ ->
           error "TODO"
-
-
-
--- NEW PACKAGES
-
-
-serveNewPackages :: Memory -> Int -> S.Snap ()
-serveNewPackages memory index =
-  do  history <- Memory.getHistory memory
-      S.writeBuilder $ Encode.encode $ Encode.list History.encodeEvent $
-        History.since index history
