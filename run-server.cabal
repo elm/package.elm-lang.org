@@ -36,15 +36,14 @@ Executable run-server
     -threaded -O2 -W -rtsopts
 
   Build-depends:
-    aeson,
-    aeson-pretty,
     base >=4.2 && <5,
     binary,
     blaze-html,
+    blaze-markup,
     bytestring,
     cmdargs,
     containers,
-    elm-compiler == 0.18,
+    elm-compiler == 0.18.1,
     builder,
     directory,
     filepath,
@@ -56,28 +55,28 @@ Executable run-server
     unordered-containers
 
 
---Executable get-dates
---  hs-source-dirs:
---    src/utils
---
---  Main-is:
---    GetDates.hs
---
---  ghc-options:
---    -threaded -O2 -W -rtsopts
---
---  Build-depends:
---    aeson,
---    base >=4.2 && <5,
---    bytestring,
---    containers,
---    directory,
---    filepath,
---    http-client,
---    http-client-tls,
---    iso8601-time,
---    mtl,
---    network,
---    text,
---    time
---
+Executable update-json
+  hs-source-dirs:
+    src/utils
+
+  Main-is:
+    UpdateJson.hs
+
+  ghc-options:
+    -threaded -O2 -W -rtsopts
+
+  Build-depends:
+    aeson,
+    base >=4.2 && <5,
+    bytestring,
+    containers,
+    directory,
+    filepath,
+    http-client,
+    http-client-tls,
+    iso8601-time,
+    mtl,
+    network,
+    text,
+    time,
+    unordered-containers

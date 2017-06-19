@@ -14,19 +14,16 @@ import Control.Concurrent (forkIO)
 import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
 import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, takeMVar)
 import Control.Monad.Trans (liftIO)
-import qualified Data.Aeson as Json
-import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
-import Data.Text (Text)
 import Snap.Core (Snap)
 import qualified System.Directory as Dir
 
 import Elm.Package (Name, Version)
 import qualified Elm.Package as Pkg
+import qualified Json.Encode as Encode
 
 import Memory.History (History)
 import qualified Memory.History as History
-import qualified Memory.Timeline as Timeline
 import qualified Sitemap
 
 
@@ -70,10 +67,8 @@ addPackage memory name version =
 
 init :: IO Memory
 init =
-  do  timeline <- Timeline.read
-
-      let history = History.fromTimeline timeline
-      let packages = History.toDict history
+  do  history <- History.load
+      let packages = History.groupByName history
       replaceAllPackages packages
 
       chan <- newChan
@@ -134,14 +129,13 @@ temp =
 
 replaceAllPackages :: Map.Map Name [Version] -> IO ()
 replaceAllPackages allPackages =
-  do  BS.writeFile temp $ Json.encode $ Json.object $
-        map toPair $ Map.toList allPackages
+  do  Encode.write temp $
+        Encode.dict Pkg.toString encodeVersions allPackages
 
       Dir.renameFile temp "all-packages.json"
-
       Sitemap.generate allPackages
 
 
-toPair :: (Name, [Version]) -> (Text, Json.Value)
-toPair (name, versions) =
-  ( Pkg.toText name, Json.toJSON versions )
+encodeVersions :: [Version] -> Encode.Value
+encodeVersions versions =
+  Encode.list (Encode.string . Pkg.versionToString) versions

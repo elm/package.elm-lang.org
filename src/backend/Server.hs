@@ -3,7 +3,6 @@
 module Server (serve) where
 
 import Control.Applicative ((<|>))
-import qualified Data.Aeson as Json
 import qualified Data.ByteString as BS
 import qualified Data.HashMap.Lazy as HashMap
 import qualified Data.List as List
@@ -12,7 +11,7 @@ import Data.Text (Text)
 import qualified Snap.Core as Snap
 import Snap.Core
   ( Snap, MonadSnap, modifyResponse, pass, redirect'
-  , setResponseStatus, writeLBS
+  , setResponseStatus, writeBuilder
   )
 import Snap.Util.FileServe
   ( serveFile, serveDirectoryWith
@@ -22,6 +21,7 @@ import Snap.Util.FileServe
 
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
+import qualified Json.Encode as Encode
 
 import Memory (Memory)
 import qualified Memory
@@ -188,7 +188,8 @@ allPackages memory =
 serveNewPackages :: Memory -> Int -> Snap ()
 serveNewPackages memory index =
   do  history <- Memory.getHistory memory
-      writeLBS (Json.encode (History.since index history))
+      writeBuilder $ Encode.encode $ Encode.list History.encodeEvent $
+        History.since index history
 
 
 
