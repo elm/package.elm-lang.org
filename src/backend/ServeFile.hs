@@ -221,4 +221,6 @@ cacheBuster url =
 
 uniqueToken :: String
 uniqueToken =
-  unsafePerformIO (show <$> round <$> getPOSIXTime)
+  unsafePerformIO $
+    do  time <- getPOSIXTime
+        return $ show (floor time :: Integer)
