@@ -113,51 +113,54 @@ verifySha version sha =
 uploadFiles :: FilePath -> Snap ()
 uploadFiles directory =
   do  results <- handleMultipart defaultUploadPolicy (handlePart directory)
-      if and results
-        then
+      case Maybe.catMaybes results of
+        [] ->
           return ()
 
-        else
+        problems ->
           do  liftIO (removeDirectoryRecursive directory)
-              httpStringError 404 "Failure uploading your package."
+              httpStringError 404 $
+                "Failure uploading your package:\n" ++ concatMap ("\n  - " ++) problems
 
 
-handlePart :: FilePath -> PartInfo -> InputStream ByteString -> IO Bool
+handlePart :: FilePath -> PartInfo -> InputStream ByteString -> IO (Maybe String)
 handlePart directory info stream =
   case partFieldName info of
     "hash" | partDisposition info == DispositionFormData ->
-      boundedWrite (directory </> "hash") stream
+      boundedWrite directory "hash" stream
 
     "elm.json" | partDisposition info == DispositionFile ->
-      boundedWrite (directory </> "elm.json") stream
+      boundedWrite directory "elm.json" stream
 
     "README.md" | partDisposition info == DispositionFile ->
-      boundedWrite (directory </> "README.md") stream
+      boundedWrite directory "README.md" stream
 
     "documentation.json" | partDisposition info == DispositionFile ->
-      boundedWrite (directory </> "documentation.json") stream
+      boundedWrite directory "documentation.json" stream
 
-    _ ->
-      return False
-
-
-boundedWrite :: FilePath -> InputStream ByteString -> IO Bool
-boundedWrite path stream =
-  IO.withBinaryFile path IO.WriteMode $ \handle ->
-    boundedWriteHelp handle 0 stream
+    name ->
+      return $ Just $ "Did not recognize " ++ show name ++ " part in form-data"
 
 
-boundedWriteHelp :: Handle -> Int -> InputStream ByteString -> IO Bool
-boundedWriteHelp handle bits stream =
-  if bits > 2^19 then
-    return False
+boundedWrite :: FilePath -> FilePath -> InputStream ByteString -> IO (Maybe String)
+boundedWrite directory path stream =
+  IO.withBinaryFile (directory </> path) IO.WriteMode $ \handle ->
+    boundedWriteHelp path handle 0 stream
+
+
+boundedWriteHelp :: FilePath -> Handle -> Int -> InputStream ByteString -> IO (Maybe String)
+boundedWriteHelp path handle bits stream =
+  if bits > 2^17 then
+    return $ Just $
+      "Your " ++ path ++ " is too big. Must be less than 128kb. Let us know if this limit is too low!"
+
   else
     do  maybeChunk <- Stream.read
         case maybeChunk of
           Nothing ->
-            return True
+            return Nothing
 
           Just chunk ->
             do  BS.hPut handle chunk
-                boundedWriteHelp handle (BS.length chunk + size) stream
+                boundedWriteHelp path handle (BS.length chunk + size) stream
 
