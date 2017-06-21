@@ -5,9 +5,11 @@ module Package.Register (register) where
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Either as Either
 import qualified Data.Time.Clock.POSIX as Time
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
+import Data.Monoid ((<>))
+import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
@@ -21,6 +23,7 @@ import qualified System.IO.Streams as Stream
 import qualified Elm.Package as Pkg
 import qualified GitHub
 import qualified Json.Decode as Decode
+import qualified Json.Encode as Encode
 import qualified Memory
 import qualified Package.Path as Path
 import qualified Package.Releases as Releases
@@ -135,7 +138,7 @@ verifySha token name version sha =
 getSha :: GitHub.Token -> Pkg.Name -> Pkg.Version -> Snap.Snap Text
 getSha token name version =
   do  response <- liftIO $ GitHub.fetch token $
-        "/repos/" ++ Pkg.toFilePath name ++ "/git/refs/tags/" ++ Pkg.versionToString version
+        "/repos/" ++ Pkg.toUrl name ++ "/git/refs/tags/" ++ Pkg.versionToString version
 
       case response of
         Left _ ->
@@ -165,7 +168,7 @@ tagDecoder =
         elm.json
         README.md
         documentation.json
-        github-hash
+        endpoints
         time
 
 -}
@@ -173,23 +176,29 @@ uploadFiles :: Pkg.Name -> Pkg.Version -> Time.POSIXTime -> Snap.Snap ()
 uploadFiles name version time =
   do  let dir = Path.directory name version
       liftIO (Dir.createDirectoryIfMissing True dir)
-      results <- Snap.handleMultipart Snap.defaultUploadPolicy (handlePart dir)
-      case Maybe.catMaybes results of
-        [] ->
-          liftIO $ writeFile (dir </> "time") (show (floor time :: Integer))
+      results <- Snap.handleMultipart Snap.defaultUploadPolicy (handlePart name version dir)
+      case Either.partitionEithers results of
+        ([], files) ->
+          if Set.fromList files == requiredFiles then
+            liftIO $ writeFile (dir </> "time") (show (floor time :: Integer))
+          else
+            do  liftIO (Dir.removeDirectoryRecursive dir)
+                Error.string 404 "Malformed request. Missing some metadata files."
 
-        problems ->
+        (problems, _) ->
           do  liftIO (Dir.removeDirectoryRecursive dir)
               Error.string 404 $
                 "Failure uploading your package:\n" ++ concatMap ("\n  - " ++) problems
 
 
-handlePart :: FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Maybe String)
-handlePart dir info stream =
-  case Snap.partFieldName info of
-    "github-hash" | Snap.partDisposition info == Snap.DispositionFormData ->
-      boundedWrite dir "github-hash" stream
+requiredFiles :: Set.Set FilePath
+requiredFiles =
+  Set.fromList ["elm.json", "README.md", "documentation.json", "endpoints"]
 
+
+handlePart :: Pkg.Name -> Pkg.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
+handlePart name version dir info stream =
+  case Snap.partFieldName info of
     "elm.json" | Snap.partDisposition info == Snap.DispositionFile ->
       boundedWrite dir "elm.json" stream
 
@@ -199,33 +208,74 @@ handlePart dir info stream =
     "documentation.json" | Snap.partDisposition info == Snap.DispositionFile ->
       boundedWrite dir "documentation.json" stream
 
-    name ->
-      return $ Just $ "Did not recognize " ++ show name ++ " part in form-data"
+    "github-hash" | Snap.partDisposition info == Snap.DispositionFormData ->
+      writeEndpoints name version dir stream
+
+    path ->
+      return $ Left $ "Did not recognize " ++ show path ++ " part in form-data"
 
 
-boundedWrite :: FilePath -> FilePath -> Stream.InputStream BS.ByteString -> IO (Maybe String)
+
+-- WRITE FILE
+
+
+boundedWrite :: FilePath -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
 boundedWrite dir path stream =
   IO.withBinaryFile (dir </> path) IO.WriteMode $ \handle ->
     boundedWriteHelp path handle 0 stream
 
 
-boundedWriteHelp :: FilePath -> IO.Handle -> Int -> Stream.InputStream BS.ByteString -> IO (Maybe String)
+boundedWriteHelp :: FilePath -> IO.Handle -> Int -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
 boundedWriteHelp path handle size stream =
-  if maxSize < size then
-    return $ Just $
-      "Your " ++ path ++ " is too big. Must be less than 128kb. Let us know if this limit is too low!"
-
-  else
+  if size < 128000 then
     do  maybeChunk <- Stream.read stream
         case maybeChunk of
           Nothing ->
-            return Nothing
+            return (Right path)
 
           Just chunk ->
             do  BS.hPut handle chunk
                 boundedWriteHelp path handle (BS.length chunk + size) stream
+  else
+    return $ Left $
+      "Your " ++ path ++ " is too big. Must be less than 128kb. Let us know if this limit is too low!"
 
 
-maxSize :: Int
-maxSize =
-  2 ^ (17 :: Int)
+
+-- WRITE ENDPOINTS
+
+
+writeEndpoints :: Pkg.Name -> Pkg.Version -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
+writeEndpoints name version dir stream =
+    boundedRead 0 ""
+  where
+    boundedRead size bits =
+      if 1000 < size then
+        return $ Left "The hash of your assets should not be more than 1kb"
+
+      else
+        do  maybeChunk <- Stream.read stream
+            case maybeChunk of
+              Just chunk ->
+                boundedRead (BS.length chunk + size) (bits <> chunk)
+
+              Nothing ->
+                case Text.decodeUtf8' bits of
+                  Left _ ->
+                    return $ Left "The hash of your assets is malformed"
+
+                  Right hash ->
+                    do  Encode.writeUgly (dir </> "endpoints") $
+                          Encode.array
+                            [ Encode.object
+                                [ ("url", Encode.string (toGithubUrl name version))
+                                , ("hash", Encode.text hash)
+                                ]
+                            ]
+
+                        return $ Right "endpoints"
+
+
+toGithubUrl :: Pkg.Name -> Pkg.Version -> String
+toGithubUrl name version =
+  "https://github.com/" ++ Pkg.toUrl name ++ "/zipball/" ++ Pkg.versionToString version ++ "/"
