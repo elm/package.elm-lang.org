@@ -23,7 +23,7 @@ import System.FilePath ((</>))
 
 import qualified Elm.Package as Pkg
 import qualified Json.Encode as Encode
-import qualified Memory.Releases as Releases
+import qualified Package.Releases as Releases
 
 
 
