@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Memory.Releases
+module Package.Releases
   ( Release(..)
   , read
   , add
@@ -17,12 +17,12 @@ import qualified Data.Text as Text
 import qualified Data.Time.Clock as Time
 import System.Directory (doesFileExist)
 import System.Exit (exitFailure)
-import System.FilePath ((</>))
 import System.IO (hPutStr, stderr)
 
 import qualified Elm.Package as Pkg
 import qualified Json.Decode as Decode
 import qualified Json.Encode as Encode
+import qualified Package.Path as Path
 
 
 
@@ -36,25 +36,19 @@ data Release =
     }
 
 
-toPath :: Pkg.Name -> FilePath
-toPath pkg =
-  "packages" </> Pkg.toFilePath pkg </> "releases.json"
-
-
 
 -- READ
 
 
 read :: Pkg.Name -> IO [Release]
-read pkg =
-  do  let path = toPath pkg
-      json <- BS.readFile path
-      case Decode.parse releaseDecoder json of
-        Right overview ->
-          return overview
+read name =
+  do  json <- BS.readFile (Path.releases name)
+      case Decode.parse releasesDecoder json of
+        Right releases ->
+          return releases
 
         Left _ ->
-          do  hPutStr stderr $ "The JSON in " ++ path ++ " is corrupt."
+          do  hPutStr stderr $ "The JSON in " ++ Path.releases name ++ " is corrupt."
               exitFailure
 
 
@@ -63,25 +57,25 @@ read pkg =
 
 
 add :: Pkg.Name -> Pkg.Version -> Time.NominalDiffTime -> IO ()
-add pkg version time =
-  do  let path = toPath pkg
+add name version time =
+  do  let path = Path.releases name
       exists <- doesFileExist path
-      releases <- if exists then read pkg else return []
-      Encode.write path $ encodeRelease $ Release version time : releases
+      releases <- if exists then read name else return []
+      Encode.write path $ encodeReleases $ Release version time : releases
 
 
 
 -- JSON
 
 
-encodeRelease :: [Release] -> Encode.Value
-encodeRelease releases =
+encodeReleases :: [Release] -> Encode.Value
+encodeReleases releases =
   Encode.object $ flip map releases $ \(Release version time) ->
     ( Pkg.versionToString version, Encode.int (floor time) )
 
 
-releaseDecoder :: Decode.Decoder [Release]
-releaseDecoder =
+releasesDecoder :: Decode.Decoder [Release]
+releasesDecoder =
   do  pairs <- HashMap.toList <$> Decode.dict Decode.int
       forM pairs $ \(vsn, int) ->
         case Pkg.versionFromText vsn of
