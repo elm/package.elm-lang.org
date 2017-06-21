@@ -165,7 +165,7 @@ tagDecoder =
         elm.json
         README.md
         documentation.json
-        commit-hash
+        github-hash
         time
 
 -}
@@ -187,8 +187,8 @@ uploadFiles name version time =
 handlePart :: FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Maybe String)
 handlePart dir info stream =
   case Snap.partFieldName info of
-    "commit-hash" | Snap.partDisposition info == Snap.DispositionFormData ->
-      boundedWrite dir "commit-hash" stream
+    "github-hash" | Snap.partDisposition info == Snap.DispositionFormData ->
+      boundedWrite dir "github-hash" stream
 
     "elm.json" | Snap.partDisposition info == Snap.DispositionFile ->
       boundedWrite dir "elm.json" stream
