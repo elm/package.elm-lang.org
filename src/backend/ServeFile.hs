@@ -1,8 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module ServeFile
-  ( metadata
-  , elm
+  ( elm
   , docsHtml
   , overviewHtml
   , previewHtml
@@ -15,8 +14,6 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
-import Snap.Util.FileServe (serveFile)
-import System.FilePath ((</>))
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Blaze.Html5 ((!))
 import qualified Text.Blaze.Html5 as H
@@ -27,16 +24,6 @@ import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
 
 import qualified Artifacts
-
-
-
--- SERVE FILE
-
-
-metadata :: Pkg.Name -> Pkg.Version -> FilePath -> Snap ()
-metadata name version filePath =
-  serveFile
-    ("packages" </> Pkg.toFilePath name </> Pkg.versionToString version </> filePath)
 
 
 
