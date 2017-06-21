@@ -13,11 +13,13 @@ import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
 import qualified Json.Encode as Encode
 
+import qualified GitHub
 import Memory (Memory)
 import qualified Memory
 import qualified Memory.History as History
-import qualified Router
-import Router (Route, top, s, int, text, custom, (</>), (==>))
+import qualified Package.Register as Register
+import qualified Server.Router as Router
+import Server.Router (Route, top, s, int, text, custom, (</>), (==>))
 import qualified ServeFile
 
 
@@ -25,8 +27,8 @@ import qualified ServeFile
 -- SERVE
 
 
-serve :: Memory -> S.Snap ()
-serve memory =
+serve :: GitHub.Token -> Memory -> S.Snap ()
+serve token memory =
   asum
     [
       -- NORMAL ROUTES
@@ -36,6 +38,7 @@ serve memory =
         , s "packages" </> text </> text </> versionStuff ==> servePackage memory
         , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
+        , s "register" ==> Register.register token memory
         , s "help" </>
             Router.oneOf
               [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines" "Page.DesignGuidelines"

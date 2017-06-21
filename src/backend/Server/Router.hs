@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE BangPatterns, GADTs, OverloadedStrings, UnboxedTuples #-}
-module Router
+module Server.Router
   ( Route, top, s, int, text, custom
   , (</>), map, oneOf
   , (==>)
