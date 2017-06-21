@@ -8,6 +8,7 @@ import System.Console.CmdArgs
 import System.Directory (doesFileExist, createDirectoryIfMissing)
 
 import qualified Artifacts
+import qualified GitHub
 import qualified Memory
 import qualified Server
 
@@ -21,6 +22,7 @@ data Flags =
   Flags
     { port :: Int
     , bootstrap :: Bool
+    , github :: String
     }
     deriving (Data,Typeable,Show,Eq)
 
@@ -31,7 +33,9 @@ flags =
     { port = 8000
         &= help "set the port of the server"
     , bootstrap = False
-        &= help "do not build the UI, because that needs to pull dependencies from the server we are trying to start"
+        &= help "avoid downloading packages from server that is currently down"
+    , github = ""
+        &= help "OAuth token for talking to GitHub"
     }
 
 
@@ -50,10 +54,10 @@ main =
         else Artifacts.compile
 
       memory <- Memory.init
+      token <- GitHub.init (github cargs)
 
-      httpServe
-        (setPort (port cargs) defaultConfig)
-        (Server.serve memory)
+      let config = setPort (port cargs) defaultConfig
+      httpServe config (Server.serve token memory)
 
 
 
