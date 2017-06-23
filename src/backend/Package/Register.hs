@@ -165,11 +165,11 @@ tagDecoder =
 {-| After a successful upload of tom/queue, the following files will be created:
 
     packages/tom/queue/2.0.0/
-        elm.json
         README.md
-        documentation.json
-        endpoint
-        time
+        elm.json
+        docs.json
+        endpoint.json
+        time.dat
 
 -}
 uploadFiles :: Pkg.Name -> Pkg.Version -> Time.POSIXTime -> Snap.Snap ()
@@ -180,7 +180,7 @@ uploadFiles name version time =
       case Either.partitionEithers results of
         ([], files) ->
           if Set.fromList files == requiredFiles then
-            liftIO $ writeFile (dir </> "time") (show (floor time :: Integer))
+            liftIO $ writeFile (dir </> "time.dat") (show (floor time :: Integer))
           else
             do  liftIO (Dir.removeDirectoryRecursive dir)
                 Error.string 404 "Malformed request. Missing some metadata files."
@@ -193,20 +193,20 @@ uploadFiles name version time =
 
 requiredFiles :: Set.Set FilePath
 requiredFiles =
-  Set.fromList ["elm.json", "README.md", "documentation.json", "endpoint"]
+  Set.fromList [ "README.md", "elm.json", "docs.json", "endpoint.json" ]
 
 
 handlePart :: Pkg.Name -> Pkg.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
 handlePart name version dir info stream =
   case Snap.partFieldName info of
-    "elm.json" | Snap.partDisposition info == Snap.DispositionFile ->
-      boundedWrite dir "elm.json" stream
-
     "README.md" | Snap.partDisposition info == Snap.DispositionFile ->
       boundedWrite dir "README.md" stream
 
-    "documentation.json" | Snap.partDisposition info == Snap.DispositionFile ->
-      boundedWrite dir "documentation.json" stream
+    "elm.json" | Snap.partDisposition info == Snap.DispositionFile ->
+      boundedWrite dir "elm.json" stream
+
+    "docs.json" | Snap.partDisposition info == Snap.DispositionFile ->
+      boundedWrite dir "docs.json" stream
 
     "github-hash" | Snap.partDisposition info == Snap.DispositionFormData ->
       writeEndpoint name version dir stream
@@ -265,13 +265,13 @@ writeEndpoint name version dir stream =
                     return $ Left "The hash of your assets is malformed"
 
                   Right hash ->
-                    do  Encode.writeUgly (dir </> "endpoint") $
+                    do  Encode.writeUgly (dir </> "endpoint.json") $
                           Encode.object
                             [ ("url", Encode.string (toGithubUrl name version))
                             , ("hash", Encode.text hash)
                             ]
 
-                        return $ Right "endpoint"
+                        return $ Right "endpoint.json"
 
 
 toGithubUrl :: Pkg.Name -> Pkg.Version -> String

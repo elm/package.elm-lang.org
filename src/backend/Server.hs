@@ -41,7 +41,6 @@ serve token memory =
         , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "register" ==> Register.register token memory
-        , s "endpoint" </> text </> text </> versionRoute ==> serveEndpoint memory
         , s "help" </>
             Router.oneOf
               [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines" "Page.DesignGuidelines"
@@ -73,27 +72,6 @@ serveNewPackages memory index =
   do  history <- Memory.getHistory memory
       S.writeBuilder $ Encode.encodeUgly $ Encode.list History.encodeEvent $
         History.since index history
-
-
-
--- ENDPOINTS
-
-
-serveEndpoint :: Memory -> Text -> Text -> Pkg.Version -> S.Snap ()
-serveEndpoint memory user project version =
-  do  let name = Pkg.Name user project
-      pkgs <- Memory.getPackages memory
-      case Map.lookup name pkgs of
-        Nothing ->
-          Error.string 404 $ "There is no " ++ Pkg.toString name ++ " package."
-
-        Just versions ->
-          if elem version versions then
-            serveFile (Path.directory name version ++ "/endpoint")
-          else
-            Error.string 404 $
-              "Package " ++ Pkg.toString name ++ " exists, but version "
-              ++ Pkg.versionToString version ++ " does not."
 
 
 
@@ -166,6 +144,9 @@ servePackageHelp name version allVersions maybeAsset =
 
     Just "README.md" ->
       serveFile (Path.directory name version ++ "/README.md")
+
+    Just "endpoint.json" ->
+      serveFile (Path.directory name version ++ "/endpoint.json")
 
     Just asset ->
       case Module.dehyphenate asset of
