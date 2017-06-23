@@ -168,7 +168,7 @@ tagDecoder =
         elm.json
         README.md
         documentation.json
-        endpoints
+        endpoint
         time
 
 -}
@@ -193,7 +193,7 @@ uploadFiles name version time =
 
 requiredFiles :: Set.Set FilePath
 requiredFiles =
-  Set.fromList ["elm.json", "README.md", "documentation.json", "endpoints"]
+  Set.fromList ["elm.json", "README.md", "documentation.json", "endpoint"]
 
 
 handlePart :: Pkg.Name -> Pkg.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
@@ -209,7 +209,7 @@ handlePart name version dir info stream =
       boundedWrite dir "documentation.json" stream
 
     "github-hash" | Snap.partDisposition info == Snap.DispositionFormData ->
-      writeEndpoints name version dir stream
+      writeEndpoint name version dir stream
 
     path ->
       return $ Left $ "Did not recognize " ++ show path ++ " part in form-data"
@@ -245,8 +245,8 @@ boundedWriteHelp path handle size stream =
 -- WRITE ENDPOINTS
 
 
-writeEndpoints :: Pkg.Name -> Pkg.Version -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
-writeEndpoints name version dir stream =
+writeEndpoint :: Pkg.Name -> Pkg.Version -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
+writeEndpoint name version dir stream =
     boundedRead 0 ""
   where
     boundedRead size bits =
@@ -265,15 +265,13 @@ writeEndpoints name version dir stream =
                     return $ Left "The hash of your assets is malformed"
 
                   Right hash ->
-                    do  Encode.writeUgly (dir </> "endpoints") $
-                          Encode.array
-                            [ Encode.object
-                                [ ("url", Encode.string (toGithubUrl name version))
-                                , ("hash", Encode.text hash)
-                                ]
+                    do  Encode.writeUgly (dir </> "endpoint") $
+                          Encode.object
+                            [ ("url", Encode.string (toGithubUrl name version))
+                            , ("hash", Encode.text hash)
                             ]
 
-                        return $ Right "endpoints"
+                        return $ Right "endpoint"
 
 
 toGithubUrl :: Pkg.Name -> Pkg.Version -> String

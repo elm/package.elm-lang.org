@@ -89,7 +89,7 @@ serveEndpoint memory user project version =
 
         Just versions ->
           if elem version versions then
-            serveFile (Path.directory name version ++ "/endpoints")
+            serveFile (Path.directory name version ++ "/endpoint")
           else
             Error.string 404 $
               "Package " ++ Pkg.toString name ++ " exists, but version "
