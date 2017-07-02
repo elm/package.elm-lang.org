@@ -21,7 +21,7 @@ import qualified System.IO as IO
 import qualified System.IO.Streams as Stream
 
 import qualified Elm.Package as Pkg
-import qualified GitHub
+import qualified Http
 import qualified Json.Decode as Decode
 import qualified Json.Encode as Encode
 import qualified Memory
@@ -40,7 +40,7 @@ import qualified Server.Error as Error
 
 -}
 
-register :: GitHub.Token -> Memory.Memory -> Snap.Snap ()
+register :: Http.Token -> Memory.Memory -> Snap.Snap ()
 register token memory =
   do  name <- verifyName =<< getQueryParam "name"
       commitHash <- getQueryParam "commit-hash"
@@ -103,7 +103,7 @@ badNameMessage name problem =
 -- VERIFY VERSION
 
 
-verifyVersion :: GitHub.Token -> Memory.Memory -> Pkg.Name -> Text -> Text -> Snap.Snap Pkg.Version
+verifyVersion :: Http.Token -> Memory.Memory -> Pkg.Name -> Text -> Text -> Snap.Snap Pkg.Version
 verifyVersion token memory name commitHash rawVersion =
   case Pkg.versionFromText rawVersion of
     Left problem ->
@@ -128,16 +128,16 @@ verifyIsNew memory name vsn =
             "Version " ++ Pkg.versionToString vsn ++ " has already been published."
 
 
-verifyTag :: GitHub.Token -> Pkg.Name -> Pkg.Version -> Text -> Snap.Snap ()
+verifyTag :: Http.Token -> Pkg.Name -> Pkg.Version -> Text -> Snap.Snap ()
 verifyTag token name version commitHash =
   do  githubHash <- getCommitHash token name version
       when (commitHash /= githubHash) $ Error.string 400 $
         "The commit tagged on github as " ++ Pkg.versionToString version ++ " is not the one I was expecting."
 
 
-getCommitHash :: GitHub.Token -> Pkg.Name -> Pkg.Version -> Snap.Snap Text
+getCommitHash :: Http.Token -> Pkg.Name -> Pkg.Version -> Snap.Snap Text
 getCommitHash token name version =
-  do  response <- liftIO $ GitHub.fetch token $
+  do  response <- liftIO $ Http.fetchGithub token $
         "/repos/" ++ Pkg.toUrl name ++ "/git/refs/tags/" ++ Pkg.versionToString version
 
       case response of

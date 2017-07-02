@@ -8,7 +8,7 @@ import System.Console.CmdArgs
 import System.Directory (doesFileExist, createDirectoryIfMissing)
 
 import qualified Artifacts
-import qualified GitHub
+import qualified Http
 import qualified Memory
 import qualified Server
 
@@ -54,7 +54,7 @@ main =
         else Artifacts.compile
 
       memory <- Memory.init
-      token <- GitHub.init (github cargs)
+      token <- Http.init (github cargs)
 
       let config = setPort (port cargs) defaultConfig
       httpServe config (Server.serve token memory)

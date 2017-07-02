@@ -13,7 +13,7 @@ import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
 import qualified Json.Encode as Encode
 
-import qualified GitHub
+import qualified Http
 import Memory (Memory)
 import qualified Memory
 import qualified Memory.History as History
@@ -28,7 +28,7 @@ import qualified ServeFile
 -- SERVE
 
 
-serve :: GitHub.Token -> Memory -> S.Snap ()
+serve :: Http.Token -> Memory -> S.Snap ()
 serve token memory =
   asum
     [

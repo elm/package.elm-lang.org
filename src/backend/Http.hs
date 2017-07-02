@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module GitHub (Token, init, fetch) where
+module Http (Token, init, fetch, fetchGithub) where
 
 
 import Prelude hiding (init)
@@ -31,7 +31,7 @@ init :: String -> IO Token
 init githubToken =
   do  manager <- Http.newManager Http.tlsManagerSettings
       let token = Token manager githubToken
-      response <- fetch token "/"
+      response <- fetchGithub token "/"
       case response of
         Left err ->
           error $ "Bad OAuth access token for GitHub.\n" ++ err
@@ -41,15 +41,32 @@ init githubToken =
 
 
 
--- GITHUB REQUESTS
+-- ARBITRARY REQUESTS
 
 
 fetch :: Token -> String -> IO (Either String LBS.ByteString)
-fetch (Token manager token) path =
+fetch (Token manager _) url =
   let
-    recover e =
-      return $ Left $ show (e :: SomeException)
+    attempt =
+      do  request <- Http.parseUrlThrow url
+          response <- Http.httpLbs request manager
+          return $ Right $ Http.responseBody response
+  in
+    attempt `catch` recover
 
+
+recover :: SomeException -> IO (Either String a)
+recover e =
+  return $ Left $ show e
+
+
+
+-- GITHUB REQUESTS
+
+
+fetchGithub :: Token -> String -> IO (Either String LBS.ByteString)
+fetchGithub (Token manager token) path =
+  let
     attempt =
       do  request <- Http.parseUrlThrow $ "https://api.github.com" ++ path
           response <- flip Http.httpLbs manager $ request
