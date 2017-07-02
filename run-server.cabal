@@ -49,6 +49,7 @@ Executable run-server
     filepath,
     http-client,
     http-client-tls,
+    http-types,
     io-streams,
     mtl,
     snap-core,
