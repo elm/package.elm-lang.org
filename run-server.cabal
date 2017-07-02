@@ -1,20 +1,20 @@
-Name: elm-public-library
-Version: 0.1
+Name: run-server
+Version: 1.0.0
 
 Synopsis:
-  Server for hosting the Elm Public Library
+  The server for package.elm-lang.org
 
 Description:
-  Generates web pages for docemuntation
+  Serve documentation, register packages, route people to downloads, etc.
 
-Homepage: http://library.elm-lang.org
+Homepage: http://package.elm-lang.org
 
 License: BSD3
 License-file: LICENSE
 
 Author:     Evan Czaplicki
 Maintainer: info@elm-lang.org
-Copyright:  Copyright (c) 2013-2014 Evan Czaplicki
+Copyright:  Copyright (c) 2013-present Evan Czaplicki
 
 Category: Language
 
@@ -54,33 +54,6 @@ Executable run-server
     mtl,
     snap-core,
     snap-server,
-    text,
-    time,
-    unordered-containers
-
-
-Executable update-json
-  hs-source-dirs:
-    src/utils
-
-  Main-is:
-    UpdateJson.hs
-
-  ghc-options:
-    -threaded -O2 -W -rtsopts
-
-  Build-depends:
-    aeson,
-    base >=4.2 && <5,
-    bytestring,
-    containers,
-    directory,
-    filepath,
-    http-client,
-    http-client-tls,
-    iso8601-time,
-    mtl,
-    network,
     text,
     time,
     unordered-containers
