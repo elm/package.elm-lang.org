@@ -1,0 +1,50 @@
+Name: migrate
+Version: 0.1
+
+Synopsis:
+  Migrate all packages to 0.19 format
+
+Description:
+  Turn elm-package.json into elm.json, fix licenses, get publication dates, etc.
+
+Homepage: http://library.elm-lang.org
+
+License: BSD3
+License-file: LICENSE
+
+Author:     Evan Czaplicki
+Maintainer: info@elm-lang.org
+Copyright:  Copyright (c) 2013-2014 Evan Czaplicki
+
+Category: Language
+
+Build-type: Simple
+Cabal-version: >=1.9
+
+source-repository head
+  type:     git
+  location: git://github.com/elm-lang/package.elm-lang.org.git
+
+
+Executable migrate
+  Main-is:
+    Migrate.hs
+
+  ghc-options:
+    -threaded -O2 -W -rtsopts
+
+  Build-depends:
+    aeson,
+    base >=4.2 && <5,
+    bytestring,
+    containers,
+    directory,
+    filepath,
+    http-client,
+    http-client-tls,
+    iso8601-time,
+    mtl,
+    network,
+    text,
+    time,
+    unordered-containers
