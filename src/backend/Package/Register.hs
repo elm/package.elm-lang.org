@@ -36,15 +36,15 @@ import qualified Server.Error as Error
   - version
   - version is not already published
   - version is on github
-  - sha matches github sha
+  - commit hash matches github commit hash
 
 -}
 
 register :: GitHub.Token -> Memory.Memory -> Snap.Snap ()
 register token memory =
-  do  sha <- getQueryParam "sha"
-      name <- verifyName =<< getQueryParam "name"
-      version <- verifyVersion token memory name sha =<< getQueryParam "version"
+  do  name <- verifyName =<< getQueryParam "name"
+      commitHash <- getQueryParam "commit-hash"
+      version <- verifyVersion token memory name commitHash =<< getQueryParam "version"
 
       time <- liftIO Time.getPOSIXTime
 
@@ -104,7 +104,7 @@ badNameMessage name problem =
 
 
 verifyVersion :: GitHub.Token -> Memory.Memory -> Pkg.Name -> Text -> Text -> Snap.Snap Pkg.Version
-verifyVersion token memory name sha rawVersion =
+verifyVersion token memory name commitHash rawVersion =
   case Pkg.versionFromText rawVersion of
     Left problem ->
       Error.string 400 $
@@ -112,7 +112,7 @@ verifyVersion token memory name sha rawVersion =
 
     Right version ->
       do  verifyIsNew memory name version
-          verifySha token name version sha
+          verifyTag token name version commitHash
           return version
 
 
@@ -128,15 +128,15 @@ verifyIsNew memory name vsn =
             "Version " ++ Pkg.versionToString vsn ++ " has already been published."
 
 
-verifySha :: GitHub.Token -> Pkg.Name -> Pkg.Version -> Text -> Snap.Snap ()
-verifySha token name version sha =
-  do  githubSha <- getSha token name version
-      when (sha /= githubSha) $ Error.string 400 $
+verifyTag :: GitHub.Token -> Pkg.Name -> Pkg.Version -> Text -> Snap.Snap ()
+verifyTag token name version commitHash =
+  do  githubHash <- getCommitHash token name version
+      when (commitHash /= githubHash) $ Error.string 400 $
         "The commit tagged on github as " ++ Pkg.versionToString version ++ " is not the one I was expecting."
 
 
-getSha :: GitHub.Token -> Pkg.Name -> Pkg.Version -> Snap.Snap Text
-getSha token name version =
+getCommitHash :: GitHub.Token -> Pkg.Name -> Pkg.Version -> Snap.Snap Text
+getCommitHash token name version =
   do  response <- liftIO $ GitHub.fetch token $
         "/repos/" ++ Pkg.toUrl name ++ "/git/refs/tags/" ++ Pkg.versionToString version
 
@@ -146,11 +146,11 @@ getSha token name version =
 
         Right body ->
           case Decode.parse tagDecoder body of
-            Right sha ->
-              return sha
+            Right hash ->
+              return hash
 
             Left _ ->
-              Error.bytestring 500 "Bad JSON from GitHub"
+              Error.bytestring 500 "Request to GitHub API failed due to unexpected JSON."
 
 
 tagDecoder :: Decode.Decoder Text
