@@ -16,7 +16,6 @@ import System.FilePath ((</>), (<.>))
 import System.IO (hPutStrLn, stderr)
 
 import qualified Elm.Compiler.Module as Module
-import qualified Elm.Utils as Utils
 
 
 
@@ -58,11 +57,11 @@ compile =
 
 runElmMake :: Module.Raw -> ExceptT String IO String
 runElmMake name =
-  Utils.run "elm-make"
+  error "Elm.Utils.run" {-"elm-make"
     [ "src" </> "frontend" </> Module.nameToPath name <.> "elm"
     , "--yes"
     , "--output=" ++ path name
-    ]
+    ]-}
 
 
 publicModules :: [Module.Raw]
