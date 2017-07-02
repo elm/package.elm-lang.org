@@ -19,7 +19,6 @@ import qualified Memory
 import qualified Memory.History as History
 import qualified Package.Path as Path
 import qualified Package.Register as Register
-import qualified Server.Error as Error
 import qualified Server.Router as Router
 import Server.Router (Route, top, s, int, text, (</>), (==>))
 import qualified ServeFile
