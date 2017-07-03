@@ -1,186 +1,71 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Main where
+module GetDates (check) where
 
-import qualified Control.Exception as E
-import Control.Monad
-import Control.Monad.Except (ExceptT, runExceptT, liftIO, throwError)
-import Control.Monad.Reader (ReaderT, runReaderT, ask)
-import Data.Aeson ((.=), (.:))
-import qualified Data.Aeson as Json
-import qualified Data.ByteString.Lazy as BS
-import qualified Data.List as List
-import qualified Data.Text as Text
+import Control.Monad.Trans (liftIO)
 import qualified Data.Time.ISO8601 as Time
 import qualified Data.Time.Clock.POSIX as Time
 import qualified System.Directory as Dir
-import System.Exit (exitFailure)
 import System.FilePath ((</>))
-import System.IO (hPutStrLn, stderr)
 
-import Network (withSocketsDo)
-import qualified Network.HTTP.Client as Http
-import qualified Network.HTTP.Client.TLS as Http
-
-
-
--- MAIN
-
-
-main :: IO ()
-main =
-  run checkPackages
-
-
-checkPackages :: Task ()
-checkPackages =
-  do  users <- getSubDirs "packages"
-      forM_ users $ \user ->
-        do  projects <- getSubDirs ("packages" </> user)
-            mapM (checkPackage user) projects
-
-
-checkPackage :: String -> String -> Task ()
-checkPackage user project =
-  do  liftIO $ putStrLn $ "Checking " ++ user ++ "/" ++ project
-      let dir = "packages" </> user </> project
-      versions <- getSubDirs dir
-
-      let noKnownTime vsn =
-            not <$> Dir.doesFileExist (dir </> vsn </> "time.dat")
-
-      timeless <- filterM (liftIO . noKnownTime) versions
-
-      when (not (null timeless)) $
-        do  tags <- fetch $ "https://api.github.com/repos/" ++ user ++ "/" ++ project ++ "/tags?per_page=100"
-
-            forM_ (tags :: [Tag]) $ \(Tag name url) ->
-              when (elem name timeless) $
-                do  liftIO $ putStrLn $ "  - " ++ name
-                    (Date time) <- fetch url
-                    let timeFile = dir </> name </> "time.dat"
-                    liftIO $ BS.writeFile timeFile (Json.encode time)
-
-            pairs <-
-              forM versions $ \vsn ->
-                do  let timeFile = dir </> vsn </> "time.dat"
-                    bytes <- liftIO $ BS.readFile timeFile
-                    case Json.decode bytes of
-                      Nothing ->
-                        throwError $ "Bad time in " ++ timeFile
-
-                      Just time ->
-                        return (Text.pack vsn .= (time :: Time.POSIXTime))
-
-            liftIO $ BS.writeFile (dir </> "overview.json") $
-              Json.encode (Json.object pairs)
-
-
-data Tag = Tag { _name :: String, _url :: String }
-
-
-instance Json.FromJSON Tag where
-  parseJSON =
-    Json.withObject "Tag" $ \tag ->
-      do  name <- tag .: "name"
-          commit <- tag .: "commit"
-          url <- commit .: "url"
-          return (Tag name url)
-
-
-newtype Date = Date Time.POSIXTime
-
-
-instance Json.FromJSON Date where
-  parseJSON =
-    Json.withObject "Date" $ \object ->
-      do  commit <- object .: "commit"
-          author <- commit .: "author"
-          date <- author .: "date"
-          case Time.parseISO8601 date of
-            Nothing ->
-              fail "Not a valid ISO 8601 date."
-
-            Just utcTime ->
-              return (Date (1000 * Time.utcTimeToPOSIXSeconds utcTime))
+import qualified Crawl
+import qualified Elm.Package as Pkg
+import qualified Json.Decode as Decode
+import qualified Json.Encode as Encode
+import qualified Package.Path as Path
+import qualified Package.Releases as Releases
+import qualified Task
 
 
 
--- TASKS
+-- CHECK DATES
 
 
-type Task =
-  ExceptT String (ReaderT Http.Manager IO)
+check :: [Crawl.Package] -> Task.Task ()
+check packages =
+  mapM_ checkReleaseDates packages
 
 
-run :: Task a -> IO ()
-run task =
-  Network.withSocketsDo $
-    do  httpManager <- Http.newManager Http.tlsManagerSettings
-        result <- runReaderT (runExceptT task) httpManager
-        case result of
-          Right _ ->
-            putStrLn "Success!"
-
-          Left msg ->
-            do  hPutStrLn stderr msg
-                exitFailure
+checkReleaseDates :: Crawl.Package -> Task.Task ()
+checkReleaseDates (Crawl.Package pkg versions) =
+  do  liftIO $ putStrLn $ "Checking " ++ Pkg.toString pkg
+      releases <- traverse (getRelease pkg) versions
+      liftIO $ Encode.write (Path.releases pkg) (Releases.encode releases)
 
 
 
--- DIRECTORIES
+-- GET RELEASE
 
 
-getSubDirs :: FilePath -> Task [FilePath]
-getSubDirs dir =
-  liftIO $
-    do  contents <- Dir.getDirectoryContents dir
-        reverse <$> foldM (addSubDir dir) [] contents
+getRelease :: Pkg.Name -> Pkg.Version -> Task.Task Releases.Release
+getRelease pkg vsn =
+  do  let timeFile = "packages" </> Pkg.toFilePath pkg </> Pkg.versionToString vsn </> "time.dat"
+
+      exists <- liftIO $ Dir.doesFileExist timeFile
+
+      Releases.Release vsn <$>
+        if exists then
+          do  string <- liftIO $ readFile timeFile
+              return $ fromIntegral (read string :: Integer)
+
+        else
+          do  sha <- Task.fetchGithub shaDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/refs/tags/" ++ Pkg.versionToString vsn
+              time <- Task.fetchGithub timeDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/tags/" ++ sha
+              liftIO $ writeFile timeFile (show (floor time :: Integer))
+              return time
 
 
-addSubDir :: FilePath -> [FilePath] -> FilePath -> IO [FilePath]
-addSubDir dir subs subDir =
-  do  let path = dir </> subDir
-      exists <- Dir.doesDirectoryExist path
-      if exists && not (List.isPrefixOf "." subDir)
-        then return (subDir : subs)
-        else return subs
+shaDecoder :: Decode.Decoder String
+shaDecoder =
+  Decode.at ["object","sha"] Decode.string
 
 
+timeDecoder :: Decode.Decoder Time.POSIXTime
+timeDecoder =
+  do  date <- Decode.at ["tagger","date"] Decode.string
+      case Time.parseISO8601 date of
+        Nothing ->
+          fail "Not a valid ISO 8601 date."
 
--- HTTP
-
-
-fetch :: (Json.FromJSON a) => String -> Task a
-fetch url =
-  do  manager <- ask
-      result <- liftIO (fetchHelp url manager `E.catch` badRequest url)
-      either throwError return result
-
-
-fetchHelp :: (Json.FromJSON a) => String -> Http.Manager -> IO (Either String a)
-fetchHelp url manager =
-  do  request <- Http.parseUrlThrow url
-      response <- Http.httpLbs (addHeaders request) manager
-      return $ Json.eitherDecode $ Http.responseBody response
-
-
-addHeaders :: Http.Request -> Http.Request
-addHeaders request =
-  let
-    auth =
-      ( "Authorization", "token 0000000000000000000000000000000000000000" )
-
-    agent =
-      ( "user-agent", "elm-package-release-date-finder" )
-  in
-    request
-      { Http.requestHeaders =
-          auth : agent : Http.requestHeaders request
-      }
-
-
-badRequest :: String -> E.SomeException -> IO (Either String a)
-badRequest url _ =
-  return $ Left $ "Failure: <" ++ url ++ ">"
-
+        Just utcTime ->
+          return (1000 * Time.utcTimeToPOSIXSeconds utcTime)
