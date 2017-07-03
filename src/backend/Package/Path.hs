@@ -6,7 +6,7 @@ import qualified Elm.Package as Pkg
 
 releases :: Pkg.Name -> FilePath
 releases pkg =
-  "packages" </> Pkg.toFilePath pkg </> "overview.json"
+  "packages" </> Pkg.toFilePath pkg </> "releases.json"
 
 
 directory :: Pkg.Name -> Pkg.Version -> FilePath
