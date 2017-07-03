@@ -4,6 +4,7 @@ module Package.Releases
   ( Release(..)
   , read
   , add
+  , encode
   )
   where
 
@@ -14,7 +15,7 @@ import qualified Data.ByteString.Lazy as BS
 import qualified Data.HashMap.Lazy as HashMap
 import Data.Monoid ((<>))
 import qualified Data.Text as Text
-import qualified Data.Time.Clock as Time
+import qualified Data.Time.Clock.POSIX as Time
 import System.Directory (doesFileExist)
 import System.Exit (exitFailure)
 import System.IO (hPutStr, stderr)
@@ -32,7 +33,7 @@ import qualified Package.Path as Path
 data Release =
   Release
     { _version :: Pkg.Version
-    , _time :: Time.NominalDiffTime
+    , _time :: Time.POSIXTime
     }
 
 
@@ -56,20 +57,20 @@ read name =
 -- ADD
 
 
-add :: Pkg.Name -> Pkg.Version -> Time.NominalDiffTime -> IO ()
+add :: Pkg.Name -> Pkg.Version -> Time.POSIXTime -> IO ()
 add name version time =
   do  let path = Path.releases name
       exists <- doesFileExist path
       releases <- if exists then read name else return []
-      Encode.write path $ encodeReleases $ Release version time : releases
+      Encode.write path $ encode $ Release version time : releases
 
 
 
 -- JSON
 
 
-encodeReleases :: [Release] -> Encode.Value
-encodeReleases releases =
+encode :: [Release] -> Encode.Value
+encode releases =
   Encode.object $ flip map releases $ \(Release version time) ->
     ( Pkg.versionToString version, Encode.int (floor time) )
 
