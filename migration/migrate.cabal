@@ -27,6 +27,10 @@ source-repository head
 
 
 Executable migrate
+  hs-source-dirs:
+    ../src/backend
+    ../migration
+
   Main-is:
     Migrate.hs
 
@@ -37,11 +41,14 @@ Executable migrate
     aeson,
     base >=4.2 && <5,
     bytestring,
+    cmdargs,
     containers,
     directory,
+    elm-compiler == 0.19.0,
     filepath,
     http-client,
     http-client-tls,
+    http-types,
     iso8601-time,
     mtl,
     network,
