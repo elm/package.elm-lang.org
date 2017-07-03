@@ -130,6 +130,10 @@ pre {
   vertical-align: top;
 }
 
+.entry-list img {
+  max-width: 100%;
+}
+
 .entry-list-title {
   font-size: 3em;
 }
