@@ -2,17 +2,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Crawl
   ( Package(..)
+  , upgradingPackages
   , newPackages
   , oldDir
   , newDir
   )
   where
 
-import Control.Monad (foldM, forM)
+import Control.Monad (foldM)
 import Control.Monad.Except (throwError)
 import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import Data.Monoid ((<>))
 import qualified Data.Text as Text
 import qualified System.Directory as Dir
@@ -41,6 +43,15 @@ oldDir pkg vsn =
 newDir :: Pkg.Name -> Pkg.Version -> FilePath
 newDir pkg vsn =
   "packages" </> Pkg.toFilePath pkg </> Pkg.versionToString vsn
+
+
+
+-- UPGRADING PACKAGES
+
+
+upgradingPackages :: Task.Task [Package]
+upgradingPackages =
+  crawl "packages"
 
 
 
@@ -87,16 +98,24 @@ crawl root =
 crawlUser :: FilePath -> String -> Task.Task [Package]
 crawlUser root user =
   do  projectNames <- getSubDirs (root </> user)
-      forM projectNames $ \project ->
-        do  vsns <- getSubDirs (root </> user </> project)
-            either throwError return (toPackage user project vsns)
+      Maybe.catMaybes <$> traverse (crawlProject root user) projectNames
 
 
-toPackage :: String -> String -> [String] -> Either String Package
-toPackage user project versions =
-  do  name <- Pkg.fromText (Text.pack user <> "/" <> Text.pack project)
-      vsns <- traverse (Pkg.versionFromText . Text.pack) versions
-      return (Package name vsns)
+crawlProject :: FilePath -> String -> String -> Task.Task (Maybe Package)
+crawlProject root user project =
+  case Pkg.fromText (Text.pack user <> "/" <> Text.pack project) of
+    Left _ ->
+      do  liftIO $ putStrLn $ "bad name - " ++ user ++ "/" ++ project
+          return Nothing
+
+    Right pkg ->
+      do  vsns <- getSubDirs (root </> user </> project)
+          case traverse (Pkg.versionFromText . Text.pack) vsns of
+            Right versions ->
+              return (Just (Package pkg versions))
+
+            Left _ ->
+              throwError $ "Problem with " ++ user ++ "/" ++ project ++ " " ++ show vsns
 
 
 
