@@ -28,8 +28,7 @@ get packages =
 
 getReleaseDates :: Crawl.Package -> Task.Task ()
 getReleaseDates (Crawl.Package pkg versions) =
-  do  liftIO $ putStrLn $ "Checking " ++ Pkg.toString pkg
-      releases <- traverse (getRelease pkg) versions
+  do  releases <- traverse (getRelease pkg) versions
       liftIO $ Encode.write (Path.releases pkg) (Releases.encode releases)
 
 
@@ -50,7 +49,8 @@ getRelease pkg vsn =
                 return $ fromIntegral (read string :: Integer)
 
           else
-            do  sha <- Task.fetchGithub shaDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/refs/tags/" ++ Pkg.versionToString vsn
+            do  liftIO $ putStrLn $ Pkg.toString pkg ++ " " ++ Pkg.versionToString vsn
+                sha <- Task.fetchGithub shaDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/refs/tags/" ++ Pkg.versionToString vsn
                 time <- Task.fetchGithub timeDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/tags/" ++ sha
                 liftIO $ writeFile timeFile (show (floor time :: Integer))
                 return time
