@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module GetDates (check) where
+module GetDates (get) where
 
 import Control.Monad.Trans (liftIO)
 import qualified Data.Time.ISO8601 as Time
@@ -21,13 +21,13 @@ import qualified Task
 -- CHECK DATES
 
 
-check :: [Crawl.Package] -> Task.Task ()
-check packages =
-  mapM_ checkReleaseDates packages
+get :: [Crawl.Package] -> Task.Task ()
+get packages =
+  mapM_ getReleaseDates packages
 
 
-checkReleaseDates :: Crawl.Package -> Task.Task ()
-checkReleaseDates (Crawl.Package pkg versions) =
+getReleaseDates :: Crawl.Package -> Task.Task ()
+getReleaseDates (Crawl.Package pkg versions) =
   do  liftIO $ putStrLn $ "Checking " ++ Pkg.toString pkg
       releases <- traverse (getRelease pkg) versions
       liftIO $ Encode.write (Path.releases pkg) (Releases.encode releases)
