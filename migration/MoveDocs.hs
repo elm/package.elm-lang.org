@@ -24,8 +24,8 @@ move :: Pkg.Name -> Pkg.Version -> Task.Transaction ()
 move pkg version =
   do  content <- liftIO $ BS.readFile (Crawl.oldDir pkg version </> "documentation.json")
       case Decode.parse (Decode.list Docs.decoder) content of
-        Left _ ->
-          Task.bail "Problem parsing documentation.json"
+        Left problem ->
+          Task.bail $ "Problem parsing documentation.json:\n" ++ show problem
 
         Right oldDocs ->
           liftIO $
