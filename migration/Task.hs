@@ -11,10 +11,12 @@ module Task
   where
 
 
+import Control.Exception (SomeException, catch, try)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, runReaderT, ask)
-import Control.Monad.Trans (lift, liftIO)
-import System.Directory (removeDirectoryRecursive)
+import Control.Monad.Trans (liftIO)
+import qualified Data.Text as Text
+import qualified System.Directory as Dir
 import System.Exit (exitFailure)
 import System.FilePath ((</>))
 import System.IO (hPutStrLn, stderr)
@@ -63,18 +65,33 @@ bail msg =
 
 attempt :: Pkg.Name -> Pkg.Version -> Transaction a -> Task a
 attempt pkg vsn transaction =
-  do  result <- lift $ runExceptT transaction
+  do  token <- ask
+
+      result <- liftIO $ runReaderT (runExceptT transaction) token
+        `catch` \e -> return (Left (Error (show (e :: SomeException))))
+
       case result of
         Right a ->
           return a
 
         Left (Error msg) ->
-          do  let version = Pkg.versionToString vsn
-              let dir = "packages" </> Pkg.toFilePath pkg </> version
-              let err = "Bailed out of " ++ Pkg.toString pkg ++ " " ++ version ++ " transaction."
-              liftIO $ removeDirectoryRecursive dir
-              liftIO $ hPutStrLn stderr err
+          do  liftIO $ hPutStrLn stderr $
+                "Bailed out of " ++ Pkg.toString pkg ++ " " ++ Pkg.versionToString vsn ++ " transaction."
+              liftIO $ removeDirectory pkg vsn
               throwError msg
+
+
+removeDirectory :: Pkg.Name -> Pkg.Version -> IO ()
+removeDirectory (Pkg.Name user project) version =
+  do  let usr = Text.unpack user
+      let prj = Text.unpack project
+      let vsn = Pkg.versionToString version
+
+      Dir.removeDirectoryRecursive ("packages" </> usr </> prj </> vsn)
+      _ <- try $ Dir.removeDirectory ("packages" </> usr </> prj) :: IO (Either SomeException ())
+      _ <- try $ Dir.removeDirectory ("packages" </> usr) :: IO (Either SomeException ())
+
+      return ()
 
 
 
