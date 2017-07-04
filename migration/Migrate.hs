@@ -1,6 +1,34 @@
 {-# OPTIONS_GHC -Wall #-}
-{-# LANGUAGE OverloadedStrings #-}
-module Migrate where
+{-# LANGUAGE DeriveDataTypeable #-}
+module Main where
+
+import Control.Monad.Trans (liftIO)
+import System.Console.CmdArgs
+
+import qualified Crawl
+import qualified GetDates
+import qualified Task
+import qualified UpdateJson
+
+
+
+
+-- FLAGS
+
+
+data Flags =
+  Flags
+    { github :: String
+    }
+    deriving (Data,Typeable,Show,Eq)
+
+
+flags :: Flags
+flags =
+  Flags
+    { github = ""
+        &= help "OAuth token for talking to GitHub"
+    }
 
 
 
@@ -9,4 +37,10 @@ module Migrate where
 
 main :: IO ()
 main =
-  putStrLn "TODO"
+  do  cargs <- cmdArgs flags
+      Task.run (github cargs) $
+        do  newPackages <- Crawl.newPackages
+
+            UpdateJson.update packages
+
+            GetDates.check packages
