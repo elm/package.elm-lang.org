@@ -1,8 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module UpdateJson (update) where
+module MoveElmJson (move) where
 
-import Control.Monad.Except (throwError)
 import Control.Monad.Trans (liftIO)
 import Data.Aeson ((.:))
 import qualified Data.Aeson as Json
@@ -18,30 +17,24 @@ import qualified Task
 
 
 
--- MAIN
+-- MOVE
 
 
-update :: [Crawl.Package] -> Task.Task ()
-update packages =
-  mapM_ updatePackage packages
-
-
-updatePackage :: Crawl.Package -> Task.Task ()
-updatePackage (Crawl.Package pkg vsns) =
-  mapM_ (updateVersion pkg) vsns
-
-
-updateVersion :: Pkg.Name -> Pkg.Version -> Task.Task ()
-updateVersion pkg version =
+move :: Pkg.Name -> Pkg.Version -> Task.Transaction ()
+move pkg version =
   do  let oldJson = Crawl.oldDir pkg version </> "elm-package.json"
       content <- liftIO $ BS.readFile oldJson
       case Json.eitherDecode content of
         Left err ->
-          throwError $ "Problem at " ++ oldJson ++ "\n" ++ err
+          Task.bail ("Problem at " ++ oldJson ++ "\n" ++ err)
 
         Right (Project object) ->
           do  let newJson = Crawl.newDir pkg version </> "elm.json"
               liftIO $ BS.writeFile newJson (Json.encode object)
+
+
+
+-- JSON DECODING
 
 
 data Project = Project Json.Object

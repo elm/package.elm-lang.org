@@ -8,7 +8,7 @@ import System.Console.CmdArgs
 import qualified Crawl
 import qualified GetDates
 import qualified Task
-import qualified UpdateJson
+import qualified MoveElmJson
 
 
 
@@ -41,6 +41,6 @@ main =
       Task.run (github cargs) $
         do  newPackages <- Crawl.newPackages
 
-            UpdateJson.update packages
+            MoveElmJson.move newPackages
 
-            GetDates.check packages
+            GetDates.check newPackages
