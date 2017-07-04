@@ -47,12 +47,14 @@ main :: IO ()
 main =
   do  cargs <- cmdArgs flags
       Task.run (github cargs) $
-        do  liftIO $ putStrLn "---- MOVING ASSETS ----"
+        do  liftIO $ putStrLn "---- CRAWLING DIRECTORIES ----"
             newPackages <- take (batch cargs) <$> Crawl.newPackages
+
+            liftIO $ putStrLn "---- MOVING ASSETS ----"
             mapM_ moveAssets newPackages
 
             liftIO $ putStrLn "---- CHECKING RELEASE DATES ----"
-            Dates.get newPackages
+            Dates.get =<< Crawl.upgradingPackages
 
             liftIO $ putStrLn "---- CHECKING ENDPOINTS ----"
             liftIO $ putStrLn "this is not implemented yet"
