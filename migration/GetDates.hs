@@ -40,20 +40,20 @@ checkReleaseDates (Crawl.Package pkg versions) =
 getRelease :: Pkg.Name -> Pkg.Version -> Task.Task Releases.Release
 getRelease pkg vsn =
   Task.attempt pkg vsn $
-  do  let timeFile = "packages" </> Pkg.toFilePath pkg </> Pkg.versionToString vsn </> "time.dat"
+    do  let timeFile = "packages" </> Pkg.toFilePath pkg </> Pkg.versionToString vsn </> "time.dat"
 
-      exists <- liftIO $ Dir.doesFileExist timeFile
+        exists <- liftIO $ Dir.doesFileExist timeFile
 
-      Releases.Release vsn <$>
-        if exists then
-          do  string <- liftIO $ readFile timeFile
-              return $ fromIntegral (read string :: Integer)
+        Releases.Release vsn <$>
+          if exists then
+            do  string <- liftIO $ readFile timeFile
+                return $ fromIntegral (read string :: Integer)
 
-        else
-          do  sha <- Task.fetchGithub shaDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/refs/tags/" ++ Pkg.versionToString vsn
-              time <- Task.fetchGithub timeDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/tags/" ++ sha
-              liftIO $ writeFile timeFile (show (floor time :: Integer))
-              return time
+          else
+            do  sha <- Task.fetchGithub shaDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/refs/tags/" ++ Pkg.versionToString vsn
+                time <- Task.fetchGithub timeDecoder $ "/repos/" ++ Pkg.toUrl pkg ++ "/git/tags/" ++ sha
+                liftIO $ writeFile timeFile (show (floor time :: Integer))
+                return time
 
 
 shaDecoder :: Decode.Decoder String
