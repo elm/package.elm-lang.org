@@ -9,7 +9,7 @@ import qualified System.Directory as Dir
 
 import qualified Crawl
 import qualified Elm.Package as Pkg
-import qualified GetDates
+import qualified GetDates as Dates
 import qualified Task
 import qualified MoveDocs as Docs
 import qualified MoveElmJson as ElmJson
@@ -47,9 +47,15 @@ main :: IO ()
 main =
   do  cargs <- cmdArgs flags
       Task.run (github cargs) $
-        do  newPackages <- take (batch cargs) <$> Crawl.newPackages
+        do  liftIO $ putStrLn "---- MOVING ASSETS ----"
+            newPackages <- take (batch cargs) <$> Crawl.newPackages
             mapM_ moveAssets newPackages
-            GetDates.check newPackages
+
+            liftIO $ putStrLn "---- CHECKING RELEASE DATES ----"
+            Dates.get newPackages
+
+            liftIO $ putStrLn "---- CHECKING ENDPOINTS ----"
+            liftIO $ putStrLn "this is not implemented yet"
 
 
 moveAssets :: Crawl.Package -> Task.Task ()
