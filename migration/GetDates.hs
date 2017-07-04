@@ -39,6 +39,7 @@ checkReleaseDates (Crawl.Package pkg versions) =
 
 getRelease :: Pkg.Name -> Pkg.Version -> Task.Task Releases.Release
 getRelease pkg vsn =
+  Task.attempt pkg vsn $
   do  let timeFile = "packages" </> Pkg.toFilePath pkg </> Pkg.versionToString vsn </> "time.dat"
 
       exists <- liftIO $ Dir.doesFileExist timeFile
