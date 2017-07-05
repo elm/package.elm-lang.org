@@ -1,9 +1,11 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Control.Monad (forM_)
 import Control.Monad.Trans (liftIO)
+import qualified Data.Set as Set
 import System.Console.CmdArgs
 import qualified System.Directory as Dir
 
@@ -32,7 +34,7 @@ data Flags =
 flags :: Flags
 flags =
   Flags
-    { batch = 10
+    { batch = 40
         &= help "Maximum number of packages to process"
     , github = ""
         &= help "OAuth token for talking to GitHub"
@@ -48,7 +50,7 @@ main =
   do  cargs <- cmdArgs flags
       Task.run (github cargs) $
         do  liftIO $ putStrLn "---- CRAWLING DIRECTORIES ----"
-            newPackages <- take (batch cargs) <$> Crawl.newPackages
+            newPackages <- skipProblems <$> Crawl.newPackages
 
             liftIO $ putStrLn "---- MOVING ASSETS ----"
             mapM_ moveAssets newPackages
@@ -56,8 +58,7 @@ main =
             liftIO $ putStrLn "---- CHECKING RELEASE DATES ----"
             Dates.get =<< Crawl.upgradingPackages
 
-            liftIO $ putStrLn "---- CHECKING ENDPOINTS ----"
-            liftIO $ putStrLn "this is not implemented yet"
+            liftIO $ putStrLn "DONE"
 
 
 moveAssets :: Crawl.Package -> Task.Task ()
@@ -69,3 +70,45 @@ moveAssets (Crawl.Package pkg vsns) =
           Readme.move pkg vsn
           ElmJson.move pkg vsn
           Docs.move pkg vsn
+
+
+
+-- PROBLEM PACKAGES
+
+
+skipProblems :: [Crawl.Package] -> [Crawl.Package]
+skipProblems packages =
+  filter (\(Crawl.Package pkg _) -> not (Set.member pkg problemPackages)) packages
+
+
+problemPackages :: Set.Set Pkg.Name
+problemPackages =
+  Set.fromList
+    [ Pkg.Name "joneshf" "elm-proof"                -- crazy module name in docs
+    , Pkg.Name "adam-r-kowalski" "elm-css-legacy"   -- deleted
+    , Pkg.Name "danstn" "elm-postgrest"             -- deleted
+    , Pkg.Name "elm-community" "elm-function-extra" -- deleted
+    , Pkg.Name "elm-community" "elm-undo-redo"      -- deleted
+    , Pkg.Name "folkertdev" "elm-ordereddict"       -- deleted
+    , Pkg.Name "frenchdonuts" "elm-autocomplete"    -- too weird
+    , Pkg.Name "geekyme" "elm-charts"               -- deleted
+    , Pkg.Name "humio" "elm-plot"                   -- missing tags / why fork?
+    , Pkg.Name "izdi" "junk"                        -- deleted
+    , Pkg.Name "JasonGFitzpatrick" "elm-router"     -- deleted
+    , Pkg.Name "jasonmahr" "html-escaped-unicode"   -- deleted
+    , Pkg.Name "JOEANDAVERDE" "flex-html"           -- deleted
+    , Pkg.Name "joonazan" "elm-ast"                 -- missing tags / why fork?
+    , Pkg.Name "jvoigtlaender" "elm-drag-and-drop"  -- deleted
+    , Pkg.Name "lagunoff" "elm-mdl"                 -- deleted
+    , Pkg.Name "lukewestby-fake-elm-lang-1" "redirect-test-1" -- deleted
+    , Pkg.Name "nicklawls" "elm-html-animation"     -- deleted
+    , Pkg.Name "nvaldes" "elm-bootstrap"            -- deprecated
+    , Pkg.Name "omarroth" "elm-dom"                 -- deleted
+    , Pkg.Name "omarroth" "elm-parts"               -- deleted
+    , Pkg.Name "rluiten" "lunrelm"                  -- deprecated
+    , Pkg.Name "RomanErnst" "updated-list"          -- deleted
+    , Pkg.Name "Spottt" "elm-dialog"                -- missing tags / why fork?
+    , Pkg.Name "terezka" "elm-view-utils"           -- renamed
+    , Pkg.Name "wittjosiah" "elm-css"               -- deleted
+    , Pkg.Name "z5h" "time-app"                     -- deprecated
+    ]
