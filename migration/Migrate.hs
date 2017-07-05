@@ -106,9 +106,12 @@ problemPackages =
     , Pkg.Name "omarroth" "elm-dom"                 -- deleted
     , Pkg.Name "omarroth" "elm-parts"               -- deleted
     , Pkg.Name "rluiten" "lunrelm"                  -- deprecated
+    , Pkg.Name "stasdavydov" "elm-cart"             -- unlicensed
     , Pkg.Name "RomanErnst" "updated-list"          -- deleted
     , Pkg.Name "Spottt" "elm-dialog"                -- missing tags / why fork?
     , Pkg.Name "terezka" "elm-view-utils"           -- renamed
+    , Pkg.Name "williamwhitacre" "gigan"            -- renamed / unlicensed
+    , Pkg.Name "williamwhitacre" "scaffold"         -- signals / unlicensed but BSD3
     , Pkg.Name "wittjosiah" "elm-css"               -- deleted
     , Pkg.Name "z5h" "time-app"                     -- deprecated
     ]
