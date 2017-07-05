@@ -98,18 +98,18 @@ removeDirectory (Pkg.Name user project) version =
 -- HTTP
 
 
-fetchGithub :: Decode.Decoder a -> String -> Transaction a
+fetchGithub :: Decode.Decoder a -> String -> Task a
 fetchGithub decoder path =
   do  token <- ask
       result <- liftIO $ Http.fetchGithub token path
       case result of
         Left msg ->
-          bail msg
+          throwError msg
 
         Right bytestring ->
           case Decode.parse decoder bytestring of
             Left _ ->
-              bail ("Bad JSON from GitHub for " ++ path)
+              throwError ("Bad JSON from GitHub for " ++ path)
 
             Right value ->
               return value
