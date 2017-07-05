@@ -76,10 +76,9 @@ toName repository =
 conversions :: Map.Map Text.Text Text.Text
 conversions =
   Map.fromList
---    [ "" ==> "BSD-3-Clause"
-
     -- BSD
-    [ "BSD3" ==> "BSD-3-Clause"
+    [ "BSD" ==> "BSD-3-Clause"
+    , "BSD3" ==> "BSD-3-Clause"
     , "BSD3-Clause" ==> "BSD-3-Clause"
     , "BSD 3-Clause" ==> "BSD-3-Clause"
     , "BSD-3-Clause" ==> "BSD-3-Clause"
@@ -91,7 +90,10 @@ conversions =
 
     -- GPL
     , "AGPL-3" ==> "AGPL-3.0"
+    , "LGPL-3.0" ==> "LGPL-3.0"
+    , "GPL-3.0" ==> "GPL-3.0"
     , "GPLv3" ==> "GPL-3.0"
+    , "GPL3" ==> "GPL-3.0"
 
     -- APACHE
     , "Apache2.0" ==> "Apache-2.0"
@@ -111,6 +113,7 @@ conversions =
     , "CC0" ==> "CC0-1.0"
     , "WTFPL" ==> "WTFPL"
     , "WORDNET" ==> "WORDNET"
+    , "Open Database License (ODbL) v1.0" ==> "ODbL-1.0"
     ]
 
 
