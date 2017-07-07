@@ -188,7 +188,7 @@ uploadFiles name version time =
         (problems, _) ->
           do  liftIO (Dir.removeDirectoryRecursive dir)
               Error.string 404 $
-                "Failure uploading your package:\n" ++ concatMap ("\n  - " ++) problems
+                "Failure uploading your package:" ++ concatMap ("\n  - " ++) problems
 
 
 requiredFiles :: Set.Set FilePath
@@ -199,16 +199,16 @@ requiredFiles =
 handlePart :: Pkg.Name -> Pkg.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
 handlePart name version dir info stream =
   case Snap.partFieldName info of
-    "README.md" | Snap.partDisposition info == Snap.DispositionFile ->
+    "README.md" ->
       boundedWrite dir "README.md" stream
 
-    "elm.json" | Snap.partDisposition info == Snap.DispositionFile ->
+    "elm.json" ->
       boundedWrite dir "elm.json" stream
 
-    "docs.json" | Snap.partDisposition info == Snap.DispositionFile ->
+    "docs.json" ->
       boundedWrite dir "docs.json" stream
 
-    "github-hash" | Snap.partDisposition info == Snap.DispositionFormData ->
+    "github-hash" ->
       writeEndpoint name version dir stream
 
     path ->
