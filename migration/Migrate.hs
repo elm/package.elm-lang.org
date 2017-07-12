@@ -102,7 +102,7 @@ problemPackages =
     , Pkg.Name "lagunoff" "elm-mdl"                 -- deleted
     , Pkg.Name "lukewestby-fake-elm-lang-1" "redirect-test-1" -- deleted
     , Pkg.Name "nicklawls" "elm-html-animation"     -- deleted
-    , Pkg.Name "nvaldes" "elm-bootstrap"            -- deprecated
+    , Pkg.Name "nvaldes" "elm-bootstrap"            -- deprecated / https://github.com/elm-lang/package.elm-lang.org/issues/227
     , Pkg.Name "omarroth" "elm-dom"                 -- deleted
     , Pkg.Name "omarroth" "elm-parts"               -- deleted
     , Pkg.Name "rluiten" "lunrelm"                  -- deprecated
