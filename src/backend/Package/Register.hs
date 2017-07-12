@@ -227,7 +227,7 @@ boundedWrite dir path stream =
 
 boundedWriteHelp :: FilePath -> IO.Handle -> Int -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
 boundedWriteHelp path handle size stream =
-  if size < 128000 then
+  if size < 512000 then
     do  maybeChunk <- Stream.read stream
         case maybeChunk of
           Nothing ->
@@ -238,7 +238,7 @@ boundedWriteHelp path handle size stream =
                 boundedWriteHelp path handle (BS.length chunk + size) stream
   else
     return $ Left $
-      "Your " ++ path ++ " is too big. Must be less than 128kb. Let us know if this limit is too low!"
+      "Your " ++ path ++ " is too big. Must be less than 512kb. Let us know if this limit is too low!"
 
 
 
