@@ -18,7 +18,7 @@ type Route
   = Home
   | User String
   | Package String String
-  | Version String String Version
+  | Readme String String Version
   | Module String String Version String (Maybe String)
   | Guidelines
   | DocsHelp
@@ -52,7 +52,7 @@ parser =
     [ map Home        <| top
     , map User        <| s "packages" </> user
     , map Package     <| s "packages" </> user </> project
-    , map Version     <| s "packages" </> user </> project </> version
+    , map Readme      <| s "packages" </> user </> project </> version
     , map Module      <| s "packages" </> user </> project </> version </> moduleName </> map Nothing top
     , map Guidelines  <| s "help" </> s "design-guidelines"
     , map DocsHelp    <| s "help" </> s "docs"
@@ -99,7 +99,7 @@ toString route =
     Package user project ->
       "/packages/" ++ user ++ "/" ++ project ++ "/"
 
-    Version user project vsn ->
+    Readme user project vsn ->
       "/packages/" ++ user ++ "/" ++ project ++ "/" ++ vsnToString vsn ++ "/"
 
     Module user project vsn moduleName maybeValue ->
