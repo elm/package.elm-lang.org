@@ -124,29 +124,29 @@ pre {
 /* DOCUMENTATION */
 
 
-.entry-list {
+.block-list {
   width: 600px;
   display: inline-block;
   vertical-align: top;
 }
 
-.entry-list-title {
+.block-list-title {
   font-size: 3em;
 }
 
-.markdown-entry h1 {
+.markdown-block h1 {
   margin-top: 2em;
   margin-bottom: 0.5px
 }
 
-.docs-entry {
+.docs-block {
   border-top: 1px solid #eeeeee;
   margin-top: 1em;
   margin-bottom: 2em;
 }
 
 
-.docs-annotation {
+.docs-header {
   white-space: pre;
   font-family: 'Source Code Pro', Consolas, "Liberation Mono", Menlo, Courier, monospace;
   padding-top: 10px;

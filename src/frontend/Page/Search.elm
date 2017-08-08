@@ -223,12 +223,13 @@ versionLink packageName vsn =
     a [ href url ] [ text vsnString ]
 
 
+
 -- VIEW OLD SUMMARIES
 
 
 viewOldSummaries : List Summary.Summary -> Html msg
 viewOldSummaries oldSummaries =
-  div [ style [ "opacity" => "0.5" ] ] <|
+  div [ style "opacity" "0.5" ] <|
     if List.isEmpty oldSummaries then
       []
 
@@ -238,13 +239,86 @@ viewOldSummaries oldSummaries =
 
 oldMessage : Html msg
 oldMessage =
-  p [ style
-        [ "color" => "#EA157A"
-        , "text-align" => "center"
-        , "padding" => "1em"
-        , "margin" => "0"
-        , "background-color" => "#eeeeee"
-        ]
+  p
+    [ style "color" "#EA157A"
+    , style "text-align" "center"
+    , style "padding" "1em"
+    , style "margin" "0"
+    , style "background-color" "#eeeeee"
     ]
     [ text "The following packages have not been updated for 0.18 yet!"
     ]
+
+
+
+-- VIEW SIDEBAR
+
+
+viewSidebar : Model -> Html Msg
+viewSidebar model =
+  div [class "catalog-sidebar"]
+    [ h2 [] [ text "Resources" ]
+    , ul []
+        [ li [] [ a [ href "http://klaftertief.github.io/elm-search/" ] [ text "Fancy Search" ] ]
+        , li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
+        , li [] [ a [ href "/help/design-guidelines" ] [ text "API Design Guidelines" ] ]
+        , li [] [ a [ href "/help/documentation-format" ] [ text "Write great docs" ] ]
+        , li [] [ a [ href "/help/docs-preview" ] [ text "Preview your docs" ] ]
+        , li [] [ a [ href "http://elm-lang.org" ] [ text "Elm Website" ] ]
+        ]
+    , h2 [] [ text "Popular Packages" ]
+    , ul []
+        [ pkgBlock "General" generalPackages
+        , pkgBlock "Rendering" renderingPackages
+        , pkgBlock "Effects" effectPackages
+        , pkgBlock "User Input" inputPackages
+        ]
+    ]
+
+
+pkgBlock : String -> List (String, String) -> Html msg
+pkgBlock title pkgs =
+  li []
+    [ text title
+    , ul [] (List.map pkgBlockItem pkgs)
+    ]
+
+
+pkgBlockItem : (String, String) -> Html msg
+pkgBlockItem (project, niceName) =
+  li []
+    [ a [ href ("/packages/" ++ project ++ "/latest") ] [ text niceName ]
+    ]
+
+
+generalPackages : List (String, String)
+generalPackages =
+  [ "elm-lang/core" => "core"
+  , "elm-lang/http" => "http"
+  ]
+
+
+renderingPackages : List (String, String)
+renderingPackages =
+  [ "elm-lang/html" => "html"
+  , "elm-lang/svg" => "svg"
+  , "evancz/elm-markdown" => "markdown"
+  ]
+
+
+effectPackages : List (String, String)
+effectPackages =
+  [ "elm-lang/dom" => "dom"
+  , "elm-lang/navigation" => "navigation"
+  , "elm-lang/geolocation" => "geolocation"
+  , "elm-lang/page-visibility" => "page-visibility"
+  , "elm-lang/websocket" => "websocket"
+  ]
+
+
+inputPackages : List (String, String)
+inputPackages =
+  [ "elm-lang/mouse" => "mouse"
+  , "elm-lang/window" => "window"
+  , "elm-lang/keyboard" => "keyboard"
+  ]

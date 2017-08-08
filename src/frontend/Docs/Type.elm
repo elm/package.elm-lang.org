@@ -6,7 +6,6 @@ import Html.Attributes exposing (..)
 import Set
 import String
 
-import Docs.Name as Name
 import Utils.Code as Code exposing (arrow, colon, padded, space)
 
 
@@ -17,7 +16,7 @@ import Utils.Code as Code exposing (arrow, colon, padded, space)
 type Type
     = Function (List Type) Type
     | Var String
-    | Apply Name.Canonical (List Type)
+    | Apply { home : String, name : String } (List Type)
     | Tuple (List Type)
     | Record (List (String, Type)) (Maybe String)
 
@@ -29,13 +28,35 @@ type alias Tag =
 
 
 
+-- NAME DICTIONARY
+
+
+type alias NameDict =
+  Dict.Dict String (Set.Set String)
+
+
+nameToLink : NameDict -> { home : String, name : String } -> Html msg
+nameToLink dict ({home,name} as canonical) =
+  case Maybe.map (Set.member name) (Dict.get home dict) of
+    Just True ->
+      let
+        link =
+          String.map (\c -> if c == '.' then '-' else c) home ++ "#" ++ name
+      in
+        a [href link] [text name]
+
+    _ ->
+      text name
+
+
+
 -- TYPE TO FLAT HTML
 
 
 type Context = Func | App | Other
 
 
-toHtml : Name.Dictionary -> Context -> Type -> List (Html msg)
+toHtml : NameDict -> Context -> Type -> List (Html msg)
 toHtml nameDict context tipe =
   let
     go ctx t =
@@ -59,7 +80,7 @@ toHtml nameDict context tipe =
         [ text name ]
 
     Apply name [] ->
-        [ Name.toLink nameDict name ]
+        [ nameToLink nameDict name ]
 
     Apply name args ->
         let
@@ -72,7 +93,7 @@ toHtml nameDict context tipe =
           argsHtml =
             List.concatMap (\arg -> space :: go App arg) args
         in
-          maybeAddParens (Name.toLink nameDict name :: argsHtml)
+          maybeAddParens (nameToLink nameDict name :: argsHtml)
 
     Tuple args ->
       List.map (go Other) args
@@ -98,7 +119,7 @@ toHtml nameDict context tipe =
           text "{ " :: recordInsides ++ [text " }"]
 
 
-fieldToHtml : Name.Dictionary -> (String, Type) -> List (Html msg)
+fieldToHtml : NameDict -> (String, Type) -> List (Html msg)
 fieldToHtml nameDict (field, tipe) =
   text field :: space :: colon :: space :: toHtml nameDict Other tipe
 
