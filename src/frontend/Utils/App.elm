@@ -39,6 +39,6 @@ onRouteClick toMsg route =
       (D.field "metaKey" D.bool)
 
 
-clickDecoder : (Route -> msg) -> Route -> Bool -> Bool -> D.Decode (msg, Bool)
+clickDecoder : (Route -> msg) -> Route -> Bool -> Bool -> (msg, Bool)
 clickDecoder toMsg route ctrl meta =
   ( toMsg route, not ctrl && not meta )
