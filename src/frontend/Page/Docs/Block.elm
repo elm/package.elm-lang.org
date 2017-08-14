@@ -12,6 +12,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Route
 import Utils.App as App
+import Utils.Markdown as Markdown
 import Version
 
 
@@ -83,10 +84,10 @@ viewValue info { name, comment, tipe } =
   viewCodeBlock nameTag comment <|
     case toLines tipe of
       One _ line ->
-        [ nameHtml :: padded colon :: line ]
+        [ nameHtml :: space :: colon :: space :: line ]
 
       More x xs ->
-        (nameHtml :: padded colon) :: indentFour x :: List.map indentFour xs
+        (nameHtml :: space :: colon) :: indentFour x :: List.map indentFour xs
 
 
 indentFour : Line msg -> Line msg
@@ -674,3 +675,32 @@ toMoreLinesHelp open sep indent close (OneOrMore firstLine firstRest) others =
 
         Just closer ->
           otherLines ++ [ close ]
+
+
+
+-- HELPERS
+
+
+keyword : String -> Html msg
+keyword kw =
+  span [class "hljs-keyword"] [text kw]
+
+
+space : Html msg
+space =
+  text " "
+
+
+arrow : Html msg
+arrow =
+  span [] [text "->"]
+
+
+colon : Html msg
+colon =
+  span [] [text ":"]
+
+
+equals : Html msg
+equals =
+  span [] [text "="]
