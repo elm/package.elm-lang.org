@@ -63,10 +63,10 @@ view info block =
         ]
 
 
-viewCodeBlock : String -> String -> List (Html Msg) -> Html Msg
+viewCodeBlock : String -> String -> List (Line Msg) -> Html Msg
 viewCodeBlock name comment header =
   div [ class "docs-block", id name ]
-    [ div [ class "docs-header" ] header
+    [ div [ class "docs-header" ] (List.map (div []) header)
     , div [ class "docs-comment" ] [ Markdown.block comment ]
     ]
 
@@ -75,19 +75,19 @@ viewCodeBlock name comment header =
 -- VIEW VALUE BLOCK
 
 
-viewValue : Info -> Docs.Value -> List (Html Msg)
+viewValue : Info -> Docs.Value -> Html Msg
 viewValue info { name, comment, tipe } =
   let
     (nameTag, nameHtml) =
       valueToLink info name
   in
   viewCodeBlock nameTag comment <|
-    case toLines tipe of
+    case toLines info Other tipe of
       One _ line ->
         [ nameHtml :: space :: colon :: space :: line ]
 
       More x xs ->
-        (nameHtml :: space :: colon) :: indentFour x :: List.map indentFour xs
+        [ nameHtml, space, colon ] :: indentFour x :: List.map indentFour xs
 
 
 indentFour : Line msg -> Line msg
@@ -99,11 +99,11 @@ indentFour =
 -- VIEW ALIAS BLOCK
 
 
-viewAlias : Info -> Docs.Alias -> List (Html Msg)
-viewAlias info { name, vars, comment, tipe } =
+viewAlias : Info -> Docs.Alias -> Html Msg
+viewAlias info { name, args, comment, tipe } =
   let
     varsString =
-      String.concat (List.map ((++) " ") vars)
+      String.concat (List.map ((++) " ") args)
 
     aliasNameLine =
       [ keyword "type", space, keyword "alias", space
@@ -112,38 +112,38 @@ viewAlias info { name, vars, comment, tipe } =
       ]
   in
   viewCodeBlock name comment <|
-    aliasNameLine :: List.map indentFour (linesToList (toLines tipe))
+    aliasNameLine :: List.map indentFour (linesToList (toLines info Other tipe))
 
 
 
 -- VIEW UNION
 
 
-viewUnion : Info -> Docs.Union -> List (Html Msg)
-viewUnion info {name, comment, vars, tags} =
+viewUnion : Info -> Docs.Union -> Html Msg
+viewUnion info {name, comment, args, tags} =
   let
     varsString =
-      String.concat <| List.map ((++) " ") vars
+      String.concat <| List.map ((++) " ") args
 
     nameLine =
       [ keyword "type", space, typeToLink info name, text varsString ]
   in
-  viewCodeBlock name comment <| More nameLine <|
+  viewCodeBlock name comment <|
     case tags of
       [] ->
-        []
+        [ nameLine ]
 
       t :: ts ->
-        linesToList (toMoreLines (unionMore info) t ts)
+        nameLine :: linesToList (toMoreLines (unionMore info) t ts)
 
 
-unionMore : Info -> MoreSettings (String, List Type.Type) msg
+unionMore : Info -> MoreSettings (String, List Type.Type) Msg
 unionMore info =
   let
     ctorToLines (ctor,args) =
       toOneOrMore (toLines info Other (Type.Type ctor args))
   in
-  { open = [ text "    = "]
+  { open = [ text "    = " ]
   , sep = text "    | "
   , close = Nothing
   , openIndent = 6
@@ -195,10 +195,14 @@ valueToLink : Info -> Docs.Name -> ( String, Html Msg )
 valueToLink info valueName =
   case valueName of
     Docs.Name name ->
-      makeLink info [bold] name name
+      ( name
+      , makeLink info [bold] name name
+      )
 
     Docs.Op name _ _ ->
-      makeLink info [bold] name <| "(" ++ name ++ ")"
+      ( name
+      , makeLink info [bold] name <| "(" ++ name ++ ")"
+      )
 
 
 bold : Attribute msg
@@ -210,12 +214,13 @@ makeLink : Info -> List (Attribute Msg) -> String -> String -> Html Msg
 makeLink {user, project, version, moduleName} attrs tagName humanName =
   let
     route =
-      Route.Module user project (Route.Exactly version) moduleName (Just tagName)
+      Route.Version user project (Route.Exactly version) <|
+        Route.Module moduleName (Just tagName)
   in
   App.link identity route attrs [ text humanName ]
 
 
-toLinkLine : Info -> String -> Line Msg
+toLinkLine : Info -> String -> Lines (Line Msg)
 toLinkLine info qualifiedName =
   case Dict.get qualifiedName info.typeNameDict of
     Nothing ->
@@ -223,10 +228,10 @@ toLinkLine info qualifiedName =
         shortName =
           last qualifiedName (String.split "." qualifiedName)
       in
-      One (String.length shortName) (span [ title qualifiedName ] [ text shortName ])
+      One (String.length shortName) [ span [ title qualifiedName ] [ text shortName ] ]
 
     Just (moduleName, name) ->
-      One (String.length name) (makeLink { info | moduleName = moduleName } [] name name)
+      One (String.length name) [ makeLink { info | moduleName = moduleName } [] name name ]
 
 
 last : a -> List a -> a
@@ -258,7 +263,7 @@ type Lines line
 type Context = Func | App | Other
 
 
-toLines : Info -> Context -> Type.Type -> Lines (Line msg)
+toLines : Info -> Context -> Type.Type -> Lines (Line Msg)
 toLines info context tipe =
   case tipe of
     Type.Var x ->
@@ -279,9 +284,9 @@ toLines info context tipe =
       One 2 [text "()"]
 
     Type.Tuple (arg :: args) ->
-      toLinesHelp tupleOne tupleMore <|
-        toLines info Other arg
-        :: List.map (toLines info Other) args
+      toLinesHelp tupleOne tupleMore
+        (toLines info Other arg)
+        (List.map (toLines info Other) args)
 
     Type.Type name args ->
       toLinesHelp
@@ -469,8 +474,9 @@ recordMore : MoreSettings (String, Lines (Line msg)) msg
 recordMore =
   { open = [ text "{ " ]
   , sep = text ", "
-  , indent = 6
   , close = Just [text "}"]
+  , openIndent = 6
+  , sepIndent = 6
   , toLines = fieldToLines
   }
 
@@ -499,8 +505,9 @@ recordMoreExt : MoreSettings (String, Lines (Line msg)) msg
 recordMoreExt =
   { open = [ text "    | " ]
   , sep = text "    , "
-  , indent = 10
   , close = Nothing
+  , openIndent = 10
+  , sepIndent = 10
   , toLines = fieldToLines
   }
 
@@ -516,7 +523,7 @@ fieldToLine ( field, lines ) =
       Nothing
 
     One width line ->
-      Just ( String.length field + 3 + width, text field :: text " : " :: line )
+      Just ( String.length field + 3 + width, text field :: space :: colon :: space :: line )
 
 
 fieldToLines : (String, Lines (Line msg)) -> OneOrMore (Line msg)
@@ -528,12 +535,12 @@ fieldToLines ( field, lines ) =
           String.length field + 3 + width
       in
       if potentialWidth < maxWidth then
-        OneOrMore [ text field :: text " : " :: line ] []
+        OneOrMore (text field :: space :: colon :: space :: line) []
       else
-        OneOrMore [ text field :: text " :" ] [ line ]
+        OneOrMore [ text field, space, colon ] [ line ]
 
     More x xs ->
-      OneOrMore [ text field, text " :" ] (x :: xs)
+      OneOrMore [ text field, space, colon ] (x :: xs)
 
 
 
@@ -599,16 +606,11 @@ type alias MoreSettings a msg =
   }
 
 
-toLinesHelp : OneSettings a msg -> MoreSettings a msg -> List a -> Lines (Line msg)
+toLinesHelp : OneSettings a msg -> MoreSettings a msg -> a -> List a -> Lines (Line msg)
 toLinesHelp one more x xs =
   let
     maybeOneLine =
-      case one.ends of
-        Nothing ->
-          toOneLine "" one.sep Nothing one.toLine (x::xs)
-
-        Just (open, close) ->
-          toOneLine open one.sep (Just close) one.toLine (x::xs)
+      toOneLine one (x::xs)
   in
   case maybeOneLine of
     Just ( width, line ) ->
@@ -618,16 +620,22 @@ toLinesHelp one more x xs =
       toMoreLines more x xs
 
 
-toOneLine : String -> String -> Maybe String -> (a -> Maybe (Int, Line msg)) -> List a -> Maybe (Int, Line msg)
-toOneLine start sep maybeClose toLine entries =
+toOneLine : OneSettings a msg -> List a -> Maybe (Int, Line msg)
+toOneLine {open, sep, close, openWidth, sepWidth, closeWidth, toLine} entries =
+  case toOneLineHelp sepWidth sep toLine (openWidth + closeWidth, close) entries of
+    Nothing ->
+      Nothing
+
+    Just (width, line) ->
+      Just ( width, open ++ line )
+
+
+
+toOneLineHelp : Int -> Html msg -> (a -> Maybe (Int, Line msg)) -> (Int, Line msg) -> List a -> Maybe (Int, Line msg)
+toOneLineHelp sepWidth sep toLine end entries =
   case entries of
     [] ->
-      case maybeClose of
-        Nothing ->
-          Just ( 0, [] )
-
-        Just close ->
-          Just ( String.length close, [ text close ] )
+      Just end
 
     entry :: remainingEntries ->
       case toLine entry of
@@ -635,38 +643,39 @@ toOneLine start sep maybeClose toLine entries =
           Nothing
 
         Just (entryWidth, line) ->
-          case toOneLine sep sep maybeClose toLine remainingEntries of
+          case toOneLineHelp sepWidth sep toLine end remainingEntries of
             Nothing ->
               Nothing
 
             Just (remainingWidth, remainingLine) ->
               let
                 width =
-                  String.length start + entryWidth + remainingWidth
+                  sepWidth + entryWidth + remainingWidth
               in
               if width < maxWidth then
-                Just ( width, text start :: line ++ remainingLine )
+                Just ( width, sep :: line ++ remainingLine )
               else
                 Nothing
 
 
 toMoreLines : MoreSettings a msg -> a -> List a -> Lines (Line msg)
-toMoreLines {open, sep, indent, close, toLines} x xs =
-  toMoreLinesHelp open sep indent close (toLines x) (List.map toLines xs)
-
-
-toMoreLinesHelp : Line msg -> Html msg -> Int -> Maybe (Line msg) -> OneOrMore (Line msg) -> List (OneOrMore (Line msg)) -> Lines (Line msg)
-toMoreLinesHelp open sep indent close (OneOrMore firstLine firstRest) others =
+toMoreLines {open, sep, close, openIndent, sepIndent, toLines} x xs =
   let
-    indentation =
-      text (String.repeat indent ' ')
+    (OneOrMore firstLine firstRest) =
+      toLines x
+
+    openIndentation =
+      text (String.repeat openIndent " ")
+
+    sepIndentation =
+      text (String.repeat sepIndent " ")
 
     toChunk (OneOrMore x xs) =
-      (sep :: x) :: List.map ((::) indentation) xs
+      (sep :: x) :: List.map ((::) sepIndentation) xs
 
     otherLines =
-      List.map ((::) indentation) firstRest
-      ++ List.concatMap toChunk others
+      List.map ((::) openIndentation) firstRest
+      ++ List.concatMap (toChunk << toLines) xs
   in
     More (open ++ firstLine) <|
       case close of
@@ -674,7 +683,7 @@ toMoreLinesHelp open sep indent close (OneOrMore firstLine firstRest) others =
           otherLines
 
         Just closer ->
-          otherLines ++ [ close ]
+          otherLines ++ [ closer ]
 
 
 
