@@ -8,7 +8,9 @@ module Session exposing
   )
 
 
+import Dict
 import Elm.Docs as Docs
+import Http
 import Json.Decode as Decode
 import Page.Problem as Problem
 import Release
@@ -75,21 +77,21 @@ insert : Result Http.Error a -> Dict.Dict String (Remote a) -> String -> (Http.E
 insert result dict key toError =
   case result of
     Err err ->
-      Dict.insert key (Failed (toError err)) dict
+      Dict.insert key (Err (toError err)) dict
 
     Ok a ->
-      Dict.insert key (Loaded a) dict
+      Dict.insert key (Ok (Just a)) dict
 
 
 
 -- PEEK
 
 
-getLatestVersion : Data -> String -> String -> Maybe Vsn.Version
+getLatestVersion : Data -> String -> String -> Maybe Version.Version
 getLatestVersion (Data info) user project =
   case Dict.get (toPkgKey user project) info.releases of
-    Just (Loaded releases) ->
-      Release.getLatestVersion releases
+    Just (Ok releases) ->
+      Maybe.andThen Release.getLatestVersion releases
 
     _ ->
       Nothing
@@ -112,29 +114,35 @@ load user project vsn maybeModule (Data info0) =
     (info2, cmd2, remoteReadme) = loadReadme user project vsn info1
     (info3, cmd3, remoteDocs) = loadDocs user project vsn info2
   in
-  case Result.map3 remoteReleases remoteReadme remoteDocs of
+  case Result.map3 (,,) remoteReleases remoteReadme remoteDocs of
     Err err ->
       Problem (Problem.BadResource err)
 
     Ok (Just releases, Just readme, Just docs) ->
-      if isModuleProblem maybeModule docs then
-        Problem (Problem.RemovedModule user project vsn)
-      else
-        Done readme docs
+      case isModuleProblem maybeModule docs of
+        Just moduleName ->
+          Problem (Problem.RemovedModule user project vsn moduleName)
+
+        Nothing ->
+          Done readme docs
 
     Ok (_, maybeReadme, maybeDocs) ->
       Loading (Data info3) maybeReadme maybeDocs <|
         Cmd.map Load (Cmd.batch [ cmd1, cmd2, cmd3 ])
 
 
-isModuleProblem : Maybe String -> List Docs.Module -> Bool
+isModuleProblem : Maybe String -> List Docs.Module -> Maybe String
 isModuleProblem maybeModule docsList =
   case maybeModule of
     Nothing ->
-      False
+      Nothing
 
     Just moduleName ->
-      List.all (\docs -> moduleName /= docs.name) docsList
+      if List.any (\docs -> moduleName == docs.name) docsList then
+        Nothing
+
+      else
+        Just moduleName
 
 
 
@@ -198,4 +206,4 @@ toPkgKey user project =
 
 toVsnKey : String -> String -> Route.Version -> String
 toVsnKey user project vsn =
-  user ++ "/" ++ project ++ "/" ++ Route.vsnToString version
+  user ++ "/" ++ project ++ "/" ++ Route.vsnToString vsn
