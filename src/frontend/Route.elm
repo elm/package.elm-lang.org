@@ -83,7 +83,7 @@ versionInfo : Parser (VersionInfo -> a) a
 versionInfo =
   Url.oneOf
     [ map Readme Url.top
-    , map Module (moduleName </> fragment)
+    , map Module (moduleName </> Url.fragment identity)
     ]
 
 
