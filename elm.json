@@ -6,7 +6,9 @@
     "elm-version": "0.19.0",
     "dependencies": {
         "elm-lang/core": "6.0.0",
-        "elm-lang/html": "3.0.0"
+        "elm-lang/html": "3.0.0",
+        "elm-lang/http": "1.0.1",
+        "elm-lang/url": "1.0.0"
     },
     "test-dependencies": {},
     "do-not-edit-this-by-hand": {
