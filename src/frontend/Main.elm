@@ -357,37 +357,24 @@ viewFooter =
 viewLogo : Html msg
 viewLogo =
   div
-    [ style
-        [ "display" => "-webkit-display"
-        , "display" => "-ms-flexbox"
-        , "display" => "flex"
-        ]
+    [ style "display" "-webkit-display"
+    , style "display" "-ms-flexbox"
+    , style "display" "flex"
     ]
     [ img
         [ src "/assets/elm_logo.svg"
-        , style
-            [ "height" => "30px"
-            , "vertical-align" => "bottom"
-            , "padding-right" => "8px"
-            ]
+        , style "height" "30px"
+        , style "vertical-align" "bottom"
+        , style "padding-right" "8px"
         ]
         []
     , div
-        [ style
-          [ "color" => "black"
-          ]
+        [ style "color" "black"
         ]
-        [ div
-            [ style
-              [ "line-height" => "20px"
-              ]
-            ]
-            [ text "elm" ]
+        [ div [ style "line-height" "20px" ] [ text "elm" ]
         , div
-            [ style
-              [ "line-height" => "10px"
-              , "font-size" => "0.5em"
-              ]
+            [ style "line-height" "10px"
+            , style "font-size" "0.5em"
             ]
             [ text "packages" ]
         ]
