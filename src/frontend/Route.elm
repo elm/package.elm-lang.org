@@ -8,8 +8,8 @@ module Route exposing
   )
 
 
-import Url.Builder as B
-import Url.Parser as Url exposing (Parser, (</>), map, s, fragment)
+import Url
+import Url.Parser exposing (Parser, (</>), custom, fragment, map, oneOf, s, top)
 import Version
 
 
@@ -50,8 +50,8 @@ fromLocation location =
 
 parser : Parser (Route -> a) a
 parser =
-  Url.oneOf
-    [ map Home        <| Url.top
+  oneOf
+    [ map Home        <| top
     , map User        <| s "packages" </> user
     , map Package     <| s "packages" </> user </> project
     , map Version     <| s "packages" </> user </> project </> version </> versionInfo
@@ -62,17 +62,17 @@ parser =
 
 user : Parser (String -> a) a
 user =
-  Url.custom "USER" Just
+  custom "USER" Just
 
 
 project : Parser (String -> a) a
 project =
-  Url.custom "PROJECT" Just
+  custom "PROJECT" Just
 
 
 version : Parser (Version -> a) a
 version =
-  Url.custom "VERSION" <| \string ->
+  custom "VERSION" <| \string ->
     if string == "latest" then
       Just Latest
     else
@@ -81,15 +81,15 @@ version =
 
 versionInfo : Parser (VersionInfo -> a) a
 versionInfo =
-  Url.oneOf
-    [ map Readme Url.top
-    , map Module (moduleName </> Url.fragment identity)
+  oneOf
+    [ map Readme top
+    , map Module (moduleName </> fragment identity)
     ]
 
 
 moduleName : Parser (String -> a) a
 moduleName =
-  Url.custom "MODULE" (Just << String.replace "-" ".")
+  custom "MODULE" (Just << String.replace "-" ".")
 
 
 
@@ -100,19 +100,19 @@ toString : Route -> String
 toString route =
   case route of
     Home ->
-      B.absolute [] []
+      Url.absolute [] []
 
     User user ->
-      B.absolute [ "packages", user ] []
+      Url.absolute [ "packages", user ] []
 
     Package user project ->
-      B.absolute [ "packages", user, project ] []
+      Url.absolute [ "packages", user, project ] []
 
     Version user project vsn Readme ->
-      B.absolute [ "packages", user, project, vsnToString vsn ] []
+      Url.absolute [ "packages", user, project, vsnToString vsn ] []
 
     Version user project vsn (Module moduleName maybeValue) ->
-      B.custom B.Absolute
+      Url.custom Url.Absolute
         [ "packages"
         , user
         , project
