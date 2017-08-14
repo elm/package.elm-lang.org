@@ -13,7 +13,7 @@ import Json.Decode as Decode
 import Release
 import Result
 import Route
-import Url.Builder as Url
+import Url
 import Version
 
 
