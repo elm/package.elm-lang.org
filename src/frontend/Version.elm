@@ -7,6 +7,10 @@ module Version exposing
   )
 
 
+import Json.Decode as Decode
+import Json.Encode as Encode
+
+
 
 -- VERSIONS
 
@@ -31,9 +35,9 @@ fromString string =
   case String.split "." string of
     [major, minor, patch] ->
       Maybe.map3 Version
-        (String.fromInt major)
-        (String.fromInt minor)
-        (String.fromInt patch)
+        (String.toInt major)
+        (String.toInt minor)
+        (String.toInt patch)
 
     _ ->
       Nothing
