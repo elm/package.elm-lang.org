@@ -6,12 +6,14 @@ module Page.Docs exposing
   )
 
 
+import Elm.Docs as Docs
 import Html exposing (..)
 import Html.Attributes exposing (..)
-
-import Elm.Docs as Docs
+import Html.Events exposing (..)
+import Html.Lazy exposing (..)
 import Page.Docs.Block as Block
 import Route
+import Url
 import Utils.App as App
 import Utils.Markdown as Markdown
 import Version
@@ -25,7 +27,7 @@ type alias Model =
   { user : String
   , project : String
   , version : Version.Version
-  , display : Display
+  , info : Route.VersionInfo
   , readme : Maybe String
   , docs : Maybe (List Docs.Module)
   , query : String
@@ -55,19 +57,19 @@ update msg model =
 -- VIEW
 
 
-view : Model -> List (Html msg)
+view : Model -> List (Html Msg)
 view ({ user, project, version, docs } as model) =
   let
     mainContent =
-      case model.display of
-        Readme ->
+      case model.info of
+        Route.Readme ->
           lazy viewReadme model.readme
 
-        Module name ->
+        Route.Module name _ ->
           lazy5 viewModule user project version name docs
   in
     [ mainContent
-    , lazy2 viewSidebar session model
+    , viewSidebar model
     ]
 
 
@@ -87,6 +89,7 @@ viewReadme loadingReadme =
 
 viewModule : String -> String -> Version.Version -> String -> Maybe (List Docs.Module) -> Html Msg
 viewModule user project version name loadingDocs =
+  Html.map GoTo <|
   div [ class "block-list" ] <|
     h1 [class "block-list-title"] [ text name ]
     ::
@@ -109,16 +112,29 @@ viewModule user project version name loadingDocs =
             List.map (Block.view info) (Docs.toBlocks docs)
 
 
+findDocs : String -> List Docs.Module -> Maybe Docs.Module
+findDocs name docsList =
+  case docsList of
+    [] ->
+      Nothing
+
+    docs :: rest ->
+      if docs.name == name then
+        Just docs
+      else
+        findDocs name rest
+
+
 
 -- VIEW SIDEBAR
 
 
-viewSidebar : Session.Data -> Model -> Html Msg
-viewSidebar session ({ user, project, version, page query } as model) =
+viewSidebar : Model -> Html Msg
+viewSidebar ({ user, project, version, info, query } as model) =
   div
     [ class "pkg-nav"
     ]
-    [ lazy4 viewReadmeLink user project version page
+    [ lazy4 viewReadmeLink user project version info
     , br [] []
     , lazy3 viewBrowseSourceLink user project version
     , h2 [] [ text "Module Docs" ]
@@ -128,21 +144,18 @@ viewSidebar session ({ user, project, version, page query } as model) =
         , onInput Search
         ]
         []
-    , viewSidebarModules session model
+    , viewSidebarModules model
     ]
 
 
-viewSidebarModules : Session.Data -> Model -> Html msg
-viewSidebarModules session ({ user, project, version, query } as model) =
-  case Session.getDocs session user project version of
-    Session.Loading ->
+viewSidebarModules : Model -> Html Msg
+viewSidebarModules model =
+  case model.docs of
+    Nothing ->
       text "Loading..."
 
-    Session.Failed ->
-      text ""
-
-    Session.Loaded docs ->
-      if String.isEmpty query then
+    Just docs ->
+      if String.isEmpty model.query then
         let
           viewEntry docs =
             li [] [ viewModuleLink model docs.name ]
@@ -151,38 +164,19 @@ viewSidebarModules session ({ user, project, version, query } as model) =
 
       else
         ul [] <|
-          List.filterMap (viewSearchItem model (String.toLower query)) docs
+          List.filterMap (viewSearchItem model (String.toLower model.query)) docs
 
 
 viewSearchItem : Model -> String -> Docs.Module -> Maybe (Html Msg)
 viewSearchItem model query docs =
   let
+    toItem ownerName valueName =
+      viewValueItem model docs.name ownerName valueName
+
     matches =
-      List.filterMap isUnionMatch docs.unions
-      ++ List.filterMap isMatch docs.aliases
-      ++ List.filterMap isMatch docs.values
-
-    isMatch {name} =
-      if String.contains query (String.toLower name) then
-        Just (viewValueItem model docs.name name name)
-      else
-        Nothing
-
-    isUnionMatch {name,tags} =
-      let
-        tipe =
-          if String.contains query (String.toLower name) then
-            [ viewValueItem model docs.name name name ]
-          else
-            []
-      in
-        tipe ++ List.filterMap (isTagMatch name) tags
-
-    isTagMatch name (tag, _) =
-      if String.contains query (String.toLower tag) then
-        Just (viewValueItem model docs.name name tag)
-      else
-        Nothing
+      List.concatMap (isUnionMatch query toItem) docs.unions
+      ++ List.filterMap (isMatch query identity toItem) docs.aliases
+      ++ List.filterMap (isMatch query getName toItem) docs.values
   in
     if List.isEmpty matches && not (String.contains query docs.name) then
       Nothing
@@ -197,43 +191,85 @@ viewSearchItem model query docs =
           ]
 
 
+isMatch : String -> (a -> String) -> (String -> String -> b) -> { r | name : a } -> Maybe b
+isMatch query toName toResult entry =
+  let
+    name =
+      toName entry.name
+  in
+  if String.contains query (String.toLower name) then
+    Just (toResult name name)
+  else
+    Nothing
+
+
+isUnionMatch : String -> (String -> String -> a) -> Docs.Union -> List a
+isUnionMatch query toResult {name,tags} =
+  let
+    tagMatches =
+      List.filterMap (isTagMatch query toResult name) tags
+  in
+    if String.contains query (String.toLower name) then
+      toResult name name :: tagMatches
+    else
+      tagMatches
+
+
+isTagMatch : String -> (String -> String -> a) -> String -> (String, details) -> Maybe a
+isTagMatch query toResult tipeName (tagName, _) =
+  if String.contains query (String.toLower tagName) then
+    Just (toResult tipeName tagName)
+  else
+    Nothing
+
+
+getName : Docs.Name -> String
+getName valueName =
+  case valueName of
+    Docs.Name name ->
+      name
+
+    Docs.Op name _ _ ->
+      name
+
 
 -- VIEW SIDEBAR LINKS
 
 
-viewReadmeLink : String -> String -> Version.Version -> Page -> Html Msg
-viewReadmeLink user project version page =
+viewReadmeLink : String -> String -> Version.Version -> Route.VersionInfo -> Html Msg
+viewReadmeLink user project version info =
   let
     route =
-      Route.Version user project (Route.Exactly version)
+      Route.Version user project (Route.Exactly version) Route.Readme
   in
-    case page of
-      Readme ->
+    case info of
+      Route.Readme ->
         boldNavLink "README" route
 
-      Module _ ->
+      Route.Module _ _ ->
         navLink "README" route
 
 
 viewBrowseSourceLink : String -> String -> Version.Version -> Html msg
 viewBrowseSourceLink user project version =
   a [ class "pkg-nav-module"
-    , href ("https://github.com" </> user </> project </> "tree" </> Version.toString version)
+    , href <|
+        Url.crossOrigin "https://github.com" [ user, project, "tree", Version.toString version ] []
     ]
     [ text "Browse source" ]
 
 
 viewModuleLink : Model -> String -> Html Msg
-viewModuleLink { user, project, version, page } name =
+viewModuleLink { user, project, version, info } name =
   let
     route =
-      Route.Module user project (Route.Exactly version) name Nothing
+      Route.Version user project (Route.Exactly version) (Route.Module name Nothing)
   in
-    case page of
-      Readme ->
+    case info of
+      Route.Readme ->
         navLink name route
 
-      Module selectedName ->
+      Route.Module selectedName _ ->
         if selectedName == name then
           boldNavLink name route
         else
@@ -244,7 +280,7 @@ viewValueItem : Model -> String -> String -> String -> Html Msg
 viewValueItem { user, project, version } moduleName ownerName valueName =
   let
     route =
-      Route.Module user project (Route.Exactly version) moduleName (Just ownerName)
+      Route.Version user project (Route.Exactly version) (Route.Module moduleName (Just ownerName))
   in
     li [ class "pkg-nav-value" ] [ navLink valueName route ]
 
