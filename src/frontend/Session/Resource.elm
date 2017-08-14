@@ -11,6 +11,7 @@ import Elm.Docs as Docs
 import Http
 import Json.Decode as Decode
 import Release
+import Result
 import Route
 import Url.Builder as Url
 import Version
@@ -21,9 +22,9 @@ import Version
 
 
 type Result
-  = Releases String String (Result Http.Error (List Release.Release))
-  | Readme String String Route.Version (Result Http.Error String)
-  | Docs String String Route.Version (Result Http.Error (List Docs.Module))
+  = Releases String String (Result.Result Http.Error (List Release.Release))
+  | Readme String String Route.Version (Result.Result Http.Error String)
+  | Docs String String Route.Version (Result.Result Http.Error (List Docs.Module))
 
 
 type Error
