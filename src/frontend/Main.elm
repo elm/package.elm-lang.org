@@ -2,11 +2,12 @@ module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
-
+import Html.Lazy exposing (..)
 import Page.Docs as Docs
 import Page.Problem as Problem
 import Route
 import Session
+import Utils.App as App
 import Version
 
 
@@ -63,7 +64,7 @@ subscriptions model =
 
 
 type Msg
-  = GoTo Route.Route
+  = Goto Route.Route
   | SessionMsg Session.Msg
   | DocsMsg Docs.Msg
 
@@ -71,7 +72,7 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
   case message of
-    GoTo route ->
+    Goto route ->
       goto route model
 
     SessionMsg msg ->
@@ -81,7 +82,7 @@ update message model =
       case model.page of
         Docs docsModel ->
           case Docs.update msg docsModel of
-            App.GoTo route ->
+            App.Goto route ->
               goto route model
 
             App.Update newDocsModel ->
@@ -156,7 +157,7 @@ loadVersion user project version info model =
       , Cmd.none
       )
 
-    Session.Progress newSessionData maybeReadme maybeDocs cmds ->
+    Session.Loading newSessionData maybeReadme maybeDocs cmds ->
       ( { model
             | session = newSessionData
             , page =
@@ -182,7 +183,7 @@ view : Model -> Html msg
 view model =
   div []
     [ center "#eeeeee" [ lazy2 viewLinks model.session model.page ]
-    , center "#60B5CC" [ lazy2 viewVersionWarning modul.session model.page ]
+    , center "#60B5CC" [ lazy2 viewVersionWarning model.session model.page ]
     , div [ class "center" ] (lazy2 viewPage model.session model.page)
     , viewFooter
     ]
@@ -230,20 +231,20 @@ viewLinks sessionData route =
         , toLink (Route.Package user project) project
         ]
 
-      Route.Version user project vsn ->
+      Route.Version user project vsn info ->
         let (version, vsnStr) = moreExactVersion sessionData user project vsn in
         [ toLink (Route.User user) user
         , toLink (Route.Package user project) project
-        , toLink (Route.Version user project version) vsnStr
+        , toLink (Route.Version user project version Route.Readme) vsnStr
         ]
+        ++
+          case info of
+            Route.Readme ->
+              []
 
-      Route.Module user project vsn moduleName _ ->
-        let (version, vsnStr) = moreExactVersion sessionData user project vsn in
-        [ toLink (Route.User user) user
-        , toLink (Route.Package user project) project
-        , toLink (Route.Version user project version) vsnStr
-        , toLink (Route.Module user project version moduleName Nothing) moduleName
-        ]
+            Route.Module moduleName maybeTag ->
+              [ toLink (Route.Version user project version (Route.Module moduleName maybeTag)) moduleName
+              ]
 
       Route.Guidelines ->
         [ text "help" ]
@@ -254,7 +255,7 @@ viewLinks sessionData route =
 
 toLink : Route.Route -> String -> Html msg
 toLink route words =
-  Route.link GoTo route [ text words ]
+  App.link Goto route [ text words ]
 
 
 moreExactVersion : Session.Data -> String -> String -> Route.Version -> (Route.Version, String)
@@ -276,65 +277,54 @@ moreExactVersion sessionData user project vsn =
 -- VIEW VERSION WARNINGS
 
 
-viewVersionWarning : Session.Data -> Route -> Html msg
-viewVersionWarning sessionData route =
+viewVersionWarning : Session.Data -> Route.Route -> Html msg
+viewVersionWarning session route =
   div [ class "header-underbar" ] <|
-    case getNewerRoute sessionData route of
+    case getNewerRoute session route of
       Nothing ->
         []
 
       Just (latestVersion, newerRoute) ->
         [ p [ class "version-warning" ]
             [ text "Warning! The latest version of this package is "
-            , Route.link newerRoute [] [ text (Version.toString latestVersion) ]
+            , App.link newerRoute [] [ text (Version.toString latestVersion) ]
             ]
         ]
 
 
-getNewerRoute : Session.Data -> Route -> Maybe (Version.Version, Route)
+getNewerRoute : Session.Data -> Route.Route -> Maybe (Version.Version, Route.Route)
 getNewerRoute sessionData route =
   case route of
-    Home ->
+    Route.Home ->
       Nothing
 
-    User _ ->
+    Route.User _ ->
       Nothing
 
-    Package _ _ ->
+    Route.Package _ _ ->
       Nothing
 
-    Readme user project version ->
-      toLatestVersion sessionData user project version (\vsn -> Readme user project vsn)
-
-    Module user project version moduleName maybeValue ->
-      toLatestVersion sessionData user project version (\vsn -> Module user project vsn moduleName maybeValue)
-
-    Guidelines ->
-      Nothing
-
-    DocsHelp ->
-      Nothing
-
-    DocsPreview ->
-      Nothing
-
-
-toLatestVersion : Session.Data -> String -> String -> Version -> (Version -> Route) -> Maybe (Version.Version, Route)
-toLatestVersion sessionData user project vsn makeRoute =
-  case vsn of
-    Latest ->
-      Nothing
-
-    Exactly version ->
-      case Session.getLatestVersion sessionData user project of
-        Nothing ->
+    Route.Version user project vsn info ->
+      case vsn of
+        Route.Latest ->
           Nothing
 
-        Just latestVersion ->
-          if version == latestVersion then
-            Nothing
-          else
-            Just (latestVersion, makeRoute Latest)
+        Route.Exactly version ->
+          case Session.getLatestVersion sessionData user project of
+            Nothing ->
+              Nothing
+
+            Just latestVersion ->
+              if version == latestVersion then
+                Nothing
+              else
+                Just ( latestVersion, Route.Version user project Route.Latest info )
+
+    Route.Guidelines ->
+      Nothing
+
+    Route.DocsHelp ->
+      Nothing
 
 
 

@@ -5,6 +5,7 @@ module Session exposing
   , update
   , load
   , Progress(..)
+  , getLatestVersion
   )
 
 
