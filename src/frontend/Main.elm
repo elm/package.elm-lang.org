@@ -1,15 +1,21 @@
-module Main exposing (view)
+module Main exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
 
 import Page.Docs as Docs
+import Page.Problem as Problem
 import Route
+import Session
 import Version
 
 
 
 -- MAIN
+
+
+main =
+  Navigation.program { init = init, view = view, update = update, subscriptions = subscriptions }
 
 
 
@@ -18,18 +24,38 @@ import Version
 
 type alias Model =
   { session : Session.Data
-  , route : Route.Route
   , page : Page
+  , next : Maybe Route.Route
   }
 
 
 type Page
   = Blank
-  | NotFound
+  | Problem Problem.Suggestion
+  | Docs Docs.Model
 
 
 
 -- INIT
+
+
+init : Navigation.Location -> ( Model, Cmd Msg )
+init location =
+  case Route.fromLocation location of
+    Nothing ->
+      ( Model Session.empty (Problem Problem.NoIdea) Nothing )
+
+    Just route ->
+      goto route (Model Session.empty Blank Nothing)
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.none
 
 
 
@@ -45,21 +71,107 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
   case message of
-    GoTo newRoute ->
-      goto newRoute model
+    GoTo route ->
+      goto route model
 
     SessionMsg msg ->
-      ( { model | session = Session.update msg model.session }
-      , Cmd.none
-      )
+      checkNext { model | session = Session.update msg model.session }
 
     DocsMsg msg ->
-      Debug.crash "TODO"
+      case model.page of
+        Docs docsModel ->
+          case Docs.update msg docsModel of
+            App.GoTo route ->
+              goto route model
+
+            App.Update newDocsModel ->
+              ( { model | page = Docs newDocsModel }, Cmd.none )
+
+        _ ->
+          ( model, Cmd.none )
+
+
+
+-- ROUTING
+
+
+checkNext : Model -> ( Model, Cmd Msg )
+checkNext model =
+  case model.next of
+    Nothing ->
+      ( model, Cmd.none )
+
+    Just route ->
+      goto route model
 
 
 goto : Route.Route -> Model -> ( Model, Cmd Msg )
 goto route model =
-  ( model, Cmd.none )
+  let
+    gotoBlank =
+      ( { model | page = Blank, next = Nothing }
+      , Navigation.newUrl (Route.toString route)
+      )
+  in
+  case route of
+    Route.Home ->
+      gotoBlank
+
+    Route.User name ->
+      gotoBlank
+
+    Route.Package user project ->
+      gotoBlank
+
+    Route.Version user project version info ->
+      loadVersion user project version info model
+
+    Route.Guidelines ->
+      gotoBlank
+
+    Route.DocsHelp ->
+      gotoBlank
+
+
+loadVersion : String -> String -> Route.Version -> Route.VersionInfo -> Model -> ( Model, Cmd Msg )
+loadVersion user project version info model =
+  let
+    makeDocsPage maybeReadme maybeDocs =
+      Docs (Docs.Model user project version info maybeReadme maybeDocs "")
+  in
+  case Session.load user project version info model.session of
+    Session.Done readme docs ->
+      ( { model
+          | page = makeDocsPage (Just readme) (Just docs)
+          , next = Nothing
+        }
+      , Cmd.none
+      )
+
+    Session.Problem suggestion ->
+      ( { model
+          | page = Problem suggestion
+          , next = Nothing
+        }
+      , Cmd.none
+      )
+
+    Session.Progress newSessionData maybeReadme maybeDocs cmds ->
+      ( { model
+            | session = newSessionData
+            , page =
+                case (info, maybeReadme, maybeDocs) of
+                  (Route.Readme, Just _, _) ->
+                    makeDocsPage maybeReadme maybeDocs
+
+                  (Route.Module _ _, _, Just _) ->
+                    makeDocsPage maybeReadme maybeDocs
+
+                  _ ->
+                    model.page
+        }
+      , Cmd.map SessionMsg cmds
+      )
 
 
 
@@ -85,23 +197,18 @@ center color kids =
 -- VIEW PAGE
 
 
-viewPage : Page -> List (Html Msg)
-viewPage page =
+viewPage : Session.Data -> Page -> List (Html Msg)
+viewPage session page =
   case page of
     Blank ->
       []
 
-    NotFound ->
-      [ div
-          [ style "height" "100%"
-          , style "text-align" "center"
-          , style "color" "#9A9A9A"
-          , style "padding" "6em 0"
-          ]
-          [ div [ style "font-size" "12em" ] [ text "404" ]
-          , div [ style "font-size" "3em" ] [ text "Page not found" ]
-          ]
+    Problem suggestion ->
+      [ Problem.view suggestion
       ]
+
+    Docs docsModel ->
+      Docs.view session docsModel
 
 
 
@@ -115,27 +222,27 @@ viewLinks sessionData route =
         []
 
       Route.User user ->
-        [ link (Route.User user) user
+        [ toLink (Route.User user) user
         ]
 
       Route.Package user project ->
-        [ link (Route.User user) user
-        , link (Route.Package user project) project
+        [ toLink (Route.User user) user
+        , toLink (Route.Package user project) project
         ]
 
       Route.Version user project vsn ->
         let (version, vsnStr) = moreExactVersion sessionData user project vsn in
-        [ link (Route.User user) user
-        , link (Route.Package user project) project
-        , link (Route.Version user project version) vsnStr
+        [ toLink (Route.User user) user
+        , toLink (Route.Package user project) project
+        , toLink (Route.Version user project version) vsnStr
         ]
 
       Route.Module user project vsn moduleName _ ->
         let (version, vsnStr) = moreExactVersion sessionData user project vsn in
-        [ link (Route.User user) user
-        , link (Route.Package user project) project
-        , link (Route.Version user project version) vsnStr
-        , link (Route.Module user project version moduleName Nothing) moduleName
+        [ toLink (Route.User user) user
+        , toLink (Route.Package user project) project
+        , toLink (Route.Version user project version) vsnStr
+        , toLink (Route.Module user project version moduleName Nothing) moduleName
         ]
 
       Route.Guidelines ->
@@ -144,12 +251,9 @@ viewLinks sessionData route =
       Route.DocsHelp ->
         [ text "help" ]
 
-      Route.DocsPreview ->
-        [ text "help" ]
 
-
-link : Route.Route -> String -> Html msg
-link route words =
+toLink : Route.Route -> String -> Html msg
+toLink route words =
   Route.link GoTo route [ text words ]
 
 
@@ -199,8 +303,8 @@ getNewerRoute sessionData route =
     Package _ _ ->
       Nothing
 
-    Version user project version ->
-      toLatestVersion sessionData user project version (\vsn -> Version user project vsn)
+    Readme user project version ->
+      toLatestVersion sessionData user project version (\vsn -> Readme user project vsn)
 
     Module user project version moduleName maybeValue ->
       toLatestVersion sessionData user project version (\vsn -> Module user project vsn moduleName maybeValue)

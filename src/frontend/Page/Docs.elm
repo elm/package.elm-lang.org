@@ -1,7 +1,5 @@
 module Page.Docs exposing
   ( Model
-  , initReadme
-  , initModule
   , Msg
   , update
   , view
@@ -16,6 +14,7 @@ import Page.Docs.Block as Block
 import Route
 import Utils.App as App
 import Utils.Markdown as Markdown
+import Version
 
 
 
@@ -27,40 +26,10 @@ type alias Model =
   , project : String
   , version : Version.Version
   , display : Display
+  , readme : Maybe String
+  , docs : Maybe (List Docs.Module)
   , query : String
   }
-
-
-type Display
-    = Readme
-    | Module String
-
-
-
--- INIT
-
-
-initReadme : Session.Data -> String -> String -> Version.Version -> ( Model, Session.Data, Cmd Session.Msg )
-initReadme session user project version =
-  init session user project version Readme
-
-
-initModule : Session.Data -> String -> String -> Version.Version -> String -> ( Model, Session.Data, Cmd Session.Msg )
-initModule session user project version moduleName =
-  init session user project version (Module moduleName)
-
-
-init : Session.Data -> String -> String -> Version.Version -> Display -> ( Model, Session.Data, Cmd Session.Msg )
-init session0 user project version display =
-  let
-    (session1, cmds1) = Session.loadDocs user project version session0
-    (session2, cmds2) = Session.loadReadme user project version session1
-    (session3, cmds3) = Session.loadReleases user project session2
-  in
-    ( Model user project version display
-    , session3
-    , Cmd.batch [ cmds1, cmds2, cmds3 ]
-    )
 
 
 
@@ -86,64 +55,50 @@ update msg model =
 -- VIEW
 
 
-view : Session.Data -> Model -> Html msg
-view session ({ user, project, version, display, query } as model) =
+view : Model -> List (Html msg)
+view ({ user, project, version, docs } as model) =
   let
     mainContent =
-      case display of
+      case model.display of
         Readme ->
-          lazy viewReadme (Session.getReadme session user project version)
+          lazy viewReadme model.readme
 
         Module name ->
-          lazy5 viewModule session user project version name
+          lazy5 viewModule user project version name docs
   in
     [ mainContent
-    , viewSidebar session model
+    , lazy2 viewSidebar session model
     ]
 
 
-viewReadme : Session.Remote String -> Html msg
-viewReadme remoteReadme =
+viewReadme : Maybe String -> Html msg
+viewReadme loadingReadme =
   let
     content =
-      case remoteReadme of
-        Session.Loading ->
+      case loadingReadme of
+        Nothing ->
           text "Loading..."
 
-        Session.Failed ->
-          text ""
-
-        Session.Loaded readme ->
+        Just readme ->
           Markdown.block readme
   in
     div [ class "block-list" ] [ content ]
 
 
-viewModule : Session.Data -> String -> String -> Version.Version -> String -> Html Msg
-viewModule session user project version name =
+viewModule : String -> String -> Version.Version -> String -> Maybe (List Docs.Module) -> Html Msg
+viewModule user project version name loadingDocs =
   div [ class "block-list" ] <|
-    case Session.getDocs session user project version of
-      Session.Loading ->
+    h1 [class "block-list-title"] [ text name ]
+    ::
+    case loadingDocs of
+      Nothing ->
         [ text "Loading..."
         ]
 
-      Session.Failed ->
-        [ text ""
-        ]
-
-      Session.Loaded docsList ->
+      Just docsList ->
         case findDocs name docsList of
           Nothing ->
-            [ p []
-                [ text "Module "
-                , code [] [ text name ]
-                , text " does not exist."
-                ]
-            , p []
-                [ text "Maybe it existed in a previous release? Go to the "
-                , "README"
-                , text " to get an overview."
-                ]
+            [ text "Something went wrong."
             ]
 
           Just docs ->
@@ -151,8 +106,7 @@ viewModule session user project version name =
               info =
                 Block.makeInfo user project version name docsList
             in
-            h1 [class "block-list-title"] [text name]
-            :: List.map (Block.view info) (Docs.toBlocks docs)
+            List.map (Block.view info) (Docs.toBlocks docs)
 
 
 

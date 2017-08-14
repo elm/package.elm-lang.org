@@ -1,7 +1,12 @@
-module Page.NotFound exposing
+module Page.Problem exposing
   ( Suggestion(..)
   , view
   )
+
+
+import Http
+import Route
+import Session.Resource as Resource
 
 
 
@@ -10,7 +15,8 @@ module Page.NotFound exposing
 
 type Suggestion
   = NoIdea
-  | RemovedModule String String Version.Version String
+  | BadResource Resource.Error
+  | RemovedModule String String Route.Version String
 
 
 
@@ -47,31 +53,17 @@ viewSuggestion suggestion =
       , []
       )
 
-    RemovedModule user project version name ->
-      let
-        pkgRoute name =
-          App.link identity (Route.Package user project) [] [ text name ]
-
-        readmeRoute name =
-          App.link identity (Route.Readme user project (Route.Exactly version)) [] [ text name ]
-      in
+    RemovedModule user project vsn name ->
       ( [ text "I cannot find the "
         , code [] [ text name ]
         , text " module!"
         ]
       , [ p []
-            [ text "The "
-            , pkgRoute (user ++ "/" ++ project)
-            , text " package exists. Version "
-            , readmeRoute (Version.toString version)
-            , text " exists too."
-        , p []
             [ text "Maybe it existed in a "
-            , pkgRoute "previous release"
+            , App.link identity (Route.Package user project) [] [ text "previous release" ]
             , text "? Maybe the "
-            , readmeRoute "README"
+            , App.link identity (Route.Readme user project vsn) [] [ text "README" ]
             , text " will help you figure out what changed?"
             ]
-            -- TODO point people to the diffing tool to see when it was removed!
         ]
-      ]
+      )

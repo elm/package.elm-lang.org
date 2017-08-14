@@ -1,20 +1,19 @@
 module Session exposing
   ( Data
   , empty
-  , getDocs
-  , getReadme
-  , getLatestVersion
   , Msg
   , update
-  , loadDocs
-  , loadReadme
-  , loadReleases
+  , load
+  , Progress(..)
   )
 
 
 import Elm.Docs as Docs
 import Json.Decode as Decode
+import Page.Problem as Problem
 import Release
+import Route
+import Session.Resource as Resource
 import Version
 
 
@@ -32,46 +31,63 @@ type alias Info =
   }
 
 
-type Remote a
-  = Loading
-  | Loaded a
-  | Failed
-
-
-
--- HELPERS
-
-
 empty : Data
 empty =
   Data (Info Dict.empty Dict.empty Dict.empty)
 
 
-toPkgKey : String -> String -> String
-toPkgKey user project =
-  user ++ "/" ++ project
+
+-- REMOTE
 
 
-toVsnKey : String -> String -> Vsn.Version -> String
-toVsnKey user project version =
-  user ++ "/" ++ project ++ "/" ++ Vsn.toString version
+type alias Remote a =
+  Result Resource.Error (Maybe a)
 
 
-getDocs : Data -> String -> String -> Vsn.Version -> Remote (List Docs.Module)
-getDocs (Data data) user project version =
-  Maybe.withDefault Loading <|
-    Dict.get (toVsnKey user project version) data.docs
+loading : Remote a
+loading =
+  Ok Nothing
 
 
-getReadme : Data -> String -> String -> Vsn.Version -> Remote String
-getReadme (Data data) user project version =
-  Maybe.withDefault Loading <|
-    Dict.get (toVsnKey user project version) data.readmes
+
+-- UPDATE
+
+
+type Msg
+  = Load Resource.Result
+
+
+update : Msg -> Data -> Data
+update (Load resourceResult) (Data info) =
+  Data <|
+    case resourceResult of
+      Resource.Releases user project result ->
+        { info | releases = insert result info.releases (toPkgKey user project) (Resource.BadReleases user project) }
+
+      Resource.Readme user project vsn result ->
+        { info | readmes = insert result info.readmes (toVsnKey user project vsn) (Resource.BadReadme user project vsn) }
+
+      Resource.Docs user project vsn result ->
+        { info | docs = insert result info.docs (toVsnKey user project vsn) (Resource.BadDocs user project vsn) }
+
+
+insert : Result Http.Error a -> Dict.Dict String (Remote a) -> String -> (Http.Error -> Resource.Error) -> Dict.Dict String (Remote a)
+insert result dict key toError =
+  case result of
+    Err err ->
+      Dict.insert key (Failed (toError err)) dict
+
+    Ok a ->
+      Dict.insert key (Loaded a) dict
+
+
+
+-- PEEK
 
 
 getLatestVersion : Data -> String -> String -> Maybe Vsn.Version
-getLatestVersion (Data data) user project =
-  case Dict.get (toPkgKey user project) data.releases of
+getLatestVersion (Data info) user project =
+  case Dict.get (toPkgKey user project) info.releases of
     Just (Loaded releases) ->
       Release.getLatestVersion releases
 
@@ -80,88 +96,106 @@ getLatestVersion (Data data) user project =
 
 
 
--- UPDATE
+-- LOAD
 
 
-type Msg
-  = LoadReleases String (Result Http.Error (List Release.Release))
-  | LoadReadme String (Result Http.Error String)
-  | LoadDocs String (Result Http.Error (List Docs.Module))
+type Progress
+  = Loading Data (Maybe String) (Maybe (List Docs.Module)) (Cmd Msg)
+  | Done String (List Docs.Module)
+  | Problem Problem.Suggestion
 
 
-update : Msg -> Data -> Data
-update msg (Data info) =
-  case msg of
-    LoadReleases key result ->
-      Data { info | releases = Dict.insert key (toRemote result) info.releases }
+load : String -> String -> Route.Version -> Maybe String -> Data -> Progress
+load user project vsn maybeModule (Data info0) =
+  let
+    (info1, cmd1, remoteReleases) = loadReleases user project info0
+    (info2, cmd2, remoteReadme) = loadReadme user project vsn info1
+    (info3, cmd3, remoteDocs) = loadDocs user project vsn info2
+  in
+  case Result.map3 remoteReleases remoteReadme remoteDocs of
+    Err err ->
+      Problem (Problem.BadResource err)
 
-    LoadReadme key result ->
-      Data { info | readmes = Dict.insert key (toRemote result) info.readmes }
+    Ok (Just releases, Just readme, Just docs) ->
+      if isModuleProblem maybeModule docs then
+        Problem (Problem.RemovedModule user project vsn)
+      else
+        Done readme docs
 
-    LoadDocs key result ->
-      Data { info | docs = Dict.insert key (toRemote result) info.docs }
-
-
-toRemote : Result e a -> Remote a
-toRemote result =
-  case result of
-    Err _ ->
-      Failed
-
-    Ok value ->
-      Loaded value
-
+    Ok (_, maybeReadme, maybeDocs) ->
+      Loading (Data info3) maybeReadme maybeDocs <|
+        Cmd.map Load (Cmd.batch [ cmd1, cmd2, cmd3 ])
 
 
--- HTTP
-
-
-loadDocs : Data -> String -> String -> Vsn.Version -> ( Data, Cmd Msg )
-loadDocs (Data info as data) user project version =
-  let key = toVsnKey user project version in
-  case Dict.get key info.docs of
-    Just _ ->
-      ( data, Cmd.none )
-
+isModuleProblem : Maybe String -> List Docs.Module -> Bool
+isModuleProblem maybeModule docsList =
+  case maybeModule of
     Nothing ->
-      let
-        docsUrl =
-          "/packages/" ++ user ++ "/" ++ project ++ "/" ++ Vsn.toString version ++ "/docs.json"
-      in
-        ( Data { info | docs = Dict.insert key Loading info.docs }
-        , Http.send (LoadDocs key) <| Http.get docsUrl (Decode.list Docs.decoder)
-        )
+      False
+
+    Just moduleName ->
+      List.all (\docs -> moduleName /= docs.name) docsList
 
 
-loadReadme : Data -> String -> String -> Vsn.Version -> ( Data, Cmd Msg )
-loadReadme (Data info as data) user project version =
-  let key = toVsnKey user project version in
-  case Dict.get key info.readmes of
-    Just _ ->
-      ( data, Cmd.none )
 
-    Nothing ->
-      let
-        readmeUrl =
-          "/packages/" ++ user ++ "/" ++ project ++ "/" ++ Vsn.toString version ++ "/README.md"
-      in
-        ( Data { info | readmes = Dict.insert key Loading info.readmes }
-        , Http.send (LoadReadme key) <| Http.getString readmeUrl
-        )
+-- LOAD HELPERS
 
 
-loadReleases : Data -> String -> String -> ( Data, Cmd Msg )
-loadReleases (Data info as data) user project =
+type alias Step a =
+  ( Info, Cmd Resource.Result, Remote a )
+
+
+loadReleases : String -> String -> Info -> Step (List Release.Release)
+loadReleases user project info =
   let key = toPkgKey user project in
   case Dict.get key info.releases of
-    Just _ ->
-      ( data, Cmd.none )
+    Just releases ->
+      ( info, Cmd.none, releases )
 
     Nothing ->
-      let
-        releasesUrl =
-          "/packages/" ++ user ++ "/" ++ project ++ "/releases.json"
-      in
-        ( Data { info | releases = Dict.insert key Loading info.releases }
-        , Http.send (LoadReleases key) <| Http.get releasesUrl Release.decoder
-        )
+      ( { info | releases = Dict.insert key loading info.releases }
+      , Resource.getReleases user project
+      , loading
+      )
+
+
+loadReadme : String -> String -> Route.Version -> Info -> Step String
+loadReadme user project version info =
+  let key = toVsnKey user project version in
+  case Dict.get key info.readmes of
+    Just readme ->
+      ( info, Cmd.none, readme )
+
+    Nothing ->
+      ( { info | readmes = Dict.insert key loading info.readmes }
+      , Resource.getReadme user project version
+      , loading
+      )
+
+
+loadDocs : String -> String -> Route.Version -> Info -> Step (List Docs.Module)
+loadDocs user project version info =
+  let key = toVsnKey user project version in
+  case Dict.get key info.docs of
+    Just docs ->
+      ( info, Cmd.none, docs )
+
+    Nothing ->
+      ( { info | docs = Dict.insert key loading info.docs }
+      , Resource.getDocs user project version
+      , loading
+      )
+
+
+
+-- KEYS
+
+
+toPkgKey : String -> String -> String
+toPkgKey user project =
+  user ++ "/" ++ project
+
+
+toVsnKey : String -> String -> Route.Version -> String
+toVsnKey user project vsn =
+  user ++ "/" ++ project ++ "/" ++ Route.vsnToString version
