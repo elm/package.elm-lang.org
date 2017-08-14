@@ -5,12 +5,14 @@ module Page.Docs.Block exposing
   )
 
 
-import Html exposing (..)
-import Html.Attributes exposing (..)
-
+import Dict
 import Elm.Docs as Docs
 import Elm.Docs.Type as Type
+import Html exposing (..)
+import Html.Attributes exposing (..)
 import Route
+import Utils.App as App
+import Version
 
 
 
@@ -20,6 +22,14 @@ import Route
 maxWidth : Int
 maxWidth =
   64
+
+
+
+-- MESSAGES
+
+
+type alias Msg =
+  Route.Route
 
 
 
@@ -161,8 +171,8 @@ type alias TypeNameDict =
 makeInfo : String -> String -> Version.Version -> String -> List Docs.Module -> Info
 makeInfo user project version moduleName docsList =
   let
-    addUnion moduleName docs union =
-      Dict.insert (moduleName ++ "." ++ union.name) (moduleName, union.name) dict
+    addUnion moduleName union docs =
+      Dict.insert (moduleName ++ "." ++ union.name) (moduleName, union.name) docs
 
     addModule docs dict =
       List.foldl (addUnion docs.name) dict docs.unions
@@ -177,31 +187,31 @@ makeInfo user project version moduleName docsList =
 
 typeToLink : Info -> String -> Html Msg
 typeToLink info name =
-  makeLink info moduleName [bold] name name
+  makeLink info [bold] name name
 
 
-valueToLink : Info -> Type.Name -> ( String, Html Msg )
+valueToLink : Info -> Docs.Name -> ( String, Html Msg )
 valueToLink info valueName =
   case valueName of
-    Type.Name name ->
+    Docs.Name name ->
       makeLink info [bold] name name
 
-    Type.Op name _ _ ->
+    Docs.Op name _ _ ->
       makeLink info [bold] name <| "(" ++ name ++ ")"
 
 
-bold : Attributes msg
+bold : Attribute msg
 bold =
   style "font-weight" "bold"
 
 
-makeLink : Info -> List (Attributes Msg) -> String -> String -> Html Msg
+makeLink : Info -> List (Attribute Msg) -> String -> String -> Html Msg
 makeLink {user, project, version, moduleName} attrs tagName humanName =
   let
     route =
       Route.Module user project (Route.Exactly version) moduleName (Just tagName)
   in
-  Route.link GoTo route attrs [ text humanName ]
+  App.link identity route attrs [ text humanName ]
 
 
 toLinkLine : Info -> String -> Line Msg
@@ -212,7 +222,7 @@ toLinkLine info qualifiedName =
         shortName =
           last qualifiedName (String.split "." qualifiedName)
       in
-      Ore (String.length shortName) (span [ title qualifiedName ] [ text shortName ])
+      One (String.length shortName) (span [ title qualifiedName ] [ text shortName ])
 
     Just (moduleName, name) ->
       One (String.length name) (makeLink { info | moduleName = moduleName } [] name name)
@@ -274,8 +284,8 @@ toLines info context tipe =
 
     Type.Type name args ->
       toLinesHelp
-        (unionOne (context == App))
-        (unionMore (context == App))
+        (typeOne (context == App))
+        (typeMore (context == App))
         (toLinkLine info name)
         (List.map (toLines info App) args)
 
@@ -391,34 +401,34 @@ tupleMore =
 
 
 
--- UNIONS
+-- TYPES
 
 
-unionOne : Bool -> Int -> Html msg -> OneSettings (Lines (Line msg)) msg
-unionOne needsParens =
+typeOne : Bool -> OneSettings (Lines (Line msg)) msg
+typeOne needsParens =
   if needsParens then
-    { open = [ text "(", nameHtml ]
+    { open = [ text "(" ]
     , sep = text " "
     , close = [ text ")" ]
-    , openWidth = nameWidth + 1
+    , openWidth = 1
     , sepWidth = 1
     , closeWidth = 1
     , toLine = toLine
     }
 
   else
-    { open = [ nameHtml ]
+    { open = []
     , sep = text " "
     , close = []
-    , openWidth = nameWidth
+    , openWidth = 0
     , sepWidth = 1
     , closeWidth = 0
     , toLine = toLine
     }
 
 
-unionMore : Bool -> MoreSettings (Lines (Line msg)) msg
-unionMore needsParens =
+typeMore : Bool -> MoreSettings (Lines (Line msg)) msg
+typeMore needsParens =
   if needsParens then
     { open = [text "("]
     , sep = text "    "
@@ -522,7 +532,7 @@ fieldToLines ( field, lines ) =
         OneOrMore [ text field :: text " :" ] [ line ]
 
     More x xs ->
-      OneOrMore [ text field, text " :" ] (x:xs)
+      OneOrMore [ text field, text " :" ] (x :: xs)
 
 
 
@@ -631,7 +641,7 @@ toOneLine start sep maybeClose toLine entries =
             Just (remainingWidth, remainingLine) ->
               let
                 width =
-                  String.length start + valueWidth + remainingWidth
+                  String.length start + entryWidth + remainingWidth
               in
               if width < maxWidth then
                 Just ( width, text start :: line ++ remainingLine )
