@@ -4,9 +4,11 @@ module Page.Problem exposing
   )
 
 
-import Http
+import Html exposing (..)
+import Html.Attributes exposing (..)
 import Route
 import Session.Resource as Resource
+import Utils.App as App
 
 
 
@@ -23,7 +25,7 @@ type Suggestion
 -- VIEW
 
 
-view : Suggestion -> Html msg
+view : Suggestion -> Html Route.Route
 view suggestion =
   let
     (message, details) =
@@ -53,6 +55,9 @@ viewSuggestion suggestion =
       , []
       )
 
+    BadResource resourceError ->
+      Debug.crash "TODO"
+
     RemovedModule user project vsn name ->
       ( [ text "I cannot find the "
         , code [] [ text name ]
@@ -62,7 +67,7 @@ viewSuggestion suggestion =
             [ text "Maybe it existed in a "
             , App.link identity (Route.Package user project) [] [ text "previous release" ]
             , text "? Maybe the "
-            , App.link identity (Route.Readme user project vsn) [] [ text "README" ]
+            , App.link identity (Route.Version user project vsn Route.Readme) [] [ text "README" ]
             , text " will help you figure out what changed?"
             ]
         ]
