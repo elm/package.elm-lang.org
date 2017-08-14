@@ -12,7 +12,6 @@ import Http
 import Json.Decode as Decode
 import Release
 import Route
-import Session.Resource as Resource
 import Url.Builder as Url
 import Version
 
