@@ -39,15 +39,15 @@ type alias Model =
 
 
 type Msg
-  = GoTo Route.Route
+  = Goto Route.Route
   | Search String
 
 
 update : Msg -> Model -> App.Update Model
 update msg model =
   case msg of
-    GoTo route ->
-      App.GoTo route
+    Goto route ->
+      App.Goto route
 
     Search query ->
       App.Update { model | query = query }
@@ -89,7 +89,7 @@ viewReadme loadingReadme =
 
 viewModule : String -> String -> Version.Version -> String -> Maybe (List Docs.Module) -> Html Msg
 viewModule user project version name loadingDocs =
-  Html.map GoTo <|
+  Html.map Goto <|
   div [ class "block-list" ] <|
     h1 [class "block-list-title"] [ text name ]
     ::
@@ -287,12 +287,12 @@ viewValueItem { user, project, version } moduleName ownerName valueName =
 
 navLink : String -> Route.Route -> Html Msg
 navLink name route =
-  App.link GoTo route [ class "pkg-nav-module" ] [ text name ]
+  App.link Goto route [ class "pkg-nav-module" ] [ text name ]
 
 
 boldNavLink : String -> Route.Route -> Html Msg
 boldNavLink name route =
-  App.link GoTo route [ class "pkg-nav-module" ]
+  App.link Goto route [ class "pkg-nav-module" ]
     [ span
         [ style "font-weight" "bold"
         , style "text-decoration" "underline"

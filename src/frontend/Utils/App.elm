@@ -15,7 +15,7 @@ import Route exposing (Route)
 
 
 type Update a
-  = GoTo Route
+  = Goto Route
   | Update a
 
 
