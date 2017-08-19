@@ -2,14 +2,15 @@ module Route exposing
   ( Route(..)
   , Version(..)
   , VersionInfo(..)
-  , fromLocation
+  , fromUrl
   , toString
   , vsnToString
   )
 
 
+import Browser
 import Url
-import Url.Parser exposing (Parser, (</>), custom, fragment, map, oneOf, s, top)
+import Url.Parser exposing (Parser, (</>), custom, fragment, map, oneOf, parsePath, s, top)
 import Version
 
 
@@ -24,6 +25,7 @@ type Route
   | Version String String Version VersionInfo
   | Guidelines
   | DocsHelp
+  | NotFound String
 
 
 type Version
@@ -40,23 +42,20 @@ type VersionInfo
 -- LOCATION TO ROUTE
 
 
-fromLocation : Location -> Maybe Route
-fromLocation location =
-  Url.parseLocation parser
-    (Url.preparePath location.pathname)
-    (Url.prepareQuery location.search)
-    (Url.prepareFragment location.hash)
+fromUrl : Browser.Url -> Route
+fromUrl url =
+  parsePath parser NotFound url
 
 
 parser : Parser (Route -> a) a
 parser =
   oneOf
-    [ map Home        <| top
-    , map User        <| s "packages" </> user
-    , map Package     <| s "packages" </> user </> project
-    , map Version     <| s "packages" </> user </> project </> version </> versionInfo
-    , map Guidelines  <| s "help" </> s "design-guidelines"
-    , map DocsHelp    <| s "help" </> s "docs"
+    [ map Home       <| top
+    , map User       <| s "packages" </> user
+    , map Package    <| s "packages" </> user </> project
+    , map Version    <| s "packages" </> user </> project </> version </> versionInfo
+    , map Guidelines <| s "help" </> s "design-guidelines"
+    , map DocsHelp   <| s "help" </> s "docs"
     ]
 
 
@@ -127,6 +126,9 @@ toString route =
 
     DocsHelp ->
       "/help/docs"
+
+    NotFound unknownUrl ->
+      unknownUrl
 
 
 vsnToString : Version -> String

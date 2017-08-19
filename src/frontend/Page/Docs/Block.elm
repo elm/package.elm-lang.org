@@ -159,7 +159,7 @@ unionMore info =
 type alias Info =
   { user : String
   , project : String
-  , version : Version.Version
+  , version : Route.Version
   , moduleName : String
   , typeNameDict : TypeNameDict
   }
@@ -169,7 +169,7 @@ type alias TypeNameDict =
   Dict.Dict String (String, String)
 
 
-makeInfo : String -> String -> Version.Version -> String -> List Docs.Module -> Info
+makeInfo : String -> String -> Route.Version -> String -> List Docs.Module -> Info
 makeInfo user project version moduleName docsList =
   let
     addUnion moduleName union docs =
@@ -214,7 +214,7 @@ makeLink : Info -> List (Attribute Msg) -> String -> String -> Html Msg
 makeLink {user, project, version, moduleName} attrs tagName humanName =
   let
     route =
-      Route.Version user project (Route.Exactly version) <|
+      Route.Version user project version <|
         Route.Module moduleName (Just tagName)
   in
   App.link identity route attrs [ text humanName ]

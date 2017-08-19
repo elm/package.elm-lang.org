@@ -1,5 +1,8 @@
 module Main exposing (..)
 
+
+import Browser
+import Browser.History as History
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Lazy exposing (..)
@@ -16,7 +19,13 @@ import Version
 
 
 main =
-  Navigation.program { init = init, view = view, update = update, subscriptions = subscriptions }
+  Browser.fullscreen
+    { init = init
+    , view = view
+    , update = update
+    , subscriptions = subscriptions
+    , onNavigation = Just onNavigation
+    }
 
 
 
@@ -40,14 +49,9 @@ type Page
 -- INIT
 
 
-init : Navigation.Location -> ( Model, Cmd Msg )
-init location =
-  case Route.fromLocation location of
-    Nothing ->
-      ( Model Session.empty (Problem Problem.NoIdea) Nothing )
-
-    Just route ->
-      goto route (Model Session.empty Blank Nothing)
+init : Browser.Env () -> ( Model, Cmd Msg )
+init env =
+  goto (Route.fromUrl env.url) (Model Session.empty Blank Nothing)
 
 
 
@@ -57,6 +61,15 @@ init location =
 subscriptions : Model -> Sub Msg
 subscriptions model =
   Sub.none
+
+
+
+-- NAVIGATION
+
+
+onNavigation : Browser.Url -> Msg
+onNavigation url =
+  Goto (Route.fromUrl url)
 
 
 
@@ -111,7 +124,7 @@ goto route model =
   let
     gotoBlank =
       ( { model | page = Blank, next = Nothing }
-      , Navigation.newUrl (Route.toString route)
+      , History.push (Route.toString route)
       )
   in
   case route of
@@ -132,6 +145,14 @@ goto route model =
 
     Route.DocsHelp ->
       gotoBlank
+
+    Route.NotFound url ->
+      ( { model
+            | page = Problem Problem.NoIdea
+            , next = Nothing
+        }
+      , History.push url
+      )
 
 
 loadVersion : String -> String -> Route.Version -> Route.VersionInfo -> Model -> ( Model, Cmd Msg )
@@ -179,14 +200,17 @@ loadVersion user project version info model =
 -- VIEW
 
 
-view : Model -> Html msg
+view : Model -> Browser.View Msg
 view model =
-  div []
-    [ center "#eeeeee" [ lazy2 viewLinks model.session model.page ]
-    , center "#60B5CC" [ lazy2 viewVersionWarning model.session model.page ]
-    , div [ class "center" ] (lazy2 viewPage model.session model.page)
-    , viewFooter
-    ]
+  { title =
+      toTitle model.page
+  , body =
+      [ center "#eeeeee" (viewLinks model.session model.page)
+      , center "#60B5CC" [ lazy2 viewVersionWarning model.session model.page ]
+      , div [ class "center" ] (viewPage model.page)
+      , viewFooter
+      ]
+  }
 
 
 center : String -> List (Html msg) -> Html msg
@@ -194,48 +218,55 @@ center color kids =
   div [ style "background-color" color ] [ div [class "center"] kids ]
 
 
+toTitle : Page -> String
+toTitle page =
+  case page of
+    Blank ->
+      "TODO"
+
+    Problem suggestion ->
+      Problem.toTitle suggestion
+
+    Docs docsModel ->
+      Docs.toTitle docsModel
+
+
 
 -- VIEW PAGE
 
 
-viewPage : Session.Data -> Page -> List (Html Msg)
-viewPage session page =
+viewPage : Page -> List (Html Msg)
+viewPage page =
   case page of
     Blank ->
       []
 
     Problem suggestion ->
-      [ Problem.view suggestion
+      [ Html.map Goto <| Problem.view suggestion
       ]
 
     Docs docsModel ->
-      Docs.view session docsModel
+      Docs.view DocsMsg docsModel
 
 
 
 -- VIEW ROUTE LINKS
 
 
-viewLinks : Session.Data -> Route.Route -> List (Html msg)
-viewLinks sessionData route =
-    case route of
-      Route.Home ->
+viewLinks : Session.Data -> Page -> List (Html Msg)
+viewLinks sessionData page =
+    case page of
+      Blank ->
         []
 
-      Route.User user ->
-        [ toLink (Route.User user) user
-        ]
+      Problem _ ->
+        []
 
-      Route.Package user project ->
+      Docs { user, project, version, info } ->
+        let (vsn, vsnStr) = moreExactVersion sessionData user project version in
         [ toLink (Route.User user) user
         , toLink (Route.Package user project) project
-        ]
-
-      Route.Version user project vsn info ->
-        let (version, vsnStr) = moreExactVersion sessionData user project vsn in
-        [ toLink (Route.User user) user
-        , toLink (Route.Package user project) project
-        , toLink (Route.Version user project version Route.Readme) vsnStr
+        , toLink (Route.Version user project vsn Route.Readme) vsnStr
         ]
         ++
           case info of
@@ -246,16 +277,10 @@ viewLinks sessionData route =
               [ toLink (Route.Version user project version (Route.Module moduleName maybeTag)) moduleName
               ]
 
-      Route.Guidelines ->
-        [ text "help" ]
 
-      Route.DocsHelp ->
-        [ text "help" ]
-
-
-toLink : Route.Route -> String -> Html msg
+toLink : Route.Route -> String -> Html Msg
 toLink route words =
-  App.link Goto route [ text words ]
+  App.link Goto route [] [ text words ]
 
 
 moreExactVersion : Session.Data -> String -> String -> Route.Version -> (Route.Version, String)
@@ -277,54 +302,45 @@ moreExactVersion sessionData user project vsn =
 -- VIEW VERSION WARNINGS
 
 
-viewVersionWarning : Session.Data -> Route.Route -> Html msg
-viewVersionWarning session route =
+viewVersionWarning : Session.Data -> Page -> Html Msg
+viewVersionWarning session page =
   div [ class "header-underbar" ] <|
-    case getNewerRoute session route of
+    case getNewerRoute session page of
       Nothing ->
         []
 
       Just (latestVersion, newerRoute) ->
         [ p [ class "version-warning" ]
             [ text "Warning! The latest version of this package is "
-            , App.link newerRoute [] [ text (Version.toString latestVersion) ]
+            , App.link Goto newerRoute [] [ text (Version.toString latestVersion) ]
             ]
         ]
 
 
-getNewerRoute : Session.Data -> Route.Route -> Maybe (Version.Version, Route.Route)
-getNewerRoute sessionData route =
-  case route of
-    Route.Home ->
+getNewerRoute : Session.Data -> Page -> Maybe (Version.Version, Route.Route)
+getNewerRoute sessionData page =
+  case page of
+    Blank ->
       Nothing
 
-    Route.User _ ->
+    Problem _ ->
       Nothing
 
-    Route.Package _ _ ->
-      Nothing
-
-    Route.Version user project vsn info ->
-      case vsn of
+    Docs { user, project, version, info } ->
+      case version of
         Route.Latest ->
           Nothing
 
-        Route.Exactly version ->
+        Route.Exactly vsn ->
           case Session.getLatestVersion sessionData user project of
             Nothing ->
               Nothing
 
             Just latestVersion ->
-              if version == latestVersion then
+              if vsn == latestVersion then
                 Nothing
               else
                 Just ( latestVersion, Route.Version user project Route.Latest info )
-
-    Route.Guidelines ->
-      Nothing
-
-    Route.DocsHelp ->
-      Nothing
 
 
 

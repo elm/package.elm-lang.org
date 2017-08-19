@@ -108,8 +108,8 @@ type Progress
   | Problem Problem.Suggestion
 
 
-load : String -> String -> Route.Version -> Maybe String -> Data -> Progress
-load user project vsn maybeModule (Data info0) =
+load : String -> String -> Route.Version -> Route.VersionInfo -> Data -> Progress
+load user project vsn info (Data info0) =
   let
     (info1, cmd1, remoteReleases) = loadReleases user project info0
     (info2, cmd2, remoteReadme) = loadReadme user project vsn info1
@@ -120,7 +120,7 @@ load user project vsn maybeModule (Data info0) =
       Problem (Problem.BadResource err)
 
     Ok (Just releases, Just readme, Just docs) ->
-      case isModuleProblem maybeModule docs of
+      case isModuleProblem info docs of
         Just moduleName ->
           Problem (Problem.RemovedModule user project vsn moduleName)
 
@@ -132,13 +132,13 @@ load user project vsn maybeModule (Data info0) =
         Cmd.map Load (Cmd.batch [ cmd1, cmd2, cmd3 ])
 
 
-isModuleProblem : Maybe String -> List Docs.Module -> Maybe String
-isModuleProblem maybeModule docsList =
-  case maybeModule of
-    Nothing ->
+isModuleProblem : Route.VersionInfo -> List Docs.Module -> Maybe String
+isModuleProblem info docsList =
+  case info of
+    Route.Readme ->
       Nothing
 
-    Just moduleName ->
+    Route.Module moduleName _ ->
       if List.any (\docs -> moduleName == docs.name) docsList then
         Nothing
 

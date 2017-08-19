@@ -3,6 +3,7 @@ module Page.Docs exposing
   , Msg
   , update
   , view
+  , toTitle
   )
 
 
@@ -26,7 +27,7 @@ import Version
 type alias Model =
   { user : String
   , project : String
-  , version : Version.Version
+  , version : Route.Version
   , info : Route.VersionInfo
   , readme : Maybe String
   , docs : Maybe (List Docs.Module)
@@ -54,11 +55,29 @@ update msg model =
 
 
 
+-- TO TITLE
+
+
+toTitle : Model -> String
+toTitle { project, version, info } =
+  let
+    genericTitle =
+      project ++ " " ++ Route.vsnToString version
+  in
+  case info of
+    Route.Readme ->
+      genericTitle
+
+    Route.Module name _ ->
+      name ++ " - " ++ genericTitle
+
+
+
 -- VIEW
 
 
-view : Model -> List (Html Msg)
-view ({ user, project, version, docs } as model) =
+view : (Msg -> msg) -> Model -> List (Html msg)
+view toMsg ({ user, project, version, docs } as model) =
   let
     mainContent =
       case model.info of
@@ -68,8 +87,8 @@ view ({ user, project, version, docs } as model) =
         Route.Module name _ ->
           lazy5 viewModule user project version name docs
   in
-    [ mainContent
-    , viewSidebar model
+    [ Html.map toMsg <| mainContent
+    , Html.map toMsg <| lazy viewSidebar model
     ]
 
 
@@ -87,7 +106,7 @@ viewReadme loadingReadme =
     div [ class "block-list" ] [ content ]
 
 
-viewModule : String -> String -> Version.Version -> String -> Maybe (List Docs.Module) -> Html Msg
+viewModule : String -> String -> Route.Version -> String -> Maybe (List Docs.Module) -> Html Msg
 viewModule user project version name loadingDocs =
   Html.map Goto <|
   div [ class "block-list" ] <|
@@ -236,11 +255,11 @@ getName valueName =
 -- VIEW SIDEBAR LINKS
 
 
-viewReadmeLink : String -> String -> Version.Version -> Route.VersionInfo -> Html Msg
+viewReadmeLink : String -> String -> Route.Version -> Route.VersionInfo -> Html Msg
 viewReadmeLink user project version info =
   let
     route =
-      Route.Version user project (Route.Exactly version) Route.Readme
+      Route.Version user project version Route.Readme
   in
     case info of
       Route.Readme ->
@@ -250,20 +269,25 @@ viewReadmeLink user project version info =
         navLink "README" route
 
 
-viewBrowseSourceLink : String -> String -> Version.Version -> Html msg
+viewBrowseSourceLink : String -> String -> Route.Version -> Html msg
 viewBrowseSourceLink user project version =
-  a [ class "pkg-nav-module"
-    , href <|
-        Url.crossOrigin "https://github.com" [ user, project, "tree", Version.toString version ] []
-    ]
-    [ text "Browse source" ]
+  case version of
+    Route.Latest ->
+      text "Browse Source"
+
+    Route.Exactly vsn ->
+      a [ class "pkg-nav-module"
+        , href <|
+            Url.crossOrigin "https://github.com" [ user, project, "tree", Version.toString vsn ] []
+        ]
+        [ text "Browse Source" ]
 
 
 viewModuleLink : Model -> String -> Html Msg
 viewModuleLink { user, project, version, info } name =
   let
     route =
-      Route.Version user project (Route.Exactly version) (Route.Module name Nothing)
+      Route.Version user project version (Route.Module name Nothing)
   in
     case info of
       Route.Readme ->
@@ -280,7 +304,7 @@ viewValueItem : Model -> String -> String -> String -> Html Msg
 viewValueItem { user, project, version } moduleName ownerName valueName =
   let
     route =
-      Route.Version user project (Route.Exactly version) (Route.Module moduleName (Just ownerName))
+      Route.Version user project version (Route.Module moduleName (Just ownerName))
   in
     li [ class "pkg-nav-value" ] [ navLink valueName route ]
 

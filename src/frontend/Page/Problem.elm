@@ -1,6 +1,7 @@
 module Page.Problem exposing
   ( Suggestion(..)
   , view
+  , toTitle
   )
 
 
@@ -19,6 +20,15 @@ type Suggestion
   = NoIdea
   | BadResource Resource.Error
   | RemovedModule String String Route.Version String
+
+
+
+-- TITLE
+
+
+toTitle : Suggestion -> String
+toTitle _ =
+  "Page Not Found!"
 
 
 
