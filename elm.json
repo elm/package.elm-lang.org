@@ -5,6 +5,7 @@
     ],
     "elm-version": "0.19.0",
     "dependencies": {
+        "elm-lang/browser": "1.0.0",
         "elm-lang/core": "6.0.0",
         "elm-lang/docs": "1.0.0",
         "elm-lang/html": "3.0.0",
@@ -14,6 +15,7 @@
     "test-dependencies": {},
     "do-not-edit-this-by-hand": {
         "transitive-dependencies": {
+            "elm-lang/dom": "2.0.0",
             "elm-lang/parser": "1.0.0",
             "elm-lang/parser-primitives": "1.0.0",
             "elm-lang/virtual-dom": "3.0.0"
