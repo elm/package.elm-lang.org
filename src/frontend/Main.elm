@@ -171,7 +171,7 @@ loadVersion user project version info model =
           | page = makeDocsPage (Just readme) (Just docs)
           , next = Nothing
         }
-      , Cmd.none
+      , History.push (Route.toString (Route.Version user project version info))
       )
 
     Session.Problem suggestion ->
