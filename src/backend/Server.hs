@@ -141,6 +141,9 @@ serveVersionHelp name version allVersions maybeAsset =
     Nothing ->
       ServeFile.docsHtml name version Nothing allVersions
 
+    Just "endpoint.json" ->
+      serveFile (Path.directory name version ++ "/endpoint.json")
+
     Just "elm.json" ->
       serveFile (Path.directory name version ++ "/elm.json")
 
@@ -155,5 +158,5 @@ serveVersionHelp name version allVersions maybeAsset =
         Nothing ->
           S.pass
 
-        Just _ ->
-          error "TODO"
+        Just moduleName ->
+          ServeFile.docsHtml name version (Just moduleName) allVersions
