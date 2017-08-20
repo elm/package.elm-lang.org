@@ -61,24 +61,46 @@ viewSuggestion : Suggestion -> ( List (Html msg), List (Html Route.Route) )
 viewSuggestion suggestion =
   case suggestion of
     NoIdea ->
-      ( [ text "I cannot find this page!" ]
-      , []
-      )
+      ( [ text "I cannot find this page!" ], [] )
 
     BadResource resourceError ->
-      Debug.crash "TODO"
+      viewBadResource resourceError
 
     RemovedModule user project vsn name ->
-      ( [ text "I cannot find the "
-        , code [] [ text name ]
-        , text " module!"
+      viewRemovedModule user project vsn name
+
+
+viewBadResource : Resource.Error -> ( List (Html msg), List (Html Route.Route) )
+viewBadResource resourceError =
+  let
+    file =
+      case resourceError of
+        Resource.BadDocs user project vsn error ->
+          "docs.json"
+
+        Resource.BadReadme user project vsn error ->
+          "README.md"
+
+        Resource.BadReleases user project error ->
+          "releases.json"
+  in
+  ( [ text "Cannot find ", code [] [ text file ] ]
+  , []
+  )
+
+
+viewRemovedModule : String -> String -> Route.Version -> String -> ( List (Html msg), List (Html Route.Route) )
+viewRemovedModule user project vsn name =
+  ( [ text "I cannot find the "
+    , code [] [ text name ]
+    , text " module!"
+    ]
+  , [ p []
+        [ text "Maybe it existed in a "
+        , App.link identity (Route.Package user project) [] [ text "previous release" ]
+        , text "? Maybe the "
+        , App.link identity (Route.Version user project vsn Route.Readme) [] [ text "README" ]
+        , text " will help you figure out what changed?"
         ]
-      , [ p []
-            [ text "Maybe it existed in a "
-            , App.link identity (Route.Package user project) [] [ text "previous release" ]
-            , text "? Maybe the "
-            , App.link identity (Route.Version user project vsn Route.Readme) [] [ text "README" ]
-            , text " will help you figure out what changed?"
-            ]
-        ]
-      )
+    ]
+  )
