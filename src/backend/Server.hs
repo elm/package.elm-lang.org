@@ -34,16 +34,17 @@ serve token memory =
     [
       -- NORMAL ROUTES
       Router.serve $ Router.oneOf $
-        [ top ==> ServeFile.elm "Elm Packages" "Page.Catalog"
+        [ top ==> ServeFile.elm "Elm Packages"
         , s "packages" ==> S.redirect' "/" 301
-        , s "packages" </> text </> text </> versionStuff ==> servePackage memory
+        , s "packages" </> text </> text </> s "releases.json" ==> serveReleases
+        , s "packages" </> text </> text </> versionStuff ==> serveVersion memory
         , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "register" ==> Register.register token memory
         , s "help" </>
             Router.oneOf
-              [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines" "Page.DesignGuidelines"
-              , s "documentation-format" ==> ServeFile.elm "Documentation Format" "Page.DocumentationFormat"
+              [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines"
+              , s "documentation-format" ==> ServeFile.elm "Documentation Format"
               , s "docs-preview" ==> ServeFile.previewHtml
               ]
         ]
@@ -58,7 +59,7 @@ serve token memory =
     ,
       -- NOT FOUND
       do  S.modifyResponse $ S.setResponseStatus 404 "Not Found"
-          ServeFile.elm "Not Found" "Page.NotFound"
+          ServeFile.elm "Not Found"
     ]
 
 
@@ -78,8 +79,8 @@ serveNewPackages memory index =
 
 
 data PkgInfo
-  = Overview
-  | Docs Vsn (Maybe Text)
+  = Readme
+  | Module Vsn (Maybe Text)
 
 
 data Vsn = Latest | Exactly Pkg.Version
@@ -98,14 +99,19 @@ versionStuff =
     asset = Router.oneOf [ top ==> Nothing, text ==> Just ]
   in
     Router.oneOf
-      [ top ==> Overview
-      , latest </> asset ==> Docs
-      , exactly </> asset ==> Docs
+      [ top ==> Readme
+      , latest </> asset ==> Module
+      , exactly </> asset ==> Module
       ]
 
 
-servePackage :: Memory -> Text -> Text -> PkgInfo -> S.Snap ()
-servePackage memory user project info =
+serveReleases :: Text -> Text -> S.Snap ()
+serveReleases user project =
+  serveFile (Path.releases (Pkg.Name user project))
+
+
+serveVersion :: Memory -> Text -> Text -> PkgInfo -> S.Snap ()
+serveVersion memory user project info =
   do  let name = Pkg.Name user project
 
       pkgs <- Memory.getPackages memory
@@ -116,21 +122,21 @@ servePackage memory user project info =
 
         Just versions ->
           case info of
-            Overview ->
+            Readme ->
               ServeFile.overviewHtml name versions
 
-            Docs (Exactly version) asset ->
+            Module (Exactly version) asset ->
               if notElem version versions then
                 S.pass
               else
-                servePackageHelp name version versions asset
+                serveVersionHelp name version versions asset
 
-            Docs Latest asset ->
-              servePackageHelp name (last (List.sort versions)) versions asset
+            Module Latest asset ->
+              serveVersionHelp name (last (List.sort versions)) versions asset
 
 
-servePackageHelp :: Pkg.Name -> Pkg.Version -> [Pkg.Version] -> Maybe Text -> S.Snap ()
-servePackageHelp name version allVersions maybeAsset =
+serveVersionHelp :: Pkg.Name -> Pkg.Version -> [Pkg.Version] -> Maybe Text -> S.Snap ()
+serveVersionHelp name version allVersions maybeAsset =
   case maybeAsset of
     Nothing ->
       ServeFile.docsHtml name version Nothing allVersions
@@ -143,9 +149,6 @@ servePackageHelp name version allVersions maybeAsset =
 
     Just "README.md" ->
       serveFile (Path.directory name version ++ "/README.md")
-
-    Just "endpoint.json" ->
-      serveFile (Path.directory name version ++ "/endpoint.json")
 
     Just asset ->
       case Module.dehyphenate asset of

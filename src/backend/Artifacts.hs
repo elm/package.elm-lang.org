@@ -2,20 +2,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Artifacts
   ( directory
-  , path
-  , url
+  , js
   , compile
   )
   where
 
-import Control.Monad.Except (ExceptT, runExceptT)
-import qualified Data.Text as Text
-import System.Directory (createDirectoryIfMissing)
-import System.Exit (exitFailure)
-import System.FilePath ((</>), (<.>))
-import System.IO (hPutStrLn, stderr)
 
-import qualified Elm.Compiler.Module as Module
+import qualified System.Directory as Dir
+import qualified System.Exit as Exit
+import qualified System.IO as IO
+import qualified System.Process as Process
 
 
 
@@ -27,14 +23,9 @@ directory =
   "artifacts"
 
 
-path :: Module.Raw -> FilePath
-path name =
-  directory </> Text.unpack (Module.hyphenate name) <.> "js"
-
-
-url :: Module.Raw -> FilePath
-url name =
-  directory ++ "/" ++ Text.unpack (Module.hyphenate name) ++ ".js"
+js :: String
+js =
+  "/" ++ directory ++ "/elm.js"
 
 
 
@@ -44,33 +35,19 @@ url name =
 compile :: IO ()
 compile =
   do  putStrLn "Compiling artifacts..."
-      createDirectoryIfMissing True "artifacts"
-      result <- runExceptT (mapM runElmMake publicModules)
-      case result of
-        Right _ ->
-          return ()
 
-        Left msg ->
-          do  hPutStrLn stderr msg
-              exitFailure
+      exitCode <-
+        Process.rawSystem
+          "../../tools/cli/dist/build/elm/elm"
+          [ "make"
+          , "src/frontend/Main.elm"
+          ]
 
+      case exitCode of
+        Exit.ExitSuccess ->
+          do  Dir.createDirectoryIfMissing True "artifacts"
+              Dir.renameFile "elm.js" "artifacts/elm.js"
 
-runElmMake :: Module.Raw -> ExceptT String IO String
-runElmMake name =
-  error "Elm.Utils.run" {-"elm-make"
-    [ "src" </> "frontend" </> Module.nameToPath name <.> "elm"
-    , "--yes"
-    , "--output=" ++ path name
-    ]-}
-
-
-publicModules :: [Module.Raw]
-publicModules =
-  [ "Page.Catalog"
-  , "Page.DesignGuidelines"
-  , "Page.DocumentationFormat"
-  , "Page.PreviewDocumentation"
-  , "Page.NotFound"
-  , "Page.Package"
-  , "Page.PackageOverview"
-  ]
+        Exit.ExitFailure _ ->
+          do  IO.hPutStrLn IO.stderr "Compilation failed!"
+              Exit.exitFailure

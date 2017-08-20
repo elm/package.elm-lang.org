@@ -30,9 +30,9 @@ import qualified Artifacts
 -- TYPICAL PAGES / NO PORTS
 
 
-elm :: String -> Module.Raw -> Snap ()
-elm title elmModuleName =
-  makeHtml title elmModuleName Nothing (return Nothing)
+elm :: String -> Snap ()
+elm title =
+  makeHtml title Nothing (return Nothing)
 
 
 
@@ -55,7 +55,7 @@ docsHtml pkg@(Pkg.Name user project) version maybeName allVersions =
     maybeLink =
       Just (canonicalLink pkg maybeName)
   in
-    makeHtml title "Page.Package" maybeLink $
+    makeHtml title maybeLink $
       return $ Just $ makeContext $
         [ "user" ==> show user
         , "project" ==> show project
@@ -107,7 +107,7 @@ renames =
 
 overviewHtml :: Pkg.Name -> [Pkg.Version] -> Snap ()
 overviewHtml pkg@(Pkg.Name user project) allVersions =
-  makeHtml (Pkg.toString pkg) "Page.PackageOverview" Nothing $
+  makeHtml (Pkg.toString pkg) Nothing $
     return $ Just $ makeContext $
       [ "user" ==> show user
       , "project" ==> show project
@@ -132,7 +132,7 @@ makeContext entries =
 
 previewHtml :: Snap ()
 previewHtml =
-  makeHtml "Preview your Docs" "Page.PreviewDocumentation" Nothing $
+  makeHtml "Preview your Docs" Nothing $
     return $ Just $ (,) "" $
       "function handleFileSelect(evt) {\n\
       \    var reader = new FileReader();\n\
@@ -151,8 +151,8 @@ previewHtml =
 -- SKELETON
 
 
-makeHtml :: String -> Module.Raw -> Maybe H.Html -> Snap (Maybe (String, String)) -> Snap ()
-makeHtml title elmModule maybeLink makePorts =
+makeHtml :: String -> Maybe H.Html -> Snap (Maybe (String, String)) -> Snap ()
+makeHtml title maybeLink makePorts =
   do  maybePorts <- makePorts
       writeBuilder $ Blaze.renderHtmlBuilder $ H.docTypeHtml $ do
         H.head $ do
@@ -164,21 +164,16 @@ makeHtml title elmModule maybeLink makePorts =
           H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/highlight/styles/default.css")
           H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/style.css")
           H.script ! A.src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
-          H.script ! A.src (cacheBuster (Artifacts.url elmModule)) $ ""
+          H.script ! A.src (cacheBuster Artifacts.js) $ ""
 
         H.body $
           H.script $ H.preEscapedToMarkup $
             case maybePorts of
               Nothing ->
-                "\nElm." ++ Module.nameToString elmModule ++ ".fullscreen()\n"
+                "\nElm.Main.fullscreen()\n"
 
               Just (ports, postScript) ->
-                "\nvar page = Elm."
-                ++ Module.nameToString elmModule
-                ++ ".fullscreen("
-                ++ ports
-                ++ ");\n\n"
-                ++ postScript
+                "\nvar page = Elm.Main.fullscreen(" ++ ports ++ ");\n\n" ++ postScript
 
 
 googleAnalytics :: H.Html
