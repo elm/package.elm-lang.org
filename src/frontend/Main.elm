@@ -51,7 +51,11 @@ type Page
 
 init : Browser.Env () -> ( Model, Cmd Msg )
 init env =
-  goto (Route.fromUrl env.url) (Model Session.empty Blank Nothing)
+  let
+    targetRoute =
+      Route.fromUrl env.url
+  in
+  goto targetRoute (Model Session.empty Blank (Just targetRoute))
 
 
 
@@ -222,7 +226,7 @@ toTitle : Page -> String
 toTitle page =
   case page of
     Blank ->
-      "TODO"
+      "..."
 
     Problem suggestion ->
       Problem.toTitle suggestion
