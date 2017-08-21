@@ -89,7 +89,7 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
-  case Debug.log "msg" message of
+  case message of
     Push route ->
       ( model
       , History.push (Route.toUrl route)
@@ -214,7 +214,7 @@ view model =
   { title =
       toTitle model.page
   , body =
-      [ center "#eeeeee" (viewLinks model.session model.page)
+      [ center "#eeeeee" [ lazy2 viewHeader model.session model.page ]
       , center "#60B5CC" [ lazy2 viewVersionWarning model.session model.page ]
       , div [ class "center" ] (viewPage model.page)
       , viewFooter
@@ -262,8 +262,9 @@ viewPage page =
 -- VIEW ROUTE LINKS
 
 
-viewLinks : Session.Data -> Page -> List (Html Msg)
-viewLinks sessionData page =
+viewHeader : Session.Data -> Page -> Html Msg
+viewHeader sessionData page =
+  h1 [ class "header" ] <| (::) (App.link Push Route.Home [] [ viewLogo ]) <|
     case page of
       Blank ->
         []
@@ -274,7 +275,9 @@ viewLinks sessionData page =
       Docs { user, project, version, info } ->
         let (vsn, vsnStr) = moreExactVersion sessionData user project version in
         [ toLink (Route.User user) user
+        , slash
         , toLink (Route.Package user project) project
+        , slash
         , toLink (Route.Version user project vsn Route.Readme) vsnStr
         ]
         ++
@@ -283,8 +286,14 @@ viewLinks sessionData page =
               []
 
             Route.Module moduleName maybeTag ->
-              [ toLink (Route.Version user project version (Route.Module moduleName maybeTag)) moduleName
+              [ slash
+              , toLink (Route.Version user project version (Route.Module moduleName maybeTag)) moduleName
               ]
+
+
+slash : Html msg
+slash =
+  span [ class "spacey-char" ] [ text "/" ]
 
 
 toLink : Route.Route -> String -> Html Msg
