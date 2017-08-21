@@ -3,7 +3,7 @@ module Route exposing
   , Version(..)
   , VersionInfo(..)
   , fromUrl
-  , toString
+  , toUrl
   , vsnToString
   )
 
@@ -92,11 +92,11 @@ moduleName =
 
 
 
--- ROUTE TO STRING
+-- ROUTE TO URL
 
 
-toString : Route -> String
-toString route =
+toUrl : Route -> String
+toUrl route =
   case route of
     Home ->
       Url.absolute [] []

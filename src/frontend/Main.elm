@@ -81,14 +81,20 @@ onNavigation url =
 
 
 type Msg
-  = Goto Route.Route
+  = Push Route.Route
+  | Goto Route.Route
   | SessionMsg Session.Msg
   | DocsMsg Docs.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
-  case message of
+  case Debug.log "msg" message of
+    Push route ->
+      ( model
+      , History.push (Route.toUrl route)
+      )
+
     Goto route ->
       goto route model
 
@@ -98,12 +104,11 @@ update message model =
     DocsMsg msg ->
       case model.page of
         Docs docsModel ->
-          case Docs.update msg docsModel of
-            App.Goto route ->
-              goto route model
-
-            App.Update newDocsModel ->
-              ( { model | page = Docs newDocsModel }, Cmd.none )
+          let
+            (newDocsModel, cmds) =
+               Docs.update msg docsModel
+          in
+          ( { model | page = Docs newDocsModel }, cmds )
 
         _ ->
           ( model, Cmd.none )
@@ -128,7 +133,7 @@ goto route model =
   let
     gotoBlank =
       ( { model | page = Blank, next = Nothing }
-      , History.push (Route.toString route)
+      , Cmd.none
       )
   in
   case route of
@@ -155,7 +160,7 @@ goto route model =
             | page = Problem Problem.NoIdea
             , next = Nothing
         }
-      , History.push url
+      , Cmd.none
       )
 
 
@@ -171,7 +176,7 @@ loadVersion user project version info model =
           | page = makeDocsPage (Just readme) (Just docs)
           , next = Nothing
         }
-      , History.push (Route.toString (Route.Version user project version info))
+      , Cmd.none
       )
 
     Session.Problem suggestion ->
@@ -246,7 +251,7 @@ viewPage page =
       []
 
     Problem suggestion ->
-      [ Html.map Goto <| Problem.view suggestion
+      [ Html.map Push <| Problem.view suggestion
       ]
 
     Docs docsModel ->
@@ -284,7 +289,7 @@ viewLinks sessionData page =
 
 toLink : Route.Route -> String -> Html Msg
 toLink route words =
-  App.link Goto route [] [ text words ]
+  App.link Push route [] [ text words ]
 
 
 moreExactVersion : Session.Data -> String -> String -> Route.Version -> (Route.Version, String)
@@ -316,7 +321,7 @@ viewVersionWarning session page =
       Just (latestVersion, newerRoute) ->
         [ p [ class "version-warning" ]
             [ text "Warning! The latest version of this package is "
-            , App.link Goto newerRoute [] [ text (Version.toString latestVersion) ]
+            , App.link Push newerRoute [] [ text (Version.toString latestVersion) ]
             ]
         ]
 

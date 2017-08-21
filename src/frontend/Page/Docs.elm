@@ -7,6 +7,7 @@ module Page.Docs exposing
   )
 
 
+import Browser.History as History
 import Elm.Docs as Docs
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -40,18 +41,22 @@ type alias Model =
 
 
 type Msg
-  = Goto Route.Route
+  = Push Route.Route
   | Search String
 
 
-update : Msg -> Model -> App.Update Model
+update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
   case msg of
-    Goto route ->
-      App.Goto route
+    Push route ->
+      ( model
+      , History.push (Route.toUrl route)
+      )
 
     Search query ->
-      App.Update { model | query = query }
+      ( { model | query = query }
+      , Cmd.none
+      )
 
 
 
@@ -108,7 +113,7 @@ viewReadme loadingReadme =
 
 viewModule : String -> String -> Route.Version -> String -> Maybe (List Docs.Module) -> Html Msg
 viewModule user project version name loadingDocs =
-  Html.map Goto <|
+  Html.map Push <|
   div [ class "block-list" ] <|
     h1 [class "block-list-title"] [ text name ]
     ::
@@ -311,12 +316,12 @@ viewValueItem { user, project, version } moduleName ownerName valueName =
 
 navLink : String -> Route.Route -> Html Msg
 navLink name route =
-  App.link Goto route [ class "pkg-nav-module" ] [ text name ]
+  App.link Push route [ class "pkg-nav-module" ] [ text name ]
 
 
 boldNavLink : String -> Route.Route -> Html Msg
 boldNavLink name route =
-  App.link Goto route [ class "pkg-nav-module" ]
+  App.link Push route [ class "pkg-nav-module" ]
     [ span
         [ style "font-weight" "bold"
         , style "text-decoration" "underline"

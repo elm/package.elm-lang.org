@@ -1,6 +1,5 @@
 module Utils.App exposing
-  ( Update(..)
-  , link
+  ( link
   )
 
 import Html exposing (Html, Attribute, a)
@@ -11,21 +10,12 @@ import Route exposing (Route)
 
 
 
--- UPDATES
-
-
-type Update a
-  = Goto Route
-  | Update a
-
-
-
 -- LINKS
 
 
 link : (Route -> msg) -> Route -> List (Attribute msg) -> List (Html msg) -> Html msg
 link toMsg route attrs kids =
-  a (attrs ++ [ href (Route.toString route), onRouteClick toMsg route ]) kids
+  a (attrs ++ [ href (Route.toUrl route), onRouteClick toMsg route ]) kids
 
 
 onRouteClick : (Route -> msg) -> Route -> Attribute msg
