@@ -336,7 +336,7 @@ collectArgs revArgs tipe =
 lambdaOne : OneSettings (Lines (Line msg)) msg
 lambdaOne =
   { open = []
-  , sep = text " -> "
+  , sep = [ text " -> " ]
   , close = []
   , openWidth = 0
   , sepWidth = 2
@@ -359,7 +359,7 @@ lambdaMore =
 lambdaOneParens : OneSettings (Lines (Line msg)) msg
 lambdaOneParens =
   { open = [ text "(" ]
-  , sep = text " -> "
+  , sep = [ text " -> " ]
   , close = [ text ")" ]
   , openWidth = 1
   , sepWidth = 2
@@ -386,7 +386,7 @@ lambdaMoreParens =
 tupleOne : OneSettings (Lines (Line msg)) msg
 tupleOne =
   { open = [ text "( " ]
-  , sep = text ", "
+  , sep = [ text ", " ]
   , close = [ text " )" ]
   , openWidth = 2
   , sepWidth = 2
@@ -414,7 +414,7 @@ typeOne : Bool -> OneSettings (Lines (Line msg)) msg
 typeOne needsParens =
   if needsParens then
     { open = [ text "(" ]
-    , sep = text " "
+    , sep = [ text " " ]
     , close = [ text ")" ]
     , openWidth = 1
     , sepWidth = 1
@@ -424,7 +424,7 @@ typeOne needsParens =
 
   else
     { open = []
-    , sep = text " "
+    , sep = [ text " " ]
     , close = []
     , openWidth = 0
     , sepWidth = 1
@@ -461,7 +461,7 @@ typeMore needsParens =
 recordOne : OneSettings (String, Lines (Line msg)) msg
 recordOne =
   { open = [ text "{ " ]
-  , sep = text ", "
+  , sep = [ text ", " ]
   , close = [ text " }" ]
   , openWidth = 2
   , sepWidth = 2
@@ -492,7 +492,7 @@ recordOneExt extension =
       "{ " ++ extension ++ " | "
   in
   { open = [ text open ]
-  , sep = text ", "
+  , sep = [ text ", " ]
   , close = [ text " }" ]
   , openWidth = String.length open
   , sepWidth = 2
@@ -587,7 +587,7 @@ toOneOrMore lines =
 
 type alias OneSettings a msg =
   { open : Line msg
-  , sep : Html msg
+  , sep : Line msg
   , close : Line msg
   , openWidth : Int
   , sepWidth : Int
@@ -610,7 +610,7 @@ toLinesHelp : OneSettings a msg -> MoreSettings a msg -> a -> List a -> Lines (L
 toLinesHelp one more x xs =
   let
     maybeOneLine =
-      toOneLine one (x::xs)
+      toOneLine one.openWidth one.open one (x::xs)
   in
   case maybeOneLine of
     Just ( width, line ) ->
@@ -620,40 +620,29 @@ toLinesHelp one more x xs =
       toMoreLines more x xs
 
 
-toOneLine : OneSettings a msg -> List a -> Maybe (Int, Line msg)
-toOneLine {open, sep, close, openWidth, sepWidth, closeWidth, toLine} entries =
-  case toOneLineHelp sepWidth sep toLine (openWidth + closeWidth, close) entries of
-    Nothing ->
-      Nothing
-
-    Just (width, line) ->
-      Just ( width, open ++ line )
-
-
-
-toOneLineHelp : Int -> Html msg -> (a -> Maybe (Int, Line msg)) -> (Int, Line msg) -> List a -> Maybe (Int, Line msg)
-toOneLineHelp sepWidth sep toLine end entries =
+toOneLine : Int -> Line msg -> OneSettings a msg -> List a -> Maybe (Int, Line msg)
+toOneLine chunkWidth chunk one entries =
   case entries of
     [] ->
-      Just end
+      Just ( one.closeWidth, one.close )
 
     entry :: remainingEntries ->
-      case toLine entry of
+      case one.toLine entry of
         Nothing ->
           Nothing
 
         Just (entryWidth, line) ->
-          case toOneLineHelp sepWidth sep toLine end remainingEntries of
+          case toOneLine one.sepWidth one.sep one remainingEntries of
             Nothing ->
               Nothing
 
             Just (remainingWidth, remainingLine) ->
               let
                 width =
-                  sepWidth + entryWidth + remainingWidth
+                  chunkWidth + entryWidth + remainingWidth
               in
               if width < maxWidth then
-                Just ( width, sep :: line ++ remainingLine )
+                Just ( width, chunk ++ line ++ remainingLine )
               else
                 Nothing
 
