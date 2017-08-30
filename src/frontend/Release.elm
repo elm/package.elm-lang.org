@@ -7,6 +7,7 @@ module Release exposing
 
 import Json.Decode as D
 import Time exposing (Time)
+import Utils.OneOrMore exposing (OneOrMore(..))
 import Version as Version
 
 
@@ -24,14 +25,9 @@ type alias Release =
 -- GET LATEST VERSION
 
 
-getLatestVersion : List Release -> Maybe Version.Version
-getLatestVersion allReleases =
-  case allReleases of
-    [] ->
-      Nothing
-
-    r :: rs ->
-      Just (getLatestVersionHelp rs r)
+getLatestVersion : OneOrMore Release -> Version.Version
+getLatestVersion (OneOrMore r rs) =
+  getLatestVersionHelp rs r
 
 
 getLatestVersionHelp : List Release -> Release -> Version.Version
@@ -49,17 +45,22 @@ getLatestVersionHelp releases maxRelease =
 -- JSON
 
 
-decoder : D.Decoder (List Release)
+decoder : D.Decoder (OneOrMore Release)
 decoder =
   D.keyValuePairs D.float
     |> D.andThen (decoderHelp [])
 
 
-decoderHelp : List Release -> List (String, Float) -> D.Decoder (List Release)
+decoderHelp : List Release -> List (String, Float) -> D.Decoder (OneOrMore Release)
 decoderHelp revReleases pairs =
   case pairs of
     [] ->
-      D.succeed (List.reverse revReleases)
+      case List.reverse revReleases of
+        [] ->
+          D.fail "Expecting at least one release!"
+
+        r :: rs ->
+          D.succeed (OneOrMore r rs)
 
     (str, time) :: otherPairs ->
       case Version.fromString str of
