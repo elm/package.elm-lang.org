@@ -14,6 +14,7 @@ import Release
 import Result
 import Route
 import Url
+import Utils.OneOrMore exposing (OneOrMore(..))
 import Version
 
 
@@ -22,13 +23,14 @@ import Version
 
 
 type Result
-  = Releases String String (Result.Result Http.Error (List Release.Release))
+  = Releases String String (Result.Result Http.Error (OneOrMore Release.Release))
   | Readme String String Route.Version (Result.Result Http.Error String)
   | Docs String String Route.Version (Result.Result Http.Error (List Docs.Module))
 
 
 type Error
-  = BadDocs String String Route.Version Http.Error
+  = MissingModule String String Route.Version String
+  | BadDocs String String Route.Version Http.Error
   | BadReadme String String Route.Version Http.Error
   | BadReleases String String Http.Error
 
