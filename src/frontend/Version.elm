@@ -2,6 +2,7 @@ module Version exposing
   ( Version
   , toString
   , fromString
+  , sameMajor
   , decoder
   , encode
   )
@@ -41,6 +42,15 @@ fromString string =
 
     _ ->
       Nothing
+
+
+
+-- COMPARISON
+
+
+sameMajor : Version -> Version -> Bool
+sameMajor (Version major1 _ _) (Version major2 _ _) =
+  major1 == major2
 
 
 

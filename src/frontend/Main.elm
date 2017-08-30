@@ -7,10 +7,14 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Lazy exposing (..)
 import Page.Docs as Docs
+import Page.Diff as Diff
 import Page.Problem as Problem
 import Route
 import Session
+import Session.Query as Query
+import Session.Status exposing (Status(..))
 import Utils.App as App
+import Utils.OneOrMore as OneOrMore
 import Version
 
 
@@ -34,14 +38,15 @@ main =
 
 type alias Model =
   { session : Session.Data
+  , route : Route.Route
   , page : Page
-  , next : Maybe Route.Route
   }
 
 
 type Page
   = Blank
   | Problem Problem.Suggestion
+  | Diff Diff.Model
   | Docs Docs.Model
 
 
@@ -51,11 +56,7 @@ type Page
 
 init : Browser.Env () -> ( Model, Cmd Msg )
 init env =
-  let
-    targetRoute =
-      Route.fromUrl env.url
-  in
-  goto targetRoute (Model Session.empty Blank (Just targetRoute))
+  check (Model Session.empty (Route.fromUrl env.url) Blank)
 
 
 
@@ -96,10 +97,10 @@ update message model =
       )
 
     Goto route ->
-      goto route model
+      check { model | route = route }
 
     SessionMsg msg ->
-      checkNext { model | session = Session.update msg model.session }
+      check { model | session = Session.update msg model.session }
 
     DocsMsg msg ->
       case model.page of
@@ -118,89 +119,77 @@ update message model =
 -- ROUTING
 
 
-checkNext : Model -> ( Model, Cmd Msg )
-checkNext model =
-  case model.next of
-    Nothing ->
-      ( model, Cmd.none )
-
-    Just route ->
-      goto route model
-
-
-goto : Route.Route -> Model -> ( Model, Cmd Msg )
-goto route model =
+check : Model -> ( Model, Cmd Msg )
+check model =
   let
-    gotoBlank =
-      ( { model | page = Blank, next = Nothing }
-      , Cmd.none
-      )
+    goto page =
+      ( { model | page = page }, Cmd.none )
   in
-  case route of
+  case model.route of
     Route.Home ->
-      gotoBlank
+      goto Blank
 
     Route.User name ->
-      gotoBlank
+      goto Blank
 
     Route.Package user project ->
-      gotoBlank
+      let
+        toPage releases =
+          Diff (Diff.Model user project (OneOrMore.toList releases))
+      in
+      onSuccess model <|
+        Query.map toPage (Session.releases user project)
 
     Route.Version user project version info ->
-      loadVersion user project version info model
+      let
+        metadataQuery =
+          Query.map
+            (Docs.Metadata user project version info)
+            (Query.maybe (Session.latestVersion user project))
+
+        contentQuery =
+          case info of
+            Route.Readme ->
+              Query.map2 Docs.Readme (Session.readme user project version) <|
+                Query.map (Maybe.withDefault []) <|
+                  Query.maybe (Session.allDocs user project version)
+
+            Route.Module name _ ->
+              Query.map
+                (Tuple.apply (Docs.Module name))
+                (Session.moduleDocs user project version name)
+      in
+      onSuccess model <| Query.map Docs <|
+        Query.map3 Docs.Model metadataQuery contentQuery (Query.success "")
 
     Route.Guidelines ->
-      gotoBlank
+      goto Blank
 
     Route.DocsHelp ->
-      gotoBlank
+      goto Blank
 
     Route.NotFound url ->
-      ( { model
-            | page = Problem Problem.NoIdea
-            , next = Nothing
-        }
-      , Cmd.none
-      )
+      goto (Problem Problem.NoIdea)
 
 
-loadVersion : String -> String -> Route.Version -> Route.VersionInfo -> Model -> ( Model, Cmd Msg )
-loadVersion user project version info model =
+onSuccess : Model -> Session.Query Page -> ( Model, Cmd Msg )
+onSuccess model query =
   let
-    makeDocsPage maybeReadme maybeDocs =
-      Docs (Docs.Model user project version info maybeReadme maybeDocs "")
-  in
-  case Session.load user project version info model.session of
-    Session.Done readme docs ->
-      ( { model
-          | page = makeDocsPage (Just readme) (Just docs)
-          , next = Nothing
-        }
-      , Cmd.none
-      )
+    (newSession, cmds, status) =
+      Query.check model.session query
 
-    Session.Problem suggestion ->
-      ( { model
-          | page = Problem suggestion
-          , next = Nothing
-        }
-      , Cmd.none
-      )
+    newPage =
+      case status of
+        Failure error _ ->
+          Problem (Problem.BadResource error)
 
-    Session.Loading newSessionData maybeReadme maybeDocs cmds ->
-      ( { model
-            | session = newSessionData
-            , page =
-                case (info, maybeReadme, maybeDocs) of
-                  (Route.Readme, Just _, _) ->
-                    makeDocsPage maybeReadme maybeDocs
+        Loading ->
+          model.page
 
-                  (Route.Module _ _, _, Just _) ->
-                    makeDocsPage maybeReadme maybeDocs
-
-                  _ ->
-                    model.page
-        }
+        Success page ->
+          page
+      in
+      ( { model | session = newSession, page = newPage }
       , Cmd.map SessionMsg cmds
       )
 
@@ -212,11 +201,11 @@ loadVersion user project version info model =
 view : Model -> Browser.View Msg
 view model =
   { title =
-      toTitle model.page
+      toTitle model.route
   , body =
       [ center "#eeeeee" [ lazy2 viewHeader model.session model.page ]
       , center "#60B5CC" [ lazy2 viewVersionWarning model.session model.page ]
-      , div [ class "center" ] (viewPage model.page)
+      , lazy viewPage model.page
       , viewFooter
       ]
   }
@@ -227,35 +216,53 @@ center color kids =
   div [ style "background-color" color ] [ div [class "center"] kids ]
 
 
-toTitle : Page -> String
-toTitle page =
-  case page of
-    Blank ->
-      "..."
+toTitle : Route.Route -> String
+toTitle route =
+  case route of
+    Route.Home ->
+      "Home"
 
-    Problem suggestion ->
-      Problem.toTitle suggestion
+    Route.User _ ->
+      "User"
 
-    Docs docsModel ->
-      Docs.toTitle docsModel
+    Route.Package _ _ ->
+      "Package"
+
+    Route.Version _ _ _ _ ->
+      "Version"
+
+    Route.Guidelines ->
+      "Guidelines"
+
+    Route.DocsHelp ->
+      "DocsHelp"
+
+    Route.NotFound _ ->
+      "NotFound"
 
 
 
 -- VIEW PAGE
 
 
-viewPage : Page -> List (Html Msg)
+viewPage : Page -> Html Msg
 viewPage page =
+  let
+    debody toMsg body =
+      Html.map toMsg (App.viewBody body)
+  in
   case page of
     Blank ->
-      []
+      debody identity <| App.body [] []
 
     Problem suggestion ->
-      [ Html.map Push <| Problem.view suggestion
-      ]
+      debody Push <| Problem.view suggestion
 
     Docs docsModel ->
-      Docs.view DocsMsg docsModel
+      debody DocsMsg <| Docs.view docsModel
+
+    Diff diffModel ->
+      debody Push <| Diff.view diffModel
 
 
 
@@ -272,23 +279,72 @@ viewHeader sessionData page =
       Problem _ ->
         []
 
-      Docs { user, project, version, info } ->
-        let (vsn, vsnStr) = moreExactVersion sessionData user project version in
-        [ toLink (Route.User user) user
-        , slash
-        , toLink (Route.Package user project) project
-        , slash
-        , toLink (Route.Version user project vsn Route.Readme) vsnStr
-        ]
-        ++
-          case info of
-            Route.Readme ->
-              []
+      Docs model ->
+        let
+          { user, project, version, latest, info } =
+            model.metadata
 
-            Route.Module moduleName maybeTag ->
-              [ slash
-              , toLink (Route.Version user project version (Route.Module moduleName maybeTag)) moduleName
-              ]
+          vsn =
+            getLatestVersion version latest
+        in
+        List.intersperse slash <|
+          [ userLink user
+          , packageLink user project
+          , versionLink user project vsn
+          ]
+          ++ moduleLink user project vsn info
+
+      Diff { user, project } ->
+        List.intersperse slash
+          [ userLink user
+          , packageLink user project
+          ]
+
+
+userLink : String -> Html Msg
+userLink user =
+  toLink (Route.User user) user
+
+
+packageLink : String -> String -> Html Msg
+packageLink user project =
+  toLink (Route.Package user project) project
+
+
+versionLink : String -> String -> Route.Version -> Html Msg
+versionLink user project version =
+  toLink
+    (Route.Version user project version Route.Readme)
+    (Route.vsnToString version)
+
+
+moduleLink : String -> String -> Route.Version -> Route.VersionInfo -> List (Html Msg)
+moduleLink user project version info =
+  case info of
+    Route.Readme ->
+      []
+
+    Route.Module moduleName maybeTag ->
+      let
+        route =
+          Route.Version user project version (Route.Module moduleName maybeTag)
+      in
+      [ toLink route moduleName ]
+
+
+getLatestVersion : Route.Version -> Maybe Version.Version -> Route.Version
+getLatestVersion version maybeLatest =
+  case version of
+    Route.Exactly _ ->
+      version
+
+    Route.Latest ->
+      case maybeLatest of
+        Nothing ->
+          version
+
+        Just latest ->
+          Route.Exactly latest
 
 
 slash : Html msg
@@ -299,21 +355,6 @@ slash =
 toLink : Route.Route -> String -> Html Msg
 toLink route words =
   App.link Push route [] [ text words ]
-
-
-moreExactVersion : Session.Data -> String -> String -> Route.Version -> (Route.Version, String)
-moreExactVersion sessionData user project vsn =
-  case vsn of
-    Route.Exactly version ->
-      ( vsn, Version.toString version )
-
-    Route.Latest ->
-      case Session.getLatestVersion sessionData user project of
-        Nothing ->
-          ( vsn, "latest" )
-
-        Just version ->
-          ( Route.Exactly version, Version.toString version )
 
 
 
@@ -344,21 +385,26 @@ getNewerRoute sessionData page =
     Problem _ ->
       Nothing
 
-    Docs { user, project, version, info } ->
-      case version of
+    Docs model ->
+      case model.metadata.version of
         Route.Latest ->
           Nothing
 
-        Route.Exactly vsn ->
-          case Session.getLatestVersion sessionData user project of
-            Nothing ->
-              Nothing
+        Route.Exactly version ->
+          let
+            { user, project, info, latest } =
+              model.metadata
 
-            Just latestVersion ->
-              if vsn == latestVersion then
+            checkLatest latestVersion =
+              if version == latestVersion then
                 Nothing
               else
                 Just ( latestVersion, Route.Version user project Route.Latest info )
+          in
+          Maybe.andThen checkLatest latest
+
+    Diff _ ->
+      Nothing
 
 
 

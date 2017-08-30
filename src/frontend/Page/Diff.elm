@@ -1,26 +1,21 @@
-module Page.PackageOverview exposing (..)
+module Page.Diff exposing
+  ( Model
+  , view
+  , toTitle
+  )
 
+
+import Browser.History as History
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Task
-
-import Component.Header as Header
-import Component.PackageOverview as Overview
-import Page.Context as Ctx
+import Html.Events exposing (..)
+import Html.Lazy exposing (..)
+import Release
 import Route
-
-
-
--- WIRES
-
-
-main =
-  Html.programWithFlags
-    { init = init
-    , view = view
-    , update = update
-    , subscriptions = \_ -> Sub.none
-    }
+import Url
+import Utils.App as App
+import Utils.Markdown as Markdown
+import Version
 
 
 
@@ -28,59 +23,65 @@ main =
 
 
 type alias Model =
-    { header : Header.Model
-    , overview : Overview.Model
-    }
+  { user : String
+  , project : String
+  , releases : List Release.Release
+  }
 
 
 
--- INIT
+-- TO TITLE
 
 
-init : Ctx.OverviewContext -> (Model, Cmd Msg)
-init context =
-  let
-    (header, headerCmd) =
-      Header.init (Route.fromOverviewContext context)
-
-    (overview, moduleCmd) =
-      Overview.init context
-  in
-    Model header overview
-      ! [ headerCmd
-        , Cmd.map UpdateOverview moduleCmd
-        ]
-
-
-
--- UPDATE
-
-
-type Msg
-    = UpdateOverview Overview.Msg
-
-
-update : Msg -> Model -> (Model, Cmd Msg)
-update msg model =
-  case msg of
-    UpdateOverview act ->
-        let
-          (newDocs, fx) =
-            Overview.update act model.overview
-        in
-          ( { model | overview = newDocs }
-          , Cmd.map UpdateOverview fx
-          )
+toTitle : Model -> String
+toTitle model =
+  model.project
 
 
 
 -- VIEW
 
 
-view : Model -> Html Msg
-view model =
-  Header.view model.header
-    [ Html.map UpdateOverview (Overview.view model.overview)
+view : Model -> App.Body Route.Route
+view { user, project, releases } =
+  App.body
+    [ class "pkg-overview"
+    ]
+    [ h1 [] [ text "Published Versions" ]
+    , releases
+        |> List.sortBy .time
+        |> List.map .version
+        |> viewReleases user project
+        |> p []
     ]
 
 
+viewReleases : String -> String -> List Version.Version -> List (Html Route.Route)
+viewReleases user project versions =
+  case versions of
+    v1 :: ((v2 :: _) as vs) ->
+      let
+        attrs =
+          if Version.sameMajor v1 v2 then [] else [ bold ]
+      in
+      readmeLink user project v1 attrs :: text ", " :: viewReleases user project vs
+
+    r0 :: [] ->
+      [ readmeLink user project r0 [ bold ] ]
+
+    [] ->
+      []
+
+
+bold : Attribute msg
+bold =
+  style "font-weight" "bold"
+
+
+readmeLink : String -> String -> Version.Version -> List (Attribute Route.Route) -> Html Route.Route
+readmeLink user project version attrs =
+  App.link
+    identity
+    (Route.Version user project (Route.Exactly version) Route.Readme)
+    attrs
+    [ text (Version.toString version) ]

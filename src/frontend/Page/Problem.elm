@@ -19,7 +19,6 @@ import Utils.App as App
 type Suggestion
   = NoIdea
   | BadResource Resource.Error
-  | RemovedModule String String Route.Version String
 
 
 
@@ -35,13 +34,34 @@ toTitle _ =
 -- VIEW
 
 
-view : Suggestion -> Html Route.Route
+view : Suggestion -> App.Body Route.Route
 view suggestion =
-  let
-    (message, details) =
-      viewSuggestion suggestion
-  in
-  div styles <|
+  case suggestion of
+    NoIdea ->
+      toBody [ text "I cannot find this page!" ] []
+
+    BadResource resourceError ->
+      case resourceError of
+        Resource.MissingModule user project vsn name ->
+          missingModule user project vsn name
+
+        Resource.BadDocs user project vsn error ->
+          cannotFind "docs.json"
+
+        Resource.BadReadme user project vsn error ->
+          cannotFind "README.md"
+
+        Resource.BadReleases user project error ->
+          cannotFind "releases.json"
+
+
+
+-- CREATE BODY
+
+
+toBody : List (Html msg) -> List (Html msg) -> App.Body msg
+toBody message details =
+  App.body styles <|
     [ div [ style "font-size" "12em" ] [ text "404" ]
     , div [ style "font-size" "3em" ] message
     ]
@@ -57,45 +77,23 @@ styles =
   ]
 
 
-viewSuggestion : Suggestion -> ( List (Html msg), List (Html Route.Route) )
-viewSuggestion suggestion =
-  case suggestion of
-    NoIdea ->
-      ( [ text "I cannot find this page!" ], [] )
 
-    BadResource resourceError ->
-      viewBadResource resourceError
-
-    RemovedModule user project vsn name ->
-      viewRemovedModule user project vsn name
+-- HELPERS
 
 
-viewBadResource : Resource.Error -> ( List (Html msg), List (Html Route.Route) )
-viewBadResource resourceError =
-  let
-    file =
-      case resourceError of
-        Resource.BadDocs user project vsn error ->
-          "docs.json"
-
-        Resource.BadReadme user project vsn error ->
-          "README.md"
-
-        Resource.BadReleases user project error ->
-          "releases.json"
-  in
-  ( [ text "Cannot find ", code [] [ text file ] ]
-  , []
-  )
+cannotFind : String -> App.Body msg
+cannotFind file =
+  toBody [ text "Cannot find ", code [] [ text file ] ] []
 
 
-viewRemovedModule : String -> String -> Route.Version -> String -> ( List (Html msg), List (Html Route.Route) )
-viewRemovedModule user project vsn name =
-  ( [ text "I cannot find the "
+missingModule : String -> String -> Route.Version -> String -> App.Body Route.Route
+missingModule user project vsn name =
+  toBody
+    [ text "I cannot find the "
     , code [] [ text name ]
     , text " module!"
     ]
-  , [ p []
+    [ p []
         [ text "Maybe it existed in a "
         , App.link identity (Route.Package user project) [] [ text "previous release" ]
         , text "? Maybe the "
@@ -103,4 +101,3 @@ viewRemovedModule user project vsn name =
         , text " will help you figure out what changed?"
         ]
     ]
-  )

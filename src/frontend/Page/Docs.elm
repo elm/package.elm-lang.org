@@ -1,5 +1,7 @@
 module Page.Docs exposing
   ( Model
+  , Metadata
+  , Content(..)
   , Msg
   , update
   , view
@@ -26,14 +28,24 @@ import Version
 
 
 type alias Model =
+  { metadata : Metadata
+  , content : Content
+  , query : String
+  }
+
+
+type alias Metadata =
   { user : String
   , project : String
   , version : Route.Version
   , info : Route.VersionInfo
-  , readme : Maybe String
-  , docs : Maybe (List Docs.Module)
-  , query : String
+  , latest : Maybe Version.Version
   }
+
+
+type Content
+  = Module String Docs.Module (List Docs.Module)
+  | Readme String (List Docs.Module)
 
 
 
@@ -64,7 +76,12 @@ update msg model =
 
 
 toTitle : Model -> String
-toTitle { project, version, info } =
+toTitle model =
+  metadataToTitle model.metadata
+
+
+metadataToTitle : Metadata -> String
+metadataToTitle { project, version, info } =
   let
     genericTitle =
       project ++ " " ++ Route.vsnToString version
@@ -81,86 +98,49 @@ toTitle { project, version, info } =
 -- VIEW
 
 
-view : (Msg -> msg) -> Model -> List (Html msg)
-view toMsg ({ user, project, version, docs } as model) =
-  let
-    mainContent =
-      case model.info of
-        Route.Readme ->
-          lazy viewReadme model.readme
-
-        Route.Module name _ ->
-          lazy5 viewModule user project version name docs
-  in
-    [ Html.map toMsg <| mainContent
-    , Html.map toMsg <| lazy viewSidebar model
-    ]
-
-
-viewReadme : Maybe String -> Html msg
-viewReadme loadingReadme =
-  let
-    content =
-      case loadingReadme of
-        Nothing ->
-          text "Loading..."
-
-        Just readme ->
-          Markdown.block readme
-  in
-    div [ class "block-list" ] [ content ]
-
-
-viewModule : String -> String -> Route.Version -> String -> Maybe (List Docs.Module) -> Html Msg
-viewModule user project version name loadingDocs =
-  Html.map Push <|
-  div [ class "block-list" ] <|
-    h1 [class "block-list-title"] [ text name ]
-    ::
-    case loadingDocs of
-      Nothing ->
-        [ text "Loading..."
+view : Model -> App.Body Msg
+view { metadata, content, query } =
+  App.body [] <|
+    case content of
+      Readme readme allDocs ->
+        [ div [ class "block-list" ] [ Markdown.block readme ]
+        , lazy3 viewSidebar metadata allDocs query
         ]
 
-      Just docsList ->
-        case findDocs name docsList of
-          Nothing ->
-            [ text "Something went wrong."
-            ]
-
-          Just docs ->
-            let
-              info =
-                Block.makeInfo user project version name docsList
-            in
-            List.map (Block.view info) (Docs.toBlocks docs)
+      Module name docs allDocs ->
+        [ lazy4 viewModule metadata name docs allDocs
+        , lazy3 viewSidebar metadata allDocs query
+        ]
 
 
-findDocs : String -> List Docs.Module -> Maybe Docs.Module
-findDocs name docsList =
-  case docsList of
-    [] ->
-      Nothing
+viewModule : Metadata -> String -> Docs.Module -> List Docs.Module -> Html Msg
+viewModule { user, project, version } name docs allDocs =
+  let
+    header =
+      h1 [class "block-list-title"] [ text name ]
 
-    docs :: rest ->
-      if docs.name == name then
-        Just docs
-      else
-        findDocs name rest
+    info =
+      Block.makeInfo user project version name allDocs
+
+    blocks =
+      List.map (Block.view info) (Docs.toBlocks docs)
+  in
+  Html.map Push <|
+    div [ class "block-list" ] (header :: blocks)
 
 
 
 -- VIEW SIDEBAR
 
 
-viewSidebar : Model -> Html Msg
-viewSidebar ({ user, project, version, info, query } as model) =
+viewSidebar : Metadata -> List Docs.Module -> String -> Html Msg
+viewSidebar metadata allDocs query =
   div
     [ class "pkg-nav"
     ]
-    [ lazy4 viewReadmeLink user project version info
+    [ lazy viewReadmeLink metadata
     , br [] []
-    , lazy3 viewBrowseSourceLink user project version
+    , lazy viewBrowseSourceLink metadata
     , h2 [] [ text "Module Docs" ]
     , input
         [ placeholder "Search"
@@ -168,34 +148,29 @@ viewSidebar ({ user, project, version, info, query } as model) =
         , onInput Search
         ]
         []
-    , viewSidebarModules model
+    , viewSidebarModules metadata allDocs query
     ]
 
 
-viewSidebarModules : Model -> Html Msg
-viewSidebarModules model =
-  case model.docs of
-    Nothing ->
-      text "Loading..."
+viewSidebarModules : Metadata -> List Docs.Module -> String -> Html Msg
+viewSidebarModules metadata docs query =
+  if String.isEmpty query then
+    let
+      viewEntry docs =
+        li [] [ viewModuleLink metadata docs.name ]
+    in
+    ul [] (List.map viewEntry docs)
 
-    Just docs ->
-      if String.isEmpty model.query then
-        let
-          viewEntry docs =
-            li [] [ viewModuleLink model docs.name ]
-        in
-          ul [] (List.map viewEntry docs)
-
-      else
-        ul [] <|
-          List.filterMap (viewSearchItem model (String.toLower model.query)) docs
+  else
+    ul [] <|
+      List.filterMap (viewSearchItem metadata (String.toLower query)) docs
 
 
-viewSearchItem : Model -> String -> Docs.Module -> Maybe (Html Msg)
-viewSearchItem model query docs =
+viewSearchItem : Metadata -> String -> Docs.Module -> Maybe (Html Msg)
+viewSearchItem metadata query docs =
   let
     toItem ownerName valueName =
-      viewValueItem model docs.name ownerName valueName
+      viewValueItem metadata docs.name ownerName valueName
 
     matches =
       List.concatMap (isUnionMatch query toItem) docs.unions
@@ -210,7 +185,7 @@ viewSearchItem model query docs =
         li
           [ class "pkg-nav-search-chunk"
           ]
-          [ viewModuleLink model docs.name
+          [ viewModuleLink metadata docs.name
           , ul [] matches
           ]
 
@@ -257,74 +232,97 @@ getName valueName =
       name
 
 
--- VIEW SIDEBAR LINKS
+
+-- VIEW "README" LINK
 
 
-viewReadmeLink : String -> String -> Route.Version -> Route.VersionInfo -> Html Msg
-viewReadmeLink user project version info =
-  let
-    route =
-      Route.Version user project version Route.Readme
-  in
-    case info of
-      Route.Readme ->
-        boldNavLink "README" route
-
-      Route.Module _ _ ->
-        navLink "README" route
+viewReadmeLink : Metadata -> Html Msg
+viewReadmeLink { user, project, version, info } =
+  navLink
+    "README"
+    (Route.Version user project version Route.Readme)
+    (info == Route.Readme)
 
 
-viewBrowseSourceLink : String -> String -> Route.Version -> Html msg
-viewBrowseSourceLink user project version =
+
+-- VIEW "BROWSE SOURCE" LINK
+
+
+viewBrowseSourceLink : Metadata -> Html msg
+viewBrowseSourceLink { user, project, version, latest } =
   case version of
-    Route.Latest ->
-      text "Browse Source"
-
     Route.Exactly vsn ->
-      a [ class "pkg-nav-module"
-        , href <|
-            Url.crossOrigin "https://github.com" [ user, project, "tree", Version.toString vsn ] []
-        ]
-        [ text "Browse Source" ]
+      viewBrowseSourceLinkHelp user project vsn
+
+    Route.Latest ->
+      case latest of
+        Just vsn ->
+          viewBrowseSourceLinkHelp user project vsn
+
+        Nothing ->
+          text "Browse Source"
 
 
-viewModuleLink : Model -> String -> Html Msg
+viewBrowseSourceLinkHelp : String -> String -> Version.Version -> Html msg
+viewBrowseSourceLinkHelp user project version =
+  let
+    url =
+      Url.crossOrigin
+        "https://github.com"
+        [ user, project, "tree", Version.toString version ]
+        []
+  in
+  a [ class "pkg-nav-module", href url ] [ text "Browse Source" ]
+
+
+
+-- VIEW "MODULE" LINK
+
+
+viewModuleLink : Metadata -> String -> Html Msg
 viewModuleLink { user, project, version, info } name =
   let
     route =
       Route.Version user project version (Route.Module name Nothing)
   in
+  navLink name route <|
     case info of
       Route.Readme ->
-        navLink name route
+        False
 
       Route.Module selectedName _ ->
-        if selectedName == name then
-          boldNavLink name route
-        else
-          navLink name route
+        selectedName == name
 
 
-viewValueItem : Model -> String -> String -> String -> Html Msg
+viewValueItem : Metadata -> String -> String -> String -> Html Msg
 viewValueItem { user, project, version } moduleName ownerName valueName =
   let
     route =
       Route.Version user project version (Route.Module moduleName (Just ownerName))
   in
-    li [ class "pkg-nav-value" ] [ navLink valueName route ]
+  li [ class "pkg-nav-value" ] [ link valueName route ]
 
 
-navLink : String -> Route.Route -> Html Msg
-navLink name route =
-  App.link Push route [ class "pkg-nav-module" ] [ text name ]
+
+-- LINK HELPERS
 
 
-boldNavLink : String -> Route.Route -> Html Msg
-boldNavLink name route =
-  App.link Push route [ class "pkg-nav-module" ]
-    [ span
-        [ style "font-weight" "bold"
+link : String -> Route.Route -> Html Msg
+link name route =
+  navLink name route False
+
+
+navLink : String -> Route.Route -> Bool -> Html Msg
+navLink name route isBold =
+  let
+    attributes =
+      if isBold then
+        [ class "pkg-nav-module"
+        , style "font-weight" "bold"
         , style "text-decoration" "underline"
         ]
-        [ text name ]
-    ]
+      else
+        [ class "pkg-nav-module"
+        ]
+  in
+  App.link Push route attributes [ text name ]
