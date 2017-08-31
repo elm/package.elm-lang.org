@@ -13,6 +13,7 @@ import Prelude hiding (read)
 import Control.Monad (forM)
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.HashMap.Lazy as HashMap
+import qualified Data.List as List
 import Data.Monoid ((<>))
 import qualified Data.Text as Text
 import qualified Data.Time.Clock.POSIX as Time
@@ -35,6 +36,7 @@ data Release =
     { _version :: Pkg.Version
     , _time :: Time.POSIXTime
     }
+  deriving (Eq, Ord)
 
 
 
@@ -71,14 +73,14 @@ add name version time =
 
 encode :: [Release] -> Encode.Value
 encode releases =
-  Encode.object $ flip map releases $ \(Release version time) ->
+  Encode.object $ flip map (List.sort releases) $ \(Release version time) ->
     ( Pkg.versionToString version, Encode.int (floor time) )
 
 
 releasesDecoder :: Decode.Decoder [Release]
 releasesDecoder =
   do  pairs <- HashMap.toList <$> Decode.dict Decode.int
-      forM pairs $ \(vsn, int) ->
+      forM (List.sort pairs) $ \(vsn, int) ->
         case Pkg.versionFromText vsn of
           Left _ ->
             Decode.fail $ Text.unpack vsn <> " is not a valid version"
