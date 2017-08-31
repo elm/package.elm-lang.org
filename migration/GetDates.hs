@@ -7,7 +7,6 @@ import Control.Monad.Trans (liftIO)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import qualified Data.Time.Clock as Time
 import qualified Data.Time.Clock.POSIX as Time
 import qualified Data.Time.ISO8601 as Time
 import qualified System.Directory as Dir
@@ -134,12 +133,7 @@ timeDecoder person =
           fail "Not a valid ISO 8601 date."
 
         Just utcTime ->
-          return (toPosix utcTime)
-
-
-toPosix :: Time.UTCTime -> Time.POSIXTime
-toPosix utcTime =
-  1000 * Time.utcTimeToPOSIXSeconds utcTime
+          return (Time.utcTimeToPOSIXSeconds utcTime)
 
 
 
@@ -150,7 +144,7 @@ checkHandCollected :: Pkg.Name -> Pkg.Version -> Maybe Time.POSIXTime
 checkHandCollected pkg vsn =
   let name = Pkg.toString pkg ++ "@" ++ Pkg.versionToString vsn
   in
-    toPosix <$> (Time.parseISO8601 =<< Map.lookup name handCollectedTimes)
+    Time.utcTimeToPOSIXSeconds <$> (Time.parseISO8601 =<< Map.lookup name handCollectedTimes)
 
 
 handCollectedTimes :: Map.Map String String
