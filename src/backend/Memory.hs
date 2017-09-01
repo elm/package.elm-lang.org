@@ -33,9 +33,7 @@ import qualified Sitemap
 
 data Memory =
   Memory
-    { _getPackages :: IO Packages
-    , _getHistory :: IO History
-    , _addPackage :: Name -> Version -> IO ()
+    { _chan :: Chan Msg
     }
 
 
@@ -47,18 +45,25 @@ type Packages = Map.Map Name [Version]
 
 
 getPackages :: Memory -> Snap Packages
-getPackages memory =
-  liftIO (_getPackages memory)
+getPackages (Memory chan) =
+  liftIO $
+    do  mvar <- newEmptyMVar
+        writeChan chan (GetPackages mvar)
+        takeMVar mvar
 
 
 getHistory :: Memory -> Snap History
-getHistory memory =
-  liftIO (_getHistory memory)
+getHistory (Memory chan) =
+  liftIO $
+    do  mvar <- newEmptyMVar
+        writeChan chan (GetHistory mvar)
+        takeMVar mvar
 
 
 addPackage :: Memory -> Name -> Version -> Snap ()
-addPackage memory name version =
-  liftIO (_addPackage memory name version)
+addPackage (Memory chan) name version =
+  liftIO $
+    writeChan chan (AddEvent name version)
 
 
 
@@ -72,22 +77,8 @@ init =
       replaceAllPackages packages
 
       chan <- newChan
-
       _ <- forkIO $ loop chan history packages
-
-      return $
-        Memory
-          { _getPackages =
-              do  mvar <- newEmptyMVar
-                  writeChan chan (GetPackages mvar)
-                  takeMVar mvar
-          , _getHistory =
-              do  mvar <- newEmptyMVar
-                  writeChan chan (GetHistory mvar)
-                  takeMVar mvar
-          , _addPackage =
-              \name version -> writeChan chan (AddEvent name version)
-          }
+      return $ Memory chan
 
 
 
