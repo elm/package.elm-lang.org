@@ -122,9 +122,8 @@ viewSidebar =
     , h2 [] [ text "Popular Packages" ]
     , ul []
         [ pkgBlock "General" generalPackages
-        , pkgBlock "Rendering" renderingPackages
-        , pkgBlock "Effects" effectPackages
-        , pkgBlock "User Input" inputPackages
+        , pkgBlock "Single-Page Apps" singlePageApps
+        , pkgBlock "Utilities" utilities
         ]
     ]
 
@@ -147,31 +146,27 @@ pkgBlockItem (user, project, niceName) =
 generalPackages : List (String, String, String)
 generalPackages =
   [ ( "elm-lang", "core", "core" )
-  , ( "elm-lang", "http", "http" )
-  ]
-
-
-renderingPackages : List (String, String, String)
-renderingPackages =
-  [ ( "elm-lang", "html", "html" )
+  , ( "elm-lang", "html", "html" )
   , ( "elm-lang", "svg", "svg" )
   , ( "evancz", "elm-markdown", "markdown" )
   ]
 
 
-effectPackages : List (String, String, String)
-effectPackages =
-  [ ( "elm-lang", "dom", "dom" )
-  , ( "elm-lang", "navigation", "navigation" )
-  , ( "elm-lang", "geolocation", "geolocation" )
-  , ( "elm-lang", "page-visibility", "page-visibility" )
-  , ( "elm-lang", "websocket", "websocket" )
+singlePageApps : List (String, String, String)
+singlePageApps =
+  [ ( "elm-lang", "browser", "browser" )
+  , ( "elm-lang", "url", "url" )
+  , ( "elm-lang", "http", "http" )
   ]
 
 
-inputPackages : List (String, String, String)
-inputPackages =
-  [ ( "elm-lang", "mouse", "mouse" )
+utilities : List (String, String, String)
+utilities =
+  [ ( "elm-lang", "dom", "dom" )
+  , ( "elm-lang", "mouse", "mouse" )
   , ( "elm-lang", "window", "window" )
   , ( "elm-lang", "keyboard", "keyboard" )
+  , ( "elm-lang", "geolocation", "geolocation" )
+  , ( "elm-lang", "page-visibility", "page-visibility" )
+  , ( "elm-lang", "websocket", "websocket" )
   ]
