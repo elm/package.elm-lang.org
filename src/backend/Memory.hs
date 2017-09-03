@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 module Memory
   ( Memory
+  , Summary(..)
   , init
   , getPackages
   , getHistory
@@ -10,16 +11,26 @@ module Memory
 
 
 import Prelude hiding (init)
-import Control.Concurrent (forkIO)
-import Control.Concurrent.Chan (Chan, newChan, readChan, writeChan)
-import Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar, takeMVar)
+import Control.Concurrent
+  ( forkIO, Chan, newChan, readChan, writeChan
+  , MVar, newMVar, putMVar, readMVar, takeMVar
+  )
+import Control.Monad (forever, join)
 import Control.Monad.Trans (liftIO)
+import qualified Data.ByteString.Lazy as BS
+import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
+import qualified Data.Text as Text
 import Snap.Core (Snap)
 import qualified System.Directory as Dir
+import System.FilePath ((</>))
 
-import Elm.Package (Name, Version)
 import qualified Elm.Package as Pkg
+import qualified Elm.Project.Constraint as Con
+import qualified Elm.Project.Json as Project
+import qualified Elm.Project.Licenses as License
+import qualified Json.Decode as Decode
 import qualified Json.Encode as Encode
 
 import Memory.History (History)
@@ -33,37 +44,48 @@ import qualified Sitemap
 
 data Memory =
   Memory
-    { _chan :: Chan Msg
+    { _state :: MVar State
+    , _worker :: Chan (IO ())
     }
 
 
-type Packages = Map.Map Name [Version]
+data State =
+  State
+    { _history :: History
+    , _packages :: Map.Map Pkg.Name Summary
+    }
 
 
 
--- SNAP
+-- SUMMARY
 
 
-getPackages :: Memory -> Snap Packages
-getPackages (Memory chan) =
-  liftIO $
-    do  mvar <- newEmptyMVar
-        writeChan chan (GetPackages mvar)
-        takeMVar mvar
+data Summary =
+  Summary
+    { _versions :: [Pkg.Version]
+    , _details :: Maybe ( Text.Text, License.License )
+    }
 
 
-getHistory :: Memory -> Snap History
-getHistory (Memory chan) =
-  liftIO $
-    do  mvar <- newEmptyMVar
-        writeChan chan (GetHistory mvar)
-        takeMVar mvar
+toSummary :: Pkg.Name -> [Pkg.Version] -> IO Summary
+toSummary name versions =
+  do  let path = toElmJsonPath name (maximum versions)
+      bytes <- BS.readFile path
+      case Decode.parse Project.pkgDecoder bytes of
+        Left _ ->
+          return (Summary versions Nothing)
+
+        Right (Project.PkgInfo _ summary license _ _ _ _ constraint) ->
+          return $ Summary versions $
+            if Con.goodElm constraint then
+              Just ( summary, license )
+            else
+              Nothing
 
 
-addPackage :: Memory -> Name -> Version -> Snap ()
-addPackage (Memory chan) name version =
-  liftIO $
-    writeChan chan (AddEvent name version)
+toElmJsonPath :: Pkg.Name -> Pkg.Version -> FilePath
+toElmJsonPath name version =
+  "packages" </> Pkg.toFilePath name </> Pkg.versionToString version </> "elm.json"
 
 
 
@@ -73,60 +95,105 @@ addPackage (Memory chan) name version =
 init :: IO Memory
 init =
   do  history <- History.load
-      let packages = History.groupByName history
-      replaceAllPackages packages
+      packages <- Map.traverseWithKey toSummary (History.groupByName history)
 
-      chan <- newChan
-      _ <- forkIO $ loop chan history packages
-      return $ Memory chan
+      state <- newMVar (State history packages)
+      worker <- newChan
+      _ <- forkIO $ forever (join (readChan worker))
 
+      generateAllPackagesJson packages
+      Sitemap.generate _versions packages
+      generateSearchJson packages
 
-
--- WORKER
-
-
-data Msg
-  = GetPackages (MVar Packages)
-  | GetHistory (MVar History)
-  | AddEvent Name Version
-
-
-loop :: Chan Msg -> History -> Packages -> IO ()
-loop chan history packages =
-  do  msg <- readChan chan
-      case msg of
-        GetPackages mvar ->
-          do  putMVar mvar packages
-              loop chan history packages
-
-        GetHistory mvar ->
-          do  putMVar mvar history
-              loop chan history packages
-
-        AddEvent name version ->
-          do  let newAll = Map.insertWith (++) name [version] packages
-              replaceAllPackages newAll
-              loop chan (History.add name version history) newAll
+      return $ Memory state worker
 
 
 
--- REPLACE JSON
+-- PUBLIC HELPERS
 
 
-temp :: FilePath
-temp =
-  "all-packages-temp.json"
+getHistory :: Memory -> Snap History
+getHistory (Memory mvar _) =
+  liftIO (_history <$> readMVar mvar)
 
 
-replaceAllPackages :: Map.Map Name [Version] -> IO ()
-replaceAllPackages allPackages =
-  do  Encode.write temp $
-        Encode.dict Pkg.toString encodeVersions allPackages
-
-      Dir.renameFile temp "all-packages.json"
-      Sitemap.generate allPackages
+getPackages :: Memory -> Snap (Map.Map Pkg.Name Summary)
+getPackages (Memory mvar _) =
+  liftIO (_packages <$> readMVar mvar)
 
 
-encodeVersions :: [Version] -> Encode.Value
-encodeVersions versions =
-  Encode.list (Encode.string . Pkg.versionToString) versions
+addPackage :: Memory -> Project.PkgInfo -> Snap ()
+addPackage (Memory mvar worker) info@(Project.PkgInfo name _ _ version _ _ _ _) =
+  liftIO $
+  do  (State history packages) <- takeMVar mvar
+
+      let newHistory = History.add name version history
+      let newPackages = Map.alter (Just . add info) name packages
+
+      generateAllPackagesJson newPackages
+      writeChan worker $
+        do  Sitemap.generate _versions newPackages
+            generateSearchJson newPackages
+
+      putMVar mvar $ State newHistory newPackages
+
+
+add :: Project.PkgInfo -> Maybe Summary -> Summary
+add (Project.PkgInfo _ summary license version _ _ _ constraint) maybeSummary =
+  Summary (maybe [] _versions maybeSummary ++ [version]) $
+    if Con.goodElm constraint then
+      Just ( summary, license )
+    else
+      Nothing
+
+
+
+-- GENERATE all-packages.json
+
+
+generateAllPackagesJson :: Map.Map Pkg.Name Summary -> IO ()
+generateAllPackagesJson packages =
+  write "all-packages.json" $
+    Encode.dict Pkg.toString (Encode.list Pkg.encodeVersion . _versions) packages
+
+
+
+-- GENERATE search.json
+
+
+generateSearchJson :: Map.Map Pkg.Name Summary -> IO ()
+generateSearchJson packages =
+  write "search.json" $
+    Encode.list id (Maybe.mapMaybe maybeEncodeSummary (Map.toList packages))
+
+
+maybeEncodeSummary :: ( Pkg.Name, Summary ) -> Maybe Encode.Value
+maybeEncodeSummary ( name, Summary versions maybeDetails ) =
+  case maybeDetails of
+    Nothing ->
+      Nothing
+
+    Just ( summary, license ) ->
+      Just $ Encode.object $
+        [ ( "name", Pkg.encode name )
+        , ( "summary", Encode.text summary )
+        , ( "license", License.encode license )
+        , ( "versions", Encode.list Pkg.encodeVersion (toVersionHighlights versions) )
+        ]
+
+
+toVersionHighlights :: [Pkg.Version] -> [Pkg.Version]
+toVersionHighlights versions =
+  reverse $ map last $ take 3 $ reverse $ List.groupBy sameMajor $ List.sort versions
+
+
+sameMajor :: Pkg.Version -> Pkg.Version -> Bool
+sameMajor v1 v2 =
+  Pkg._major v1 == Pkg._major v2
+
+
+write :: FilePath -> Encode.Value -> IO ()
+write path json =
+  do  let temp = "temp-" ++ path
+      Encode.writeUgly temp json
+      Dir.renameFile temp path

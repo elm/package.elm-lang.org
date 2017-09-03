@@ -45,7 +45,6 @@ serve token memory =
             Router.oneOf
               [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines"
               , s "documentation-format" ==> ServeFile.elm "Documentation Format"
-              , s "docs-preview" ==> ServeFile.previewHtml
               ]
         ]
     ,
@@ -53,6 +52,7 @@ serve token memory =
       S.route
         [ ("assets", serveDirectory "assets")
         , ("artifacts", serveDirectory "artifacts")
+        , ("search.json", serveFile "search.json")
         , ("robots.txt", serveFile "robots.txt")
         , ("sitemap.xml", serveFile "sitemap.xml")
         ]
@@ -120,7 +120,7 @@ serveVersion memory user project info =
         Nothing ->
           S.pass
 
-        Just versions ->
+        Just (Memory.Summary versions _) ->
           case info of
             Readme ->
               ServeFile.overviewHtml name versions

@@ -5,6 +5,7 @@ module Package.Register (register) where
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Either as Either
 import qualified Data.Time.Clock.POSIX as Time
 import qualified Data.Map as Map
@@ -21,6 +22,7 @@ import qualified System.IO as IO
 import qualified System.IO.Streams as Stream
 
 import qualified Elm.Package as Pkg
+import qualified Elm.Project.Json as Project
 import qualified Http
 import qualified Json.Decode as Decode
 import qualified Json.Encode as Encode
@@ -48,10 +50,10 @@ register token memory =
 
       time <- liftIO Time.getPOSIXTime
 
-      uploadFiles name version time
+      info <- uploadFiles name version time
 
       liftIO $ Releases.add name version time
-      Memory.addPackage memory name version
+      Memory.addPackage memory info
 
       return ()
 
@@ -123,7 +125,7 @@ verifyIsNew memory name vsn =
         Nothing ->
           return ()
 
-        Just versions ->
+        Just (Memory.Summary versions _) ->
           when (elem vsn versions) $ Error.string 400 $
             "Version " ++ Pkg.versionToString vsn ++ " has already been published."
 
@@ -172,28 +174,38 @@ tagDecoder =
         time.dat
 
 -}
-uploadFiles :: Pkg.Name -> Pkg.Version -> Time.POSIXTime -> Snap.Snap ()
+uploadFiles :: Pkg.Name -> Pkg.Version -> Time.POSIXTime -> Snap.Snap Project.PkgInfo
 uploadFiles name version time =
   do  let dir = Path.directory name version
       liftIO (Dir.createDirectoryIfMissing True dir)
       results <- Snap.handleMultipart Snap.defaultUploadPolicy (handlePart name version dir)
       case Either.partitionEithers results of
         ([], files) ->
-          if Set.fromList files == requiredFiles then
-            liftIO $ writeFile (dir </> "time.dat") (show (floor time :: Integer))
+          if Set.fromList files /= requiredFiles then
+            revert dir $ "Malformed request. Missing some metadata files."
           else
-            do  liftIO (Dir.removeDirectoryRecursive dir)
-                Error.string 404 "Malformed request. Missing some metadata files."
+            do  bytes <- liftIO $ LBS.readFile (dir </> "elm.json")
+                case Decode.parse Project.pkgDecoder bytes of
+                  Left _ ->
+                    revert dir $ "Invalid content in elm.json file."
+
+                  Right info ->
+                    do  liftIO $ writeFile (dir </> "time.dat") (show (floor time :: Integer))
+                        return info
 
         (problems, _) ->
-          do  liftIO (Dir.removeDirectoryRecursive dir)
-              Error.string 404 $
-                "Failure uploading your package:" ++ concatMap ("\n  - " ++) problems
+          revert dir $ "Failure uploading your package:" ++ concatMap ("\n  - " ++) problems
 
 
 requiredFiles :: Set.Set FilePath
 requiredFiles =
   Set.fromList [ "README.md", "elm.json", "docs.json", "endpoint.json" ]
+
+
+revert :: FilePath -> String -> Snap.Snap a
+revert dir details =
+  do  liftIO (Dir.removeDirectoryRecursive dir)
+      Error.string 404 details
 
 
 handlePart :: Pkg.Name -> Pkg.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)

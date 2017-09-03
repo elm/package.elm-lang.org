@@ -24,27 +24,27 @@ import qualified Elm.Package as Pkg
 -- GENERATE
 
 
-generate :: Map Name [Version] -> IO ()
-generate packages =
+generate :: (a -> [Version]) -> Map Name a -> IO ()
+generate getVersions packages =
   BS.writeFile "sitemap.xml" $
-    Blaze.renderMarkup (generateSitemap packages)
+    Blaze.renderMarkup (generateSitemap getVersions packages)
 
 
 
 -- SITEMAP XML
 
 
-generateSitemap :: Map Name [Version] -> Blaze.Markup
-generateSitemap packages =
+generateSitemap :: (a -> [Version]) -> Map Name a -> Blaze.Markup
+generateSitemap getVersions packages =
   do  Blaze.preEscapedText "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
       urlset ! xmlns "http://www.sitemaps.org/schemas/sitemap/0.9" $
-        void $ Map.traverseWithKey genPackageUrls packages
+        void $ Map.traverseWithKey (genPackageUrls getVersions) packages
 
 
-genPackageUrls :: Name -> [Version] -> Blaze.Markup
-genPackageUrls name versions =
+genPackageUrls :: (a -> [Version]) -> Name -> a -> Blaze.Markup
+genPackageUrls getVersions name summary =
   do  genLatestUrl name
-      -- void $ traverse (genExactUrl name) versions
+      -- void $ traverse (genExactUrl name) (getVersions summary)
 
 
 genLatestUrl :: Name -> Blaze.Markup
