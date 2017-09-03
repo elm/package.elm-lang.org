@@ -1,5 +1,5 @@
 module Version exposing
-  ( Version
+  ( Version(..)
   , toString
   , fromString
   , sameMajor

@@ -2,6 +2,7 @@ module Session.Resource exposing
   ( getDocs
   , getReadme
   , getReleases
+  , getPackages
   , Result(..)
   , Error(..)
   )
@@ -10,6 +11,7 @@ module Session.Resource exposing
 import Elm.Docs as Docs
 import Http
 import Json.Decode as Decode
+import Page.Search.Entry as Entry
 import Release
 import Result
 import Route
@@ -23,7 +25,8 @@ import Version
 
 
 type Result
-  = Releases String String (Result.Result Http.Error (OneOrMore Release.Release))
+  = Packages (Result.Result Http.Error (List Entry.Entry))
+  | Releases String String (Result.Result Http.Error (OneOrMore Release.Release))
   | Readme String String Route.Version (Result.Result Http.Error String)
   | Docs String String Route.Version (Result.Result Http.Error (List Docs.Module))
 
@@ -33,10 +36,16 @@ type Error
   | BadDocs String String Route.Version Http.Error
   | BadReadme String String Route.Version Http.Error
   | BadReleases String String Http.Error
+  | BadPackages Http.Error
 
 
 
 -- HTTP GET
+
+
+getPackages : Cmd Result
+getPackages =
+  Http.send Packages <| Http.get "/search.json" (Decode.list Entry.decoder)
 
 
 getReleases : String -> String -> Cmd Result

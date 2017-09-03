@@ -9,6 +9,7 @@ import Html.Lazy exposing (..)
 import Page.Docs as Docs
 import Page.Diff as Diff
 import Page.Problem as Problem
+import Page.Search as Search
 import Route
 import Session
 import Session.Query as Query
@@ -48,6 +49,7 @@ type Page
   | Problem Problem.Suggestion
   | Diff Diff.Model
   | Docs Docs.Model
+  | Search Search.Model
 
 
 
@@ -86,6 +88,7 @@ type Msg
   | Goto Route.Route
   | SessionMsg Session.Msg
   | DocsMsg Docs.Msg
+  | SearchMsg Search.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -114,6 +117,18 @@ update message model =
         _ ->
           ( model, Cmd.none )
 
+    SearchMsg msg ->
+      case model.page of
+        Search searchModel ->
+          let
+            (newSearchModel, cmds) =
+               Search.update msg searchModel
+          in
+          ( { model | page = Search newSearchModel }, cmds )
+
+        _ ->
+          ( model, Cmd.none )
+
 
 
 -- ROUTING
@@ -127,7 +142,8 @@ check model =
   in
   case model.route of
     Route.Home ->
-      goto Blank
+      onSuccess model <|
+        Query.map (Search << Search.Model "") Session.packages
 
     Route.User name ->
       goto Blank
@@ -220,25 +236,39 @@ toTitle : Route.Route -> String
 toTitle route =
   case route of
     Route.Home ->
-      "Home"
+      "Elm Packages"
 
-    Route.User _ ->
-      "User"
+    Route.User user ->
+      user
 
-    Route.Package _ _ ->
-      "Package"
+    Route.Package _ project ->
+      project
 
-    Route.Version _ _ _ _ ->
-      "Version"
+    Route.Version _ project version info ->
+      let
+        genericName =
+          case version of
+            Route.Latest ->
+              project
+
+            Route.Exactly vsn ->
+              project ++ " " ++ Version.toString vsn
+      in
+      case info of
+        Route.Readme ->
+          genericName
+
+        Route.Module name _ ->
+          name ++ " - " ++ genericName
 
     Route.Guidelines ->
       "Guidelines"
 
     Route.DocsHelp ->
-      "DocsHelp"
+      "Help"
 
     Route.NotFound _ ->
-      "NotFound"
+      "Not Found!"
 
 
 
@@ -264,6 +294,9 @@ viewPage page =
     Diff diffModel ->
       debody Push <| Diff.view diffModel
 
+    Search searchModel ->
+      debody SearchMsg <| Search.view searchModel
+
 
 
 -- VIEW ROUTE LINKS
@@ -271,7 +304,7 @@ viewPage page =
 
 viewHeader : Session.Data -> Page -> Html Msg
 viewHeader sessionData page =
-  h1 [ class "header" ] <| (::) (App.link Push Route.Home [] [ viewLogo ]) <|
+  h1 [ class "header" ] <| (::) homeLogo <|
     case page of
       Blank ->
         []
@@ -299,6 +332,9 @@ viewHeader sessionData page =
           [ userLink user
           , packageLink user project
           ]
+
+      Search _ ->
+        []
 
 
 userLink : String -> Html Msg
@@ -406,6 +442,9 @@ getNewerRoute sessionData page =
     Diff _ ->
       Nothing
 
+    Search _ ->
+      Nothing
+
 
 
 -- VIEW FOOTER
@@ -424,8 +463,13 @@ viewFooter =
 -- VIEW LOGO
 
 
-viewLogo : Html msg
-viewLogo =
+homeLogo : Html Msg
+homeLogo =
+  App.link Push Route.Home [ style "text-decoration" "none" ] [ logo ]
+
+
+logo : Html msg
+logo =
   div
     [ style "display" "-webkit-display"
     , style "display" "-ms-flexbox"

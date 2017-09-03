@@ -2,6 +2,8 @@ module Route exposing
   ( Route(..)
   , Version(..)
   , VersionInfo(..)
+  , latest
+  , exactly
   , fromUrl
   , toUrl
   , vsnToString
@@ -36,6 +38,16 @@ type Version
 type VersionInfo
   = Readme
   | Module String (Maybe String)
+
+
+latest : String -> String -> Route
+latest user project =
+  Version user project Latest Readme
+
+
+exactly : String -> String -> Version.Version -> Route
+exactly user project version =
+  Version user project (Exactly version) Readme
 
 
 

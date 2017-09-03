@@ -5,6 +5,7 @@ module Session exposing
   , update
   -- queries
   , Query
+  , packages
   , latestVersion
   , releases
   , readme
@@ -18,6 +19,7 @@ import Elm.Docs as Docs
 import Http
 import Json.Decode as Decode
 import Page.Problem as Problem
+import Page.Search.Entry as Entry
 import Release
 import Route
 import Session.Query as Query
@@ -39,7 +41,8 @@ type alias Status a =
 
 
 type alias Info =
-  { releases : Dict.Dict String (Status (OneOrMore Release.Release))
+  { packages : Maybe (Status (List Entry.Entry))
+  , releases : Dict.Dict String (Status (OneOrMore Release.Release))
   , readmes : Dict.Dict String (Status String)
   , docs : Dict.Dict String (Status (List Docs.Module))
   }
@@ -47,7 +50,7 @@ type alias Info =
 
 empty : Data
 empty =
-  Data (Info Dict.empty Dict.empty Dict.empty)
+  Data (Info Nothing Dict.empty Dict.empty Dict.empty)
 
 
 
@@ -85,6 +88,18 @@ update (Load resourceResult) (Data info) =
       Resource.Docs user project vsn result ->
         { info | docs = insert result info.docs (toVsnKey user project vsn) (Resource.BadDocs user project vsn) }
 
+      Resource.Packages result ->
+        let
+          status =
+            case result of
+              Err err ->
+                Status.Failure (Resource.BadPackages err) []
+
+              Ok entries ->
+                Status.Success entries
+        in
+        { info | packages = Just status }
+
 
 insert : Result Http.Error a -> Dict.Dict String (Status a) -> String -> (Http.Error -> Resource.Error) -> Dict.Dict String (Status a)
 insert result dict key toError =
@@ -102,6 +117,21 @@ insert result dict key toError =
 
 type alias Query a =
   Query.Query Data Msg Resource.Error a
+
+
+packages : Query (List Entry.Entry)
+packages =
+  Query.required <|
+    \(Data info as data) ->
+      case info.packages of
+        Just status ->
+          ( data, Cmd.none, status )
+
+        Nothing ->
+          ( Data { info | packages = Just Status.Loading }
+          , Cmd.map Load Resource.getPackages
+          , Status.Loading
+          )
 
 
 latestVersion : String -> String -> Query Version.Version

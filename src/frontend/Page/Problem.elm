@@ -54,6 +54,9 @@ view suggestion =
         Resource.BadReleases user project error ->
           cannotFind "releases.json"
 
+        Resource.BadPackages error ->
+          cannotFind "search.json"
+
 
 
 -- CREATE BODY
