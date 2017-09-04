@@ -34,20 +34,25 @@ viewBody (Body attrs kids) =
 
 link : (Route -> msg) -> Route -> List (Attribute msg) -> List (Html msg) -> Html msg
 link toMsg route attrs kids =
-  a (attrs ++ [ href (Route.toUrl route), onRouteClick toMsg route ]) kids
+  a (attrs ++ [ href (Route.toUrl route), onRouteClick (toMsg route) ]) kids
 
 
-onRouteClick : (Route -> msg) -> Route -> Attribute msg
-onRouteClick toMsg route =
+onRouteClick : msg -> Attribute msg
+onRouteClick msg =
   preventDefaultOn "click" <|
-    D.map4
-      clickDecoder
-      (D.succeed toMsg)
-      (D.succeed route)
-      (D.field "ctrlKey" D.bool)
-      (D.field "metaKey" D.bool)
+    D.andThen (clickDecoder msg) modifiers
 
 
-clickDecoder : (Route -> msg) -> Route -> Bool -> Bool -> (msg, Bool)
-clickDecoder toMsg route ctrl meta =
-  ( toMsg route, not ctrl && not meta )
+modifiers : D.Decoder Bool
+modifiers =
+  D.map2 (||)
+    (D.field "ctrlKey" D.bool)
+    (D.field "metaKey" D.bool)
+
+
+clickDecoder : msg -> Bool -> D.Decoder (msg, Bool)
+clickDecoder msg isModified =
+  if isModified then
+    D.fail ""
+  else
+    D.succeed ( msg, True )
