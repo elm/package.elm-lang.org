@@ -1,7 +1,7 @@
 module Utils.Markdown exposing (block)
 
 import Html
-import Markdown
+import Markdown exposing (defaultOptions)
 
 
 block : String -> Html.Html msg
@@ -9,9 +9,6 @@ block raw =
   Markdown.toHtmlWith myOptions [] raw
 
 
+myOptions : Markdown.Options
 myOptions =
-  let
-    options =
-      Markdown.defaultOptions
-  in
-    { options | defaultHighlighting = Just "elm" }
+  { defaultOptions | defaultHighlighting = Just "elm" }

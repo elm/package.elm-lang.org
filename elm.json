@@ -5,6 +5,7 @@
     ],
     "elm-version": "0.19.0",
     "dependencies": {
+        "elm-explorations/markdown": "1.0.0",
         "elm-lang/browser": "1.0.0",
         "elm-lang/core": "6.0.0",
         "elm-lang/docs": "1.0.0",
