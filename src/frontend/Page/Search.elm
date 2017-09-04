@@ -111,62 +111,26 @@ viewExactVersions { user, project, versions } =
 viewSidebar : Html Msg
 viewSidebar =
   div [ class "catalog-sidebar" ]
-    [ h2 [] [ text "Resources" ]
+    [ h2 [] [ text "Popular Packages" ]
+    , ul [] <|
+        List.map viewPopularPackage [ "core", "html", "browser", "url", "http" ]
+    , h2 [] [ text "Resources" ]
     , ul []
         [ li [] [ a [ href "http://klaftertief.github.io/elm-search/" ] [ text "Fancy Search" ] ]
         , li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
-        , li [] [ a [ href "/help/design-guidelines" ] [ text "API Design Guidelines" ] ]
-        , li [] [ a [ href "/help/documentation-format" ] [ text "Write great docs" ] ]
+        , li [] [ App.link Push Route.Guidelines [] [ text "API Design Guidelines" ] ]
+        , li [] [ App.link Push Route.DocsHelp [] [ text "Write great docs" ] ]
         , li [] [ a [ href "http://elm-lang.org" ] [ text "Elm Website" ] ]
         ]
-    , h2 [] [ text "Popular Packages" ]
-    , ul []
-        [ pkgBlock "General" generalPackages
-        , pkgBlock "Single-Page Apps" singlePageApps
-        , pkgBlock "Utilities" utilities
-        ]
     ]
 
 
-pkgBlock : String -> List (String, String, String) -> Html Msg
-pkgBlock title pkgs =
+viewPopularPackage : String -> Html Msg
+viewPopularPackage project =
   li []
-    [ text title
-    , ul [] (List.map pkgBlockItem pkgs)
+    [ App.link
+        Push
+        (Route.latest "elm-lang" project)
+        []
+        [ text ("elm-lang/" ++ project) ]
     ]
-
-
-pkgBlockItem : (String, String, String) -> Html Msg
-pkgBlockItem (user, project, niceName) =
-  li []
-    [ App.link Push (Route.latest user project) [] [ text niceName ]
-    ]
-
-
-generalPackages : List (String, String, String)
-generalPackages =
-  [ ( "elm-lang", "core", "core" )
-  , ( "elm-lang", "html", "html" )
-  , ( "elm-lang", "svg", "svg" )
-  , ( "evancz", "elm-markdown", "markdown" )
-  ]
-
-
-singlePageApps : List (String, String, String)
-singlePageApps =
-  [ ( "elm-lang", "browser", "browser" )
-  , ( "elm-lang", "url", "url" )
-  , ( "elm-lang", "http", "http" )
-  ]
-
-
-utilities : List (String, String, String)
-utilities =
-  [ ( "elm-lang", "dom", "dom" )
-  , ( "elm-lang", "mouse", "mouse" )
-  , ( "elm-lang", "window", "window" )
-  , ( "elm-lang", "keyboard", "keyboard" )
-  , ( "elm-lang", "geolocation", "geolocation" )
-  , ( "elm-lang", "page-visibility", "page-visibility" )
-  , ( "elm-lang", "websocket", "websocket" )
-  ]

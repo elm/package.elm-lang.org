@@ -278,7 +278,8 @@ pre {
 
 .catalog-sidebar h2 {
   font-size: 1.5em;
-  margin-bottom: 10px;
+  padding: 10px;
+  margin: 0;
 }
 
 .catalog-sidebar ul {
@@ -286,12 +287,6 @@ pre {
   margin: 0;
   padding-left: 20px;
   padding-bottom: 10px;
-}
-
-.catalog-sidebar ul ul {
-  list-style-type: none;
-  margin: 0;
-  padding-left: 20px;
 }
 
 
