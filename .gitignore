@@ -4,6 +4,6 @@ log
 elm-stuff
 artifacts
 packages
+search.json
 all-packages.json
-new-packages.json
 sitemap.xml
