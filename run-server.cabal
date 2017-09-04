@@ -52,6 +52,7 @@ Executable run-server
     http-types,
     io-streams,
     mtl,
+    process,
     snap-core,
     snap-server,
     text,
