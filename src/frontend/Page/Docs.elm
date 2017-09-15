@@ -9,7 +9,7 @@ module Page.Docs exposing
   )
 
 
-import Browser.History as History
+import Browser.Navigation as Navigation
 import Elm.Docs as Docs
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -62,7 +62,7 @@ update msg model =
   case msg of
     Push route ->
       ( model
-      , History.push (Route.toUrl route)
+      , Navigation.pushUrl (Route.toUrl route)
       )
 
     Search query ->

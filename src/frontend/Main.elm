@@ -2,7 +2,7 @@ module Main exposing (..)
 
 
 import Browser
-import Browser.History as History
+import Browser.Navigation as Navigation
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Lazy exposing (..)
@@ -10,10 +10,12 @@ import Page.Docs as Docs
 import Page.Diff as Diff
 import Page.Problem as Problem
 import Page.Search as Search
+import Process
 import Route
 import Session
 import Session.Query as Query
 import Session.Status exposing (Status(..))
+import Task
 import Utils.App as App
 import Utils.OneOrMore as OneOrMore
 import Version
@@ -76,7 +78,7 @@ subscriptions model =
 
 onNavigation : Browser.Url -> Msg
 onNavigation url =
-  Goto (Route.fromUrl url)
+  ReactToUrl (Route.fromUrl url)
 
 
 
@@ -84,8 +86,9 @@ onNavigation url =
 
 
 type Msg
-  = Push Route.Route
-  | Goto Route.Route
+  = NoOp
+  | PushUrl Route.Route
+  | ReactToUrl Route.Route
   | SessionMsg Session.Msg
   | DocsMsg Docs.Msg
   | SearchMsg Search.Msg
@@ -94,12 +97,15 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
   case message of
-    Push route ->
+    NoOp ->
+      ( model, Cmd.none )
+
+    PushUrl route ->
       ( model
-      , History.push (Route.toUrl route)
+      , Navigation.pushUrl (Route.toUrl route)
       )
 
-    Goto route ->
+    ReactToUrl route ->
       check { model | route = route }
 
     SessionMsg msg ->
@@ -175,7 +181,7 @@ check model =
                 (Tuple.apply (Docs.Module name))
                 (Session.moduleDocs user project version name)
       in
-      onSuccess model <| Query.map Docs <|
+      scrollOnSuccess (Route.getHash info) model <| Query.map Docs <|
         Query.map3 Docs.Model metadataQuery contentQuery (Query.success "")
 
     Route.Guidelines ->
@@ -189,7 +195,12 @@ check model =
 
 
 onSuccess : Model -> Session.Query Page -> ( Model, Cmd Msg )
-onSuccess model query =
+onSuccess =
+  scrollOnSuccess Nothing
+
+
+scrollOnSuccess : Maybe String -> Model -> Session.Query Page -> ( Model, Cmd Msg )
+scrollOnSuccess maybeTag model query =
   let
     (newSession, cmds, status) =
       Query.check model.session query
@@ -206,8 +217,21 @@ onSuccess model query =
           page
       in
       ( { model | session = newSession, page = newPage }
-      , Cmd.map SessionMsg cmds
+      , scrollTo maybeTag (Cmd.map SessionMsg cmds)
       )
+
+
+scrollTo : Maybe String -> Cmd Msg -> Cmd Msg
+scrollTo maybeTag command =
+  case maybeTag of
+    Nothing ->
+      command
+
+    Just tag ->
+      Cmd.batch
+        [ Task.attempt (\_ -> NoOp) (Browser.scrollIntoView tag)
+        , command
+        ]
 
 
 
@@ -286,13 +310,13 @@ viewPage page =
       debody identity <| App.body [] []
 
     Problem suggestion ->
-      debody Push <| Problem.view suggestion
+      debody PushUrl <| Problem.view suggestion
 
     Docs docsModel ->
       debody DocsMsg <| Docs.view docsModel
 
     Diff diffModel ->
-      debody Push <| Diff.view diffModel
+      debody PushUrl <| Diff.view diffModel
 
     Search searchModel ->
       debody SearchMsg <| Search.view searchModel
@@ -363,7 +387,7 @@ moduleLink user project version info =
     Route.Module moduleName maybeTag ->
       let
         route =
-          Route.Version user project version (Route.Module moduleName maybeTag)
+          Route.Version user project version (Route.Module moduleName Nothing)
       in
       [ toLink route moduleName ]
 
@@ -390,7 +414,7 @@ slash =
 
 toLink : Route.Route -> String -> Html Msg
 toLink route words =
-  App.link Push route [] [ text words ]
+  App.link PushUrl route [] [ text words ]
 
 
 
@@ -407,7 +431,7 @@ viewVersionWarning session page =
       Just (latestVersion, newerRoute) ->
         [ p [ class "version-warning" ]
             [ text "Warning! The latest version of this package is "
-            , App.link Push newerRoute [] [ text (Version.toString latestVersion) ]
+            , App.link PushUrl newerRoute [] [ text (Version.toString latestVersion) ]
             ]
         ]
 
@@ -465,7 +489,7 @@ viewFooter =
 
 homeLogo : Html Msg
 homeLogo =
-  App.link Push Route.Home [ style "text-decoration" "none" ] [ logo ]
+  App.link PushUrl Route.Home [ style "text-decoration" "none" ] [ logo ]
 
 
 logo : Html msg

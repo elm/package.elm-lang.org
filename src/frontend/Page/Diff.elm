@@ -5,7 +5,6 @@ module Page.Diff exposing
   )
 
 
-import Browser.History as History
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)

@@ -5,7 +5,7 @@ module Page.Search exposing
   , view
   )
 
-import Browser.History as History
+import Browser.Navigation as Navigation
 import Html exposing (..)
 import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
 import Html.Events exposing (..)
@@ -40,7 +40,7 @@ update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
   case msg of
     Push route ->
-      ( model, History.push (Route.toUrl route) )
+      ( model, Navigation.pushUrl (Route.toUrl route) )
 
     Query query ->
       ( { model | query = query }, Cmd.none )

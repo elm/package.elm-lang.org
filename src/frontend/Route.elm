@@ -2,6 +2,7 @@ module Route exposing
   ( Route(..)
   , Version(..)
   , VersionInfo(..)
+  , getHash
   , latest
   , exactly
   , fromUrl
@@ -48,6 +49,16 @@ latest user project =
 exactly : String -> String -> Version.Version -> Route
 exactly user project version =
   Version user project (Exactly version) Readme
+
+
+getHash : VersionInfo -> Maybe String
+getHash info =
+  case info of
+    Readme ->
+      Nothing
+
+    Module _ maybeName ->
+      maybeName
 
 
 
