@@ -3,14 +3,10 @@
 module ServeFile
   ( elm
   , docsHtml
-  , overviewHtml
-  , previewHtml
   )
   where
 
-import qualified Data.List as List
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
@@ -32,15 +28,15 @@ import qualified Artifacts
 
 elm :: String -> Snap ()
 elm title =
-  makeHtml title Nothing (return Nothing)
+  makeHtml title (return ())
 
 
 
 -- DOCUMENTATION FOR A PARTICULAR VERSION
 
 
-docsHtml :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> [Pkg.Version] -> Snap ()
-docsHtml pkg@(Pkg.Name user project) version maybeName allVersions =
+docsHtml :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
+docsHtml pkg@(Pkg.Name _ project) version maybeName =
   let
     versionString =
       Pkg.versionToString version
@@ -51,18 +47,8 @@ docsHtml pkg@(Pkg.Name user project) version maybeName allVersions =
     title =
       maybe "" (++" - ") maybeStringName
       ++ Text.unpack project ++ " " ++ versionString
-
-    maybeLink =
-      Just (canonicalLink pkg maybeName)
   in
-    makeHtml title maybeLink $
-      return $ Just $ makeContext $
-        [ "user" ==> show user
-        , "project" ==> show project
-        , "version" ==> show versionString
-        , "allVersions" ==> show (List.map Pkg.versionToString allVersions)
-        , "moduleName" ==> maybe "null" show maybeStringName
-        ]
+    makeHtml title (canonicalLink pkg maybeName)
 
 
 canonicalLink :: Pkg.Name -> Maybe Module.Raw -> H.Html
@@ -102,90 +88,34 @@ renames =
 
 
 
--- SHOW ALL THE DIFFERENT VERSIONS OF A PACKAGE
-
-
-overviewHtml :: Pkg.Name -> [Pkg.Version] -> Snap ()
-overviewHtml pkg@(Pkg.Name user project) allVersions =
-  makeHtml (Pkg.toString pkg) Nothing $
-    return $ Just $ makeContext $
-      [ "user" ==> show user
-      , "project" ==> show project
-      , "versions" ==> show (List.map Pkg.versionToString allVersions)
-      ]
-
-
-makeContext :: [(String, String)] -> (String, String)
-makeContext entries =
-  let
-    ports =
-      "{"
-      ++ List.intercalate "," (List.map (\(k,v) -> "\n    " ++ k ++ ": " ++ v) entries)
-      ++ "\n}"
-  in
-    (ports, "")
-
-
-
--- PREVIEW DOCUMENTATION
-
-
-previewHtml :: Snap ()
-previewHtml =
-  makeHtml "Preview your Docs" Nothing $
-    return $ Just $ (,) "" $
-      "function handleFileSelect(evt) {\n\
-      \    var reader = new FileReader();\n\
-      \    reader.readAsText(evt.target.files[0]);\n\
-      \    reader.onload = function(event) {\n\
-      \        page.ports.uploads.send(event.target.result);\n\
-      \    };\n\
-      \}\n\
-      \\n\
-      \setTimeout(function() {\n\
-      \  document.getElementById('fileLoader').addEventListener('change', handleFileSelect, false);\n\
-      \}, 0)\n"
-
-
-
 -- SKELETON
 
 
-makeHtml :: String -> Maybe H.Html -> Snap (Maybe (String, String)) -> Snap ()
-makeHtml title maybeLink makePorts =
-  do  maybePorts <- makePorts
-      writeBuilder $ Blaze.renderHtmlBuilder $ H.docTypeHtml $ do
-        H.head $ do
-          H.meta ! A.charset "UTF-8"
-          favicon
-          H.title (H.toHtml title)
-          googleAnalytics
-          Maybe.fromMaybe (return ()) maybeLink
-          H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/highlight/styles/default.css")
-          H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/style.css")
-          H.script ! A.src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
-          H.script ! A.src (cacheBuster Artifacts.js) $ ""
+makeHtml :: String -> H.Html -> Snap ()
+makeHtml title canonialLink =
+  writeBuilder $ Blaze.renderHtmlBuilder $ H.docTypeHtml $ do
+    H.head $ do
+      H.meta ! A.charset "UTF-8"
+      favicon
+      H.title (H.toHtml title)
+      googleAnalytics
+      canonialLink
+      H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/highlight/styles/default.css")
+      H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/style.css")
+      H.script ! A.src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
+      H.script ! A.src (cacheBuster Artifacts.js) $ ""
 
-        H.body $
-          H.script $ H.preEscapedToMarkup $
-            case maybePorts of
-              Nothing ->
-                "\nElm.Main.fullscreen()\n"
-
-              Just (ports, postScript) ->
-                "\nvar page = Elm.Main.fullscreen(" ++ ports ++ ");\n\n" ++ postScript
+    H.body $ H.script $ H.preEscapedToMarkup ("\nElm.Main.fullscreen()\n" :: String)
 
 
 googleAnalytics :: H.Html
 googleAnalytics =
   H.script ! A.type_ "text/javascript" $
-    "(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){\n\
-    \(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),\n\
-    \m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)\n\
-    \})(window,document,'script','//www.google-analytics.com/analytics.js','ga');\n\
-    \\n\
-    \ga('create', 'UA-25827182-1', 'auto');\n\
-    \ga('send', 'pageview');\n"
+    "(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){\
+    \(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),\
+    \m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)\
+    \})(window,document,'script','//www.google-analytics.com/analytics.js','ga');\
+    \ga('create','UA-25827182-1','auto');ga('send','pageview');"
 
 
 favicon :: H.Html

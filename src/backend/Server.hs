@@ -123,23 +123,23 @@ serveVersion memory user project info =
         Just (Memory.Summary versions _) ->
           case info of
             Readme ->
-              ServeFile.overviewHtml name versions
+              ServeFile.elm (Pkg.toString name)
 
             Module (Exactly version) asset ->
               if notElem version versions then
                 S.pass
               else
-                serveVersionHelp name version versions asset
+                serveVersionHelp name version asset
 
             Module Latest asset ->
-              serveVersionHelp name (last (List.sort versions)) versions asset
+              serveVersionHelp name (last (List.sort versions)) asset
 
 
-serveVersionHelp :: Pkg.Name -> Pkg.Version -> [Pkg.Version] -> Maybe Text -> S.Snap ()
-serveVersionHelp name version allVersions maybeAsset =
+serveVersionHelp :: Pkg.Name -> Pkg.Version -> Maybe Text -> S.Snap ()
+serveVersionHelp name version maybeAsset =
   case maybeAsset of
     Nothing ->
-      ServeFile.docsHtml name version Nothing allVersions
+      ServeFile.docsHtml name version Nothing
 
     Just "endpoint.json" ->
       serveFile (Path.directory name version ++ "/endpoint.json")
@@ -159,4 +159,4 @@ serveVersionHelp name version allVersions maybeAsset =
           S.pass
 
         Just moduleName ->
-          ServeFile.docsHtml name version (Just moduleName) allVersions
+          ServeFile.docsHtml name version (Just moduleName)
