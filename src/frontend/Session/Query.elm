@@ -40,7 +40,7 @@ failure err =
   Query <| \state -> ( state, Cmd.none, Failure err [] )
 
 
-required : ( state -> ( state, Cmd msg, Status result ) ) -> Query state msg result
+required : ( state -> ( state, Cmd msg, Status err result ) ) -> Query state msg err result
 required =
   Query
 
