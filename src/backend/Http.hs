@@ -1,6 +1,12 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Http (Token, init, fetch, fetchGithub) where
+module Http
+  ( Token
+  , init
+  , fetch
+  , fetchGithub
+  )
+  where
 
 
 import Prelude hiding (init)
