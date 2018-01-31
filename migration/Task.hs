@@ -15,6 +15,7 @@ import Control.Exception (SomeException, catch, try)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Reader (ReaderT, runReaderT, ask)
 import Control.Monad.Trans (liftIO)
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
 import qualified System.Directory as Dir
 import System.Exit (exitFailure)
@@ -98,7 +99,7 @@ removeDirectory (Pkg.Name user project) version =
 -- HTTP
 
 
-fetchGithub :: Decode.Decoder a -> String -> Task a
+fetchGithub :: Decode.Decoder e a -> String -> Task a
 fetchGithub decoder path =
   do  token <- ask
       result <- liftIO $ Http.fetchGithub token path
@@ -107,7 +108,7 @@ fetchGithub decoder path =
           throwError msg
 
         Right bytestring ->
-          case Decode.parse decoder bytestring of
+          case Decode.parse decoder (LBS.toStrict bytestring) of
             Left _ ->
               throwError ("Bad JSON from GitHub for " ++ path)
 

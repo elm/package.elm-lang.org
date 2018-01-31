@@ -91,7 +91,7 @@ data Endpoint
   | Commit String
 
 
-endpointDecoder :: Decode.Decoder Endpoint
+endpointDecoder :: Decode.Decoder String Endpoint
 endpointDecoder =
   let
     toUrl tipe =
@@ -103,7 +103,7 @@ endpointDecoder =
           Decode.map Tag $ Decode.at ["object","sha"] Decode.string
 
         _ ->
-          Decode.fail $ "unknown type: " ++ tipe
+          Decode.fail ("unknown type: " ++ tipe)
   in
     Decode.andThen toUrl $
       Decode.at ["object","type"] Decode.string
@@ -125,15 +125,15 @@ getTime pkg endpoint =
         "/repos/" ++ Pkg.toUrl pkg ++ "/git/commits/" ++ sha
 
 
-timeDecoder :: Text.Text -> Decode.Decoder Time.POSIXTime
+timeDecoder :: Text.Text -> Decode.Decoder String Time.POSIXTime
 timeDecoder person =
   do  date <- Decode.at [person,"date"] Decode.string
       case Time.parseISO8601 date of
         Nothing ->
-          fail "Not a valid ISO 8601 date."
+          Decode.fail "Not a valid ISO 8601 date."
 
         Just utcTime ->
-          return (Time.utcTimeToPOSIXSeconds utcTime)
+          Decode.succeed (Time.utcTimeToPOSIXSeconds utcTime)
 
 
 
