@@ -1,9 +1,13 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module MoveElmJson (move) where
+module MoveElmJson
+  ( move
+  )
+  where
+
 
 import Control.Monad.Trans (liftIO)
-import Data.Aeson ((.:))
+import Data.Aeson ((.:), (.:?))
 import qualified Data.Aeson as Json
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.HashMap.Lazy as HashMap
@@ -13,6 +17,10 @@ import System.FilePath ((</>))
 
 import qualified Crawl
 import qualified Elm.Package as Pkg
+import qualified Elm.Project.Constraint as Con
+import qualified Elm.Project.Json as Project
+import qualified Elm.Project.Licenses as Licenses
+import qualified Json.Encode as Encode
 import qualified Task
 
 
@@ -28,49 +36,144 @@ move pkg version =
         Left err ->
           Task.bail ("Problem at " ++ oldJson ++ "\n" ++ err)
 
-        Right (Project object) ->
+        Right pkgInfo ->
           do  let newJson = Crawl.newDir pkg version </> "elm.json"
-              liftIO $ BS.writeFile newJson (Json.encode object)
+              liftIO $ Encode.writeUgly newJson $
+                Project.encode (Project.Pkg pkgInfo)
 
 
 
 -- JSON DECODING
 
 
-data Project = Project Json.Object
+instance Json.FromJSON Project.PkgInfo where
+  parseJSON value =
+    case value of
+      Json.Object obj ->
+        do  version <- obj .: "version"
+            (Txt summmary) <- obj .: "summary"
+            repository <- obj .: "repository"
+            license <- obj .: "license"
+            exposed <- obj .: "exposed-modules"
+            deps <- obj .: "dependencies"
+            elm <- obj .:? "elm-version"
 
-
-instance Json.FromJSON Project where
-  parseJSON =
-    Json.withObject "Project" $ \object ->
-      do
-          (Json.String license) <- object .: "license"
-          (Json.String repo) <- object .: "repository"
-
-          case Map.lookup license conversions of
-            Nothing ->
-              fail $ "cannot find " ++ Text.unpack license ++ " in license conversions table"
-
-            Just spdxLicense ->
-              return $ Project $
-                HashMap.insert "type" (Json.String "package") $
-                HashMap.delete "repository" $
-                HashMap.insert "name" (Json.String (toName repo)) $
-                HashMap.insert "license" (Json.String spdxLicense) $
-                HashMap.insert "test-dependencies" (Json.Object HashMap.empty) $
-                  object
-
-
-toName :: Text.Text -> Text.Text
-toName repository =
-  Text.dropEnd 4 $
-  Text.replace "http://github.com/" "" $
-  Text.replace "https://github.com/" "" $
-    repository
+            return $
+              Project.PkgInfo
+                (repoToPkgName repository)
+                summmary
+                (toLicense license)
+                version
+                (Project.ExposedList exposed)
+                deps
+                Map.empty
+                (toElmVersion elm)
 
 
 
--- LICENSE CONVERTER
+-- UNESCAPED TEXT
+
+
+newtype Txt = Txt Text.Text
+
+
+instance Json.FromJSON Txt where
+  parseJSON (Json.String txt) =
+    return $ Txt $
+      Text.replace "\\u003c" "<" (Text.replace "\\u003e" ">" txt)
+
+  parseJSON _ =
+    fail "Need a STRING here."
+
+
+
+-- VERSION and CONSTRAINT
+
+
+instance Json.FromJSON Pkg.Version where
+  parseJSON (Json.String txt) =
+    maybe (fail "bad version") return (Pkg.versionFromText txt)
+
+  parseJSON _ =
+    fail "bad version, need STRING"
+
+
+instance Json.FromJSON Con.Constraint where
+  parseJSON (Json.String txt) =
+    either fail return (Con.fromText txt)
+
+  parseJSON _ =
+    fail "bad constraint, need STRING"
+
+
+toElmVersion :: Maybe Txt -> Con.Constraint
+toElmVersion maybeTxt =
+  either error id $ Con.fromText $
+    case maybeTxt of
+      Nothing ->
+        "0.14.0 <= v < 0.15.0"
+
+      Just (Txt text) ->
+        text
+
+
+
+-- PACKAGE NAMES
+
+
+instance Json.FromJSON Pkg.Name where
+  parseJSON (Json.String txt) =
+    return (textToPkgName txt)
+
+  parseJSON _ =
+    fail "Problem with package name."
+
+
+instance Json.FromJSONKey Pkg.Name where
+  fromJSONKey =
+    Json.FromJSONKeyText textToPkgName
+
+
+textToPkgName :: Text.Text -> Pkg.Name
+textToPkgName rawName =
+  case Pkg.fromText rawName of
+    Right pkg ->
+      pkg
+
+    Left err ->
+      case Text.splitOn "/" rawName of
+        [user, project] ->
+          Pkg.Name user (Text.toLower project)
+
+        _ ->
+          error $ "Problem with package name " ++ show rawName ++ " which is " ++ err
+
+
+
+-- REPO TO PACKAGE NAME
+
+
+repoToPkgName :: Text.Text -> Pkg.Name
+repoToPkgName repository =
+    textToPkgName $
+    Text.dropEnd 4 $
+    Text.replace "http://github.com/" "" $
+    Text.replace "https://github.com/" "" $
+      repository
+
+
+
+-- TO LICENSE
+
+
+toLicense :: Text.Text -> Licenses.License
+toLicense oldLicense =
+  case Licenses.check (Map.findWithDefault oldLicense oldLicense conversions) of
+    Right newLicense ->
+      newLicense
+
+    Left _ ->
+      error $ "Cannot deal with " ++ show oldLicense ++ " license."
 
 
 conversions :: Map.Map Text.Text Text.Text
@@ -84,10 +187,6 @@ conversions =
     , "BSD-3-Clause" ==> "BSD-3-Clause"
     , "BSD2" ==> "BSD-2-Clause"
 
-    -- CORRECT ONES
-    , "MIT" ==> "MIT"
-    , "ISC" ==> "ISC"
-
     -- GPL
     , "AGPL-3" ==> "AGPL-3.0"
     , "LGPL-3.0" ==> "LGPL-3.0"
@@ -99,6 +198,7 @@ conversions =
     , "Apache2.0" ==> "Apache-2.0"
     , "Apache 2.0" ==> "Apache-2.0"
     , "Apache-2.0" ==> "Apache-2.0"
+    , "Apache license, version 2.0" ==> "Apache-2.0"
     , "Apache License, version 2.0" ==> "Apache-2.0"
     , "Apache License, Version 2.0" ==> "Apache-2.0"
 
@@ -108,12 +208,6 @@ conversions =
     , "MPL2" ==> "MPL-2.0"
     , "MPLv2" ==> "MPL-2.0"
     , "Mozilla Public License 2.0" ==> "MPL-2.0"
-
-    -- NOT OSI
-    , "CC0" ==> "CC0-1.0"
-    , "WTFPL" ==> "WTFPL"
-    , "WORDNET" ==> "WORDNET"
-    , "Open Database License (ODbL) v1.0" ==> "ODbL-1.0"
     ]
 
 
