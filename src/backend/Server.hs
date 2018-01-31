@@ -1,6 +1,10 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Server (serve) where
+module Server
+  ( serve
+  )
+  where
+
 
 import Data.Foldable (asum)
 import qualified Data.List as List
@@ -88,7 +92,7 @@ data Vsn = Latest | Exactly Pkg.Version
 
 versionRoute :: Route (Pkg.Version -> a) a
 versionRoute =
-  Router.custom (either (\_ -> Nothing) Just . Pkg.versionFromText)
+  Router.custom Pkg.versionFromText
 
 
 versionStuff :: Route (PkgInfo -> a) a
@@ -154,7 +158,7 @@ serveVersionHelp name version maybeAsset =
       serveFile (Path.directory name version ++ "/README.md")
 
     Just asset ->
-      case Module.dehyphenate asset of
+      case Module.fromHyphenPath asset of
         Nothing ->
           S.pass
 

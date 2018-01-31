@@ -108,11 +108,11 @@ badNameMessage name problem =
 verifyVersion :: Http.Token -> Memory.Memory -> Pkg.Name -> Text -> Text -> Snap.Snap Pkg.Version
 verifyVersion token memory name commitHash rawVersion =
   case Pkg.versionFromText rawVersion of
-    Left problem ->
+    Nothing ->
       Error.string 400 $
-        "I was given an invalid version: " ++ Text.unpack rawVersion ++ "\n\n" ++ problem
+        "I was given an invalid version: " ++ Text.unpack rawVersion
 
-    Right version ->
+    Just version ->
       do  verifyIsNew memory name version
           verifyTag token name version commitHash
           return version
@@ -147,7 +147,7 @@ getCommitHash token name version =
           Error.bytestring 500 "Request to GitHub API failed."
 
         Right body ->
-          case Decode.parse tagDecoder body of
+          case Decode.parse tagDecoder (LBS.toStrict body) of
             Right hash ->
               return hash
 
@@ -155,7 +155,7 @@ getCommitHash token name version =
               Error.bytestring 500 "Request to GitHub API failed due to unexpected JSON."
 
 
-tagDecoder :: Decode.Decoder Text
+tagDecoder :: Decode.Decoder e Text
 tagDecoder =
   Decode.at ["object","sha"] Decode.text
 
@@ -184,7 +184,7 @@ uploadFiles name version time =
           if Set.fromList files /= requiredFiles then
             revert dir $ "Malformed request. Missing some metadata files."
           else
-            do  bytes <- liftIO $ LBS.readFile (dir </> "elm.json")
+            do  bytes <- liftIO $ BS.readFile (dir </> "elm.json")
                 case Decode.parse Project.pkgDecoder bytes of
                   Left _ ->
                     revert dir $ "Invalid content in elm.json file."
@@ -279,13 +279,13 @@ writeEndpoint name version dir stream =
                   Right hash ->
                     do  Encode.writeUgly (dir </> "endpoint.json") $
                           Encode.object
-                            [ ("url", Encode.string (toGithubUrl name version))
+                            [ ("url", Encode.text (toGithubUrl name version))
                             , ("hash", Encode.text hash)
                             ]
 
                         return $ Right "endpoint.json"
 
 
-toGithubUrl :: Pkg.Name -> Pkg.Version -> String
+toGithubUrl :: Pkg.Name -> Pkg.Version -> Text.Text
 toGithubUrl name version =
-  "https://github.com/" ++ Pkg.toUrl name ++ "/zipball/temp-" ++ Pkg.versionToString version ++ "/"
+  "https://github.com/" <> Text.pack (Pkg.toUrl name) <> "/zipball/temp-" <> Pkg.versionToText version <> "/"
