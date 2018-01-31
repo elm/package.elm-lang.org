@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wall #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Memory
   ( Memory
   , Summary(..)
@@ -17,7 +18,7 @@ import Control.Concurrent
   )
 import Control.Monad (forever, join)
 import Control.Monad.Trans (liftIO)
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString as BS
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
@@ -154,7 +155,7 @@ add (Project.PkgInfo _ summary license version _ _ _ constraint) maybeSummary =
 generateAllPackagesJson :: Map.Map Pkg.Name Summary -> IO ()
 generateAllPackagesJson packages =
   write "all-packages.json" $
-    Encode.dict Pkg.toString (Encode.list Pkg.encodeVersion . _versions) packages
+    Encode.dict Pkg.toText (Encode.list Pkg.encodeVersion . _versions) packages
 
 
 
