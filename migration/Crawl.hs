@@ -111,7 +111,7 @@ crawlProject root user project =
     Right pkg ->
       do  vsns <- getSubDirs (root </> user </> project)
           case traverse (Pkg.versionFromText . Text.pack) vsns of
-            Right [v1] ->
+            Just [v1] ->
               do  let readme = root </> user </> project </> Pkg.versionToString v1 </> "README.md"
                   exists <- liftIO $ Dir.doesFileExist readme
                   if exists
@@ -120,10 +120,10 @@ crawlProject root user project =
                       do  liftIO $ putStrLn $ "failed publish - " ++ user ++ "/" ++ project
                           return Nothing
 
-            Right versions ->
+            Just versions ->
               return (Just (Package pkg versions))
 
-            Left _ ->
+            Nothing ->
               throwError $ "Problem with " ++ user ++ "/" ++ project ++ " " ++ show vsns
 
 
