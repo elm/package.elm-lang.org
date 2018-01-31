@@ -153,17 +153,17 @@ viewSidebar metadata allDocs query =
 
 
 viewSidebarModules : Metadata -> List Docs.Module -> String -> Html Msg
-viewSidebarModules metadata docs query =
+viewSidebarModules metadata modules query =
   if String.isEmpty query then
     let
       viewEntry docs =
         li [] [ viewModuleLink metadata docs.name ]
     in
-    ul [] (List.map viewEntry docs)
+    ul [] (List.map viewEntry modules)
 
   else
     ul [] <|
-      List.filterMap (viewSearchItem metadata (String.toLower query)) docs
+      List.filterMap (viewSearchItem metadata (String.toLower query)) modules
 
 
 viewSearchItem : Metadata -> String -> Docs.Module -> Maybe (Html Msg)

@@ -172,8 +172,8 @@ type alias TypeNameDict =
 makeInfo : String -> String -> Route.Version -> String -> List Docs.Module -> Info
 makeInfo user project version moduleName docsList =
   let
-    addUnion moduleName union docs =
-      Dict.insert (moduleName ++ "." ++ union.name) (moduleName, union.name) docs
+    addUnion home union docs =
+      Dict.insert (home ++ "." ++ union.name) (home, union.name) docs
 
     addModule docs dict =
       List.foldl (addUnion docs.name) dict docs.unions
@@ -303,8 +303,8 @@ toLines info context tipe =
 
     Type.Record (f :: fs) extension ->
       let
-        toLns ( field, tipe ) =
-          ( field, toLines info Other tipe )
+        toLns ( field, fieldType ) =
+          ( field, toLines info Other fieldType )
       in
       case extension of
         Nothing ->
@@ -648,26 +648,26 @@ toOneLine chunkWidth chunk one entries =
 
 
 toMoreLines : MoreSettings a msg -> a -> List a -> Lines (Line msg)
-toMoreLines {open, sep, close, openIndent, sepIndent, toLines} x xs =
+toMoreLines s x xs =
   let
     (OneOrMore firstLine firstRest) =
-      toLines x
+      s.toLines x
 
     openIndentation =
-      text (String.repeat openIndent " ")
+      text (String.repeat s.openIndent " ")
 
     sepIndentation =
-      text (String.repeat sepIndent " ")
+      text (String.repeat s.sepIndent " ")
 
-    toChunk (OneOrMore x xs) =
-      (sep :: x) :: List.map ((::) sepIndentation) xs
+    toChunk (OneOrMore y ys) =
+      (s.sep :: y) :: List.map ((::) sepIndentation) ys
 
     otherLines =
       List.map ((::) openIndentation) firstRest
-      ++ List.concatMap (toChunk << toLines) xs
+      ++ List.concatMap (toChunk << s.toLines) xs
   in
-    More (open ++ firstLine) <|
-      case close of
+    More (s.open ++ firstLine) <|
+      case s.close of
         Nothing ->
           otherLines
 

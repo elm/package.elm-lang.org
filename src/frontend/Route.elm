@@ -11,9 +11,8 @@ module Route exposing
   )
 
 
-import Browser
 import Url
-import Url.Parser exposing (Parser, (</>), custom, fragment, map, oneOf, parsePath, s, top)
+import Url.Parser as Parser exposing (Parser, (</>), custom, fragment, map, oneOf, s, top)
 import Version
 
 
@@ -65,35 +64,40 @@ getHash info =
 -- LOCATION TO ROUTE
 
 
-fromUrl : Browser.Url -> Route
+fromUrl : Parser.Url -> Route
 fromUrl url =
-  parsePath parser NotFound url
+  case Parser.parse parser url of
+    Nothing ->
+      NotFound (Parser.fromUrl url)
+
+    Just route ->
+      route
 
 
 parser : Parser (Route -> a) a
 parser =
   oneOf
     [ map Home       <| top
-    , map User       <| s "packages" </> user
-    , map Package    <| s "packages" </> user </> project
-    , map Version    <| s "packages" </> user </> project </> version </> versionInfo
+    , map User       <| s "packages" </> user_
+    , map Package    <| s "packages" </> user_ </> project_
+    , map Version    <| s "packages" </> user_ </> project_ </> version_ </> versionInfo
     , map Guidelines <| s "help" </> s "design-guidelines"
     , map DocsHelp   <| s "help" </> s "docs"
     ]
 
 
-user : Parser (String -> a) a
-user =
+user_ : Parser (String -> a) a
+user_ =
   custom "USER" Just
 
 
-project : Parser (String -> a) a
-project =
+project_ : Parser (String -> a) a
+project_ =
   custom "PROJECT" Just
 
 
-version : Parser (Version -> a) a
-version =
+version_ : Parser (Version -> a) a
+version_ =
   custom "VERSION" <| \string ->
     if string == "latest" then
       Just Latest
@@ -105,12 +109,12 @@ versionInfo : Parser (VersionInfo -> a) a
 versionInfo =
   oneOf
     [ map Readme top
-    , map Module (moduleName </> fragment identity)
+    , map Module (moduleName_ </> fragment identity)
     ]
 
 
-moduleName : Parser (String -> a) a
-moduleName =
+moduleName_ : Parser (String -> a) a
+moduleName_ =
   custom "MODULE" (Just << String.replace "-" ".")
 
 
