@@ -46,6 +46,9 @@ view info block =
     Docs.ValueBlock value ->
       viewValue info value
 
+    Docs.BinopBlock binop ->
+      viewBinop info binop
+
     Docs.AliasBlock alias ->
       viewAlias info alias
 
@@ -78,10 +81,10 @@ viewCodeBlock name comment header =
 viewValue : Info -> Docs.Value -> Html Msg
 viewValue info { name, comment, tipe } =
   let
-    (nameTag, nameHtml) =
-      valueToLink info name
+    nameHtml =
+      toBoldLink info name
   in
-  viewCodeBlock nameTag comment <|
+  viewCodeBlock name comment <|
     case toLines info Other tipe of
       One _ line ->
         [ nameHtml :: space :: colon :: space :: line ]
@@ -96,6 +99,25 @@ indentFour =
 
 
 
+-- VIEW BINOP BLOCK
+
+
+viewBinop : Info -> Docs.Binop -> Html Msg
+viewBinop info { name, comment, tipe } =
+  let
+    nameHtml =
+      toBoldLink info ("(" ++ name ++ ")")
+  in
+  viewCodeBlock name comment <|
+    case toLines info Other tipe of
+      One _ line ->
+        [ nameHtml :: space :: colon :: space :: line ]
+
+      More x xs ->
+        [ nameHtml, space, colon ] :: indentFour x :: List.map indentFour xs
+
+
+
 -- VIEW ALIAS BLOCK
 
 
@@ -107,7 +129,7 @@ viewAlias info { name, args, comment, tipe } =
 
     aliasNameLine =
       [ keyword "type", space, keyword "alias", space
-      , typeToLink info name, text varsString, space
+      , toBoldLink info name, text varsString, space
       , equals
       ]
   in
@@ -126,7 +148,7 @@ viewUnion info {name, comment, args, tags} =
       String.concat <| List.map ((++) " ") args
 
     nameLine =
-      [ keyword "type", space, typeToLink info name, text varsString ]
+      [ keyword "type", space, toBoldLink info name, text varsString ]
   in
   viewCodeBlock name comment <|
     case tags of
@@ -186,23 +208,9 @@ makeInfo user project version moduleName docsList =
 -- CREATE LINKS
 
 
-typeToLink : Info -> String -> Html Msg
-typeToLink info name =
+toBoldLink : Info -> String -> Html Msg
+toBoldLink info name =
   makeLink info [bold] name name
-
-
-valueToLink : Info -> Docs.Name -> ( String, Html Msg )
-valueToLink info valueName =
-  case valueName of
-    Docs.Name name ->
-      ( name
-      , makeLink info [bold] name name
-      )
-
-    Docs.Op name _ _ ->
-      ( name
-      , makeLink info [bold] name <| "(" ++ name ++ ")"
-      )
 
 
 bold : Attribute msg

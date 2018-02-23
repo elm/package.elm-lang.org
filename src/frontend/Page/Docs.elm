@@ -174,8 +174,8 @@ viewSearchItem metadata query docs =
 
     matches =
       List.concatMap (isUnionMatch query toItem) docs.unions
-      ++ List.filterMap (isMatch query identity toItem) docs.aliases
-      ++ List.filterMap (isMatch query getName toItem) docs.values
+      ++ List.filterMap (isMatch query toItem) docs.aliases
+      ++ List.filterMap (isMatch query toItem) docs.values
   in
     if List.isEmpty matches && not (String.contains query docs.name) then
       Nothing
@@ -190,12 +190,8 @@ viewSearchItem metadata query docs =
           ]
 
 
-isMatch : String -> (a -> String) -> (String -> String -> b) -> { r | name : a } -> Maybe b
-isMatch query toName toResult entry =
-  let
-    name =
-      toName entry.name
-  in
+isMatch : String -> (String -> String -> b) -> { r | name : String } -> Maybe b
+isMatch query toResult {name} =
   if String.contains query (String.toLower name) then
     Just (toResult name name)
   else
@@ -220,16 +216,6 @@ isTagMatch query toResult tipeName (tagName, _) =
     Just (toResult tipeName tagName)
   else
     Nothing
-
-
-getName : Docs.Name -> String
-getName valueName =
-  case valueName of
-    Docs.Name name ->
-      name
-
-    Docs.Op name _ _ ->
-      name
 
 
 

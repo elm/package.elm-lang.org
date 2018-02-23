@@ -147,7 +147,7 @@ getCommitHash token name version =
           Error.bytestring 500 "Request to GitHub API failed."
 
         Right body ->
-          case Decode.parse tagDecoder (LBS.toStrict body) of
+          case Decode.parse "github.json" "commit" id tagDecoder (LBS.toStrict body) of
             Right hash ->
               return hash
 
@@ -185,7 +185,7 @@ uploadFiles name version time =
             revert dir $ "Malformed request. Missing some metadata files."
           else
             do  bytes <- liftIO $ BS.readFile (dir </> "elm.json")
-                case Decode.parse Project.pkgDecoder bytes of
+                case Decode.parse "elm.json" "project" (const []) Project.pkgDecoder bytes of
                   Left _ ->
                     revert dir $ "Invalid content in elm.json file."
 

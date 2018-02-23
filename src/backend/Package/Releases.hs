@@ -44,7 +44,7 @@ data Release =
 read :: Pkg.Name -> IO [Release]
 read name =
   do  json <- BS.readFile (Path.releases name)
-      case Decode.parse releasesDecoder json of
+      case Decode.parse (Path.releases name) "releases" (const []) releasesDecoder json of
         Right releases ->
           return releases
 
