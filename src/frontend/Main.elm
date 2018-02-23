@@ -179,7 +179,7 @@ check model =
 
             Route.Module name _ ->
               Query.map
-                (Tuple.apply (Docs.Module name))
+                (\(d,ds) -> Docs.Module name d ds)
                 (Session.moduleDocs user project version name)
       in
       scrollOnSuccess (Route.getHash info) model <| Query.map Docs <|

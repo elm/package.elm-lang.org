@@ -7,7 +7,7 @@ module Page.Docs.Block exposing
 
 import Dict
 import Elm.Docs as Docs
-import Elm.Docs.Type as Type
+import Elm.Type as Type
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Route
