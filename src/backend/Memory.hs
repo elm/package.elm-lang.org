@@ -72,7 +72,7 @@ toSummary :: Pkg.Name -> [Pkg.Version] -> IO Summary
 toSummary name versions =
   do  let path = toElmJsonPath name (maximum versions)
       bytes <- BS.readFile path
-      case Decode.parse path "summary" (const []) Project.pkgDecoder bytes of
+      case Decode.parse "summary" (const []) Project.pkgDecoder bytes of
         Left _ ->
           return (Summary versions Nothing)
 
