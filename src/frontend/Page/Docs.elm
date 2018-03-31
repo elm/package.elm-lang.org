@@ -173,7 +173,8 @@ viewSearchItem metadata query docs =
       viewValueItem metadata docs.name ownerName valueName
 
     matches =
-      List.concatMap (isUnionMatch query toItem) docs.unions
+      List.filterMap (isMatch query toItem) docs.binops
+      ++ List.concatMap (isUnionMatch query toItem) docs.unions
       ++ List.filterMap (isMatch query toItem) docs.aliases
       ++ List.filterMap (isMatch query toItem) docs.values
   in
