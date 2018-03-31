@@ -37,11 +37,7 @@ compile =
   do  putStrLn "Compiling artifacts..."
 
       exitCode <-
-        Process.rawSystem
-          "../../tools/cli/dist/build/elm/elm"
-          [ "make"
-          , "src/frontend/Main.elm"
-          ]
+        Process.rawSystem "../../compiler/dist/build/elm/elm" ["make" ,"src/frontend/Main.elm"]
 
       case exitCode of
         Exit.ExitSuccess ->
