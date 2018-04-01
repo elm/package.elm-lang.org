@@ -105,7 +105,7 @@ makeHtml title canonialLink =
       H.script ! A.src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
       H.script ! A.src (cacheBuster Artifacts.js) $ ""
 
-    H.body $ H.script $ H.preEscapedToMarkup ("\nElm.Main.init()\n" :: String)
+    H.body $ H.script $ H.preEscapedToMarkup ("\nElm.Main.fullscreen()\n" :: String)
 
 
 googleAnalytics :: H.Html
