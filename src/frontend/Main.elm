@@ -427,7 +427,8 @@ viewVersionWarning session page =
   div [ class "header-underbar" ] <|
     case getNewerRoute session page of
       Nothing ->
-        []
+        [ text "NOT FOR SHARING. For alpha testers only!"
+        ]
 
       Just (latestVersion, newerRoute) ->
         [ p [ class "version-warning" ]
