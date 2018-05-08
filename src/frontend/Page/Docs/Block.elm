@@ -297,9 +297,13 @@ toLines info context tipe =
         (List.map (toLines info Other) args)
 
     Type.Type name args ->
+      let
+        needsParens =
+          context == App && not (List.isEmpty args)
+      in
       toLinesHelp
-        (typeOne (context == App))
-        (typeMore (context == App))
+        (typeOne needsParens)
+        (typeMore needsParens)
         (toLinkLine info name)
         (List.map (toLines info App) args)
 
