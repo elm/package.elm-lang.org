@@ -125,7 +125,7 @@ verifyIsNew memory name vsn =
         Nothing ->
           return ()
 
-        Just (Memory.Summary versions _) ->
+        Just (Memory.Summary versions _ _) ->
           when (elem vsn versions) $ Error.string 400 $
             "Version " ++ Pkg.versionToString vsn ++ " has already been published."
 

@@ -65,6 +65,7 @@ data Summary =
   Summary
     { _versions :: [Pkg.Version]
     , _details :: Maybe ( Text.Text, License.License )
+    , _weight :: Int
     }
 
 
@@ -74,14 +75,16 @@ toSummary name versions =
       bytes <- BS.readFile path
       case Decode.parse "summary" (const []) Project.pkgDecoder bytes of
         Left _ ->
-          return (Summary versions Nothing)
+          return (Summary versions Nothing (-1))
 
         Right (Project.PkgInfo _ summary license _ _ _ _ constraint) ->
-          return $ Summary versions $
-            if Con.goodElm constraint then
-              Just ( summary, license )
-            else
-              Nothing
+          let
+            details =
+              if Con.goodElm constraint
+                then Just ( summary, license )
+                else Nothing
+          in
+          return $ Summary versions details (getWeight name)
 
 
 toElmJsonPath :: Pkg.Name -> Pkg.Version -> FilePath
@@ -140,12 +143,19 @@ addPackage (Memory mvar worker) info@(Project.PkgInfo name _ _ version _ _ _ _) 
 
 
 add :: Project.PkgInfo -> Maybe Summary -> Summary
-add (Project.PkgInfo _ summary license version _ _ _ constraint) maybeSummary =
-  Summary (maybe [] _versions maybeSummary ++ [version]) $
-    if Con.goodElm constraint then
-      Just ( summary, license )
-    else
-      Nothing
+add (Project.PkgInfo name summary license version _ _ _ constraint) maybeSummary =
+  let
+    versions =
+      maybe [] _versions maybeSummary ++ [version]
+
+    details =
+      if Con.goodElm constraint then
+        Just ( summary, license )
+      else
+        Nothing
+  in
+  Summary versions details (getWeight name)
+
 
 
 
@@ -165,11 +175,12 @@ generateAllPackagesJson packages =
 generateSearchJson :: Map.Map Pkg.Name Summary -> IO ()
 generateSearchJson packages =
   write "search.json" $
-    Encode.list id (Maybe.mapMaybe maybeEncodeSummary (Map.toList packages))
+    Encode.list id $ Maybe.mapMaybe maybeEncodeSummary $
+      List.sortOn (negate . _weight . snd) (Map.toList packages)
 
 
 maybeEncodeSummary :: ( Pkg.Name, Summary ) -> Maybe Encode.Value
-maybeEncodeSummary ( name, Summary versions maybeDetails ) =
+maybeEncodeSummary ( name, Summary versions maybeDetails _ ) =
   case maybeDetails of
     Nothing ->
       Nothing
@@ -198,3 +209,115 @@ write path json =
   do  let temp = "temp-" ++ path
       Encode.writeUgly temp json
       Dir.renameFile temp path
+
+
+
+-- WEIGHTS
+
+
+getWeight :: Pkg.Name -> Int
+getWeight (Pkg.Name author _) =
+  Map.findWithDefault 0 author weights
+
+
+-- Currently based on appearances at elm-conf and Elm Europe.
+--
+-- The theory is that this selects packages by authors that have a real
+-- relationship with the Elm community. I will list a couple other metrics
+-- that I think are weaker:
+--
+-- GitHub stars - This basically measures if your README ever got posted on
+--   reddit or Hacker News. This would prioritize "able to get on HN" over
+--   questions like "how nice is the API?" and "how well does it fit with the
+--   Elm ecosystem?"
+--
+-- Download counts - This basically measures CI builds. Furthermore, Elm 0.19
+--   will only download a package once per user. That means everyone downloads
+--   elm-lang/core 6.0.0 once ever. If your CI is configured correctly, it
+--   should be caching to avoid downloads and builds. So in the end this would
+--   measure "have people tried it out once or more?" with a heavy bias towards
+--   misconfigured CI builds.
+--
+-- Time spent in docs - This measures how much time people spend learning a
+--   package. So folks probably are not in elm-lang/core very often after a
+--   certain point, but it is very important! Folks may be in docs because they
+--   do not use it often and forgot or find it really confusing.
+--
+-- By going with conference talks, I think we capture important details with
+-- higher fidelity. Is this person invested in the Elm ecosystem? Will they be
+-- likely to be hooked into core development and update packages promptly? Have
+-- they thought about their design carefully enough to make a talk of it? Etc.
+--
+weights :: Map.Map Text.Text Int
+weights =
+  Map.insert "elm-lang" 100000 $
+    foldr (\author dict -> Map.insertWith (+) author 1 dict) Map.empty $
+      -- elm-conf 2016 - https://2016.elm-conf.us/speaker/
+      [ "evancz"
+      , "ohanhi"
+      , "lukewestby"
+      , "tesk9"
+      , "mdgriffith"
+      , "abadi199"
+      , "JoelQ"
+      , "jschomay"
+      , "jessitron"
+      , "splodingsocks"
+      , "rtfeldman"
+      -- elm-conf 2017 - https://2017.elm-conf.us/talks/
+      , "evancz"
+      , "klaftertief"
+      , "tesk9"
+      , "splodingsocks"
+      , "lukewestby"
+      , "jfairbank"
+      , "pzingg"
+      , "w0rm"
+      , "terezka"
+      , "rtfeldman"
+      -- Elm Europe 2017 - https://2017.elmeurope.org/
+      , "evancz"
+      , "rtfeldman"
+      , "Janiczek"
+      , "eeue56"
+      , "Skinney"
+      , "pickled"
+      , "thebritican"
+      , "gampleman"
+      , "amitaibu"
+      , "jsteiner"
+      , "jschomay"
+      , "supermario"
+      , "mdgriffith"
+      , "BrianHicks"
+      , "Fenntasy"
+      , "tomekwi"
+      , "terezka"
+      , "myrho"
+      , "w0rm"
+      , "noahzgordon"
+      , "sebcreme"
+      , "cbenz"
+      -- Elm Europe 2018 - https://2018.elmeurope.org/
+      , "evancz"
+      , "rtfeldman"
+      , "Janiczek"
+      , "jxxcarlson"
+      , "BrianHicks"
+      , "bakkdoor"
+      , "JoelQ"
+      , "ianmackenzie"
+      , "lukewestby"
+      , "mdgriffith"
+      , "paulsonnentag"
+      , "Arkham"
+      , "bitterjug"
+      , "decioferreira"
+      , "emmacunningham"
+      , "tibastral"
+      , "kachkaev"
+      , "supermario"
+      , "myrho"
+      , "w0rm"
+      , "celine-m-s"
+      ]
