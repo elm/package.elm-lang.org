@@ -41,13 +41,13 @@ type VersionInfo
 
 
 latest : String -> String -> Route
-latest user project =
-  Version user project Latest Readme
+latest author project =
+  Version author project Latest Readme
 
 
 exactly : String -> String -> Version.Version -> Route
-exactly user project version =
-  Version user project (Exactly version) Readme
+exactly author project version =
+  Version author project (Exactly version) Readme
 
 
 getHash : VersionInfo -> Maybe String
@@ -128,19 +128,19 @@ toUrl route =
     Home ->
       Url.absolute [] []
 
-    User user ->
-      Url.absolute [ "packages", user ] []
+    User author ->
+      Url.absolute [ "packages", author ] []
 
-    Package user project ->
-      Url.absolute [ "packages", user, project ] []
+    Package author project ->
+      Url.absolute [ "packages", author, project ] []
 
-    Version user project vsn Readme ->
-      Url.absolute [ "packages", user, project, vsnToString vsn ] []
+    Version author project vsn Readme ->
+      Url.absolute [ "packages", author, project, vsnToString vsn ] []
 
-    Version user project vsn (Module moduleName maybeValue) ->
+    Version author project vsn (Module moduleName maybeValue) ->
       Url.custom Url.Absolute
         [ "packages"
-        , user
+        , author
         , project
         , vsnToString vsn
         , String.replace "." "-" moduleName

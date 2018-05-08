@@ -16,7 +16,7 @@ import Version
 
 type alias Entry =
   { name : String
-  , user : String
+  , author : String
   , project : String
   , summary : String
   , license : String
@@ -67,8 +67,8 @@ decoder =
 splitName : String -> D.Decoder (String -> String -> List Version.Version -> Entry)
 splitName name =
   case String.split "/" name of
-    [user, project] ->
-      D.succeed (Entry name user project)
+    [author, project] ->
+      D.succeed (Entry name author project)
 
     _ ->
       D.fail ("Ran into an invalid package name: " ++ name)

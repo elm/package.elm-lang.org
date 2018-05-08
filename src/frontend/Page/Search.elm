@@ -72,10 +72,10 @@ view { entries, query } =
 
 
 viewEntry : Entry.Entry -> Html Msg
-viewEntry ({ name, user, project, summary } as entry) =
+viewEntry ({ name, author, project, summary } as entry) =
   div [ class "pkg-summary" ]
     [ div []
-        [ h1 [] [ App.link Push (Route.latest user project) [] [ text name ] ]
+        [ h1 [] [ App.link Push (Route.latest author project) [] [ text name ] ]
         , viewExactVersions entry
         ]
     , p [ class "pkg-summary-desc" ] [ text summary ]
@@ -83,16 +83,16 @@ viewEntry ({ name, user, project, summary } as entry) =
 
 
 viewExactVersions : Entry.Entry -> Html Msg
-viewExactVersions { user, project, versions } =
+viewExactVersions { author, project, versions } =
   let
     exactVersion vsn =
-      App.link Push (Route.exactly user project vsn) [] [ text (Version.toString vsn) ]
+      App.link Push (Route.exactly author project vsn) [] [ text (Version.toString vsn) ]
 
     allVersions =
       List.intersperse (text " … ") (List.map exactVersion versions)
       ++
       [ text " — "
-      , App.link Push (Route.Package user project) [] [ text "Overview" ]
+      , App.link Push (Route.Package author project) [] [ text "Overview" ]
       ]
   in
   span [ class "pkg-summary-hints" ] <|
