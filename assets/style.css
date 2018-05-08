@@ -22,6 +22,9 @@ a {
   color: #1184CE;
   text-decoration: none;
 }
+a light {
+  color: #5FABDC;
+}
 a:hover {
   text-decoration: underline;
   color: rgb(234,21,122);
