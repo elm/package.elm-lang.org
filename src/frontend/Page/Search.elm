@@ -132,5 +132,7 @@ viewPopularPackage project =
         Push
         (Route.latest "elm-lang" project)
         []
-        [ text ("elm-lang/" ++ project) ]
+        [ span [ style "opacity" "0.5" ] [ text "elm-lang/" ]
+        , text project
+        ]
     ]
