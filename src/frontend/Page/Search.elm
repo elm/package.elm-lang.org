@@ -113,7 +113,7 @@ viewSidebar =
   div [ class "catalog-sidebar" ]
     [ h2 [] [ text "Popular Packages" ]
     , ul [] <|
-        List.map viewPopularPackage [ "core", "html", "browser", "url", "http" ]
+        List.map viewPopularPackage [ "core", "html", "json", "browser", "url", "http" ]
     , h2 [] [ text "Resources" ]
     , ul []
         [ li [] [ a [ href "http://klaftertief.github.io/elm-search/" ] [ text "Fancy Search" ] ]
