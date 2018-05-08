@@ -77,7 +77,7 @@ viewEntry ({ author, project, summary } as entry) =
     [ div []
         [ h1 []
             [ App.link Push (Route.latest author project) []
-                [ span [ style "opacity" "0.5" ] [ text (author ++ "/") ]
+                [ span [ style "color" "#5FABDC" ] [ text (author ++ "/") ]
                 , text project
                 ]
             ]
@@ -137,7 +137,7 @@ viewPopularPackage project =
         Push
         (Route.latest "elm-lang" project)
         []
-        [ span [ style "opacity" "0.5" ] [ text "elm-lang/" ]
+        [ span [ style "color" "#5FABDC" ] [ text "elm-lang/" ]
         , text project
         ]
     ]
