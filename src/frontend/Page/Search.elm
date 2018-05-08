@@ -72,10 +72,15 @@ view { entries, query } =
 
 
 viewEntry : Entry.Entry -> Html Msg
-viewEntry ({ name, author, project, summary } as entry) =
+viewEntry ({ author, project, summary } as entry) =
   div [ class "pkg-summary" ]
     [ div []
-        [ h1 [] [ App.link Push (Route.latest author project) [] [ text name ] ]
+        [ h1 []
+            [ App.link Push (Route.latest author project) []
+                [ span [ style "opacity" "0.5" ] [ text (author ++ "/") ]
+                , text project
+                ]
+            ]
         , viewExactVersions entry
         ]
     , p [ class "pkg-summary-desc" ] [ text summary ]
