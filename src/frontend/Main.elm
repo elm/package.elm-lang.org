@@ -427,7 +427,10 @@ viewVersionWarning session page =
   div [ class "header-underbar" ] <|
     case getNewerRoute session page of
       Nothing ->
-        [ text "NOT FOR SHARING. For alpha testers only!"
+        [ p [ class "version-warning" ]
+            [ text "NOT FOR SHARING. For alpha testers only! Learn why "
+            , a [ href "https://www.deconstructconf.com/2017/evan-czaplicki-on-storytelling" ] [ text "here" ]
+            ]
         ]
 
       Just (latestVersion, newerRoute) ->
