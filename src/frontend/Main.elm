@@ -239,7 +239,7 @@ scrollTo maybeTag command =
 -- VIEW
 
 
-view : Model -> Browser.View Msg
+view : Model -> Browser.Page Msg
 view model =
   { title =
       toTitle model.route
