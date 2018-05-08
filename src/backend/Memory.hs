@@ -251,6 +251,7 @@ getWeight (Pkg.Name author _) =
 weights :: Map.Map Text.Text Int
 weights =
   Map.insert "elm-lang" 100000 $
+  Map.insert "elm-explorations" 1000 $
     foldr (\author dict -> Map.insertWith (+) author 1 dict) Map.empty $
       -- elm-conf 2016 - https://2016.elm-conf.us/speaker/
       [ "evancz"
