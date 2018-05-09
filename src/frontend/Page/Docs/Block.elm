@@ -320,7 +320,10 @@ toLines info context tipe =
       in
       case extension of
         Nothing ->
-          toLinesHelp recordOne recordMore (toLns f) (List.map toLns fs)
+          if List.isEmpty fs then
+            toLinesHelp recordOne recordMore (toLns f) (List.map toLns fs)
+          else
+            toMoreLines recordMore (toLns f) (List.map toLns fs)
 
         Just ext ->
           case toLinesHelp (recordOneExt ext) recordMoreExt (toLns f) (List.map toLns fs) of
@@ -486,7 +489,7 @@ recordMore : MoreSettings (String, Lines (Line msg)) msg
 recordMore =
   { open = [ text "{ " ]
   , sep = text ", "
-  , close = Just [text "}"]
+  , close = Just [ text "}" ]
   , openIndent = 6
   , sepIndent = 6
   , toLines = fieldToLines
