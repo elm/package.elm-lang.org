@@ -8,10 +8,9 @@ import qualified Data.Map as Map
 import Data.Text (Text)
 import GHC.Conc
 import qualified Snap.Core as S
-import Snap.Http.Server (httpServe, setPort, defaultConfig)
+import qualified Snap.Http.Server as S
 import Snap.Util.FileServe (serveFile, serveDirectory)
 import System.Console.CmdArgs
-import System.Directory (doesFileExist, createDirectoryIfMissing)
 
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
@@ -60,7 +59,6 @@ flags =
 main :: IO ()
 main =
   do  setNumCapabilities =<< getNumProcessors
-      setupLogging
       cargs <- cmdArgs flags
 
       if bootstrap cargs
@@ -70,27 +68,21 @@ main =
       memory <- Memory.init
       token <- Http.init (github cargs)
 
-      let config = setPort (port cargs) defaultConfig
-      httpServe config (serve token memory)
+      S.httpServe (config (port cargs)) (serve token memory)
 
 
-
--- LOGGING
-
-
-setupLogging :: IO ()
-setupLogging =
-  do  createDirectoryIfMissing True "log"
-      createIfMissing "log/access.log"
-      createIfMissing "log/error.log"
+config :: Int -> S.Config S.Snap a
+config port =
+  S.defaultConfig
+    # S.setVerbose False
+    # S.setPort port
+    # S.setAccessLog S.ConfigNoLog
+    # S.setErrorLog S.ConfigNoLog
 
 
-createIfMissing :: FilePath -> IO ()
-createIfMissing path =
-  do  exists <- doesFileExist path
-      if exists
-        then return ()
-        else writeFile path ""
+(#) :: a -> (a -> b) -> b
+(#) value func =
+  func value
 
 
 
