@@ -3,7 +3,6 @@
 module Http
   ( Token
   , init
-  , fetch
   , fetchGithub
   )
   where
@@ -15,7 +14,7 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http
-import Network.HTTP.Types.Header (hAuthorization, hUserAgent)
+import qualified Network.HTTP.Types.Header as Http (hAcceptEncoding, hAuthorization, hUserAgent)
 
 
 
@@ -25,7 +24,7 @@ import Network.HTTP.Types.Header (hAuthorization, hUserAgent)
 data Token =
   Token
     { _manager :: Http.Manager
-    , _token :: String
+    , _token :: BS.ByteString
     }
 
 
@@ -36,7 +35,7 @@ data Token =
 init :: String -> IO Token
 init githubToken =
   do  manager <- Http.newManager Http.tlsManagerSettings
-      let token = Token manager githubToken
+      let token = Token manager (BS.pack ("token " ++ githubToken))
       response <- fetchGithub token "/"
       case response of
         Left err ->
@@ -44,26 +43,6 @@ init githubToken =
 
         Right _ ->
           return token
-
-
-
--- ARBITRARY REQUESTS
-
-
-fetch :: Token -> String -> IO (Either String LBS.ByteString)
-fetch (Token manager _) url =
-  let
-    attempt =
-      do  request <- Http.parseUrlThrow url
-          response <- Http.httpLbs request manager
-          return $ Right $ Http.responseBody response
-  in
-    attempt `catch` recover
-
-
-recover :: SomeException -> IO (Either String a)
-recover e =
-  return $ Left $ show e
 
 
 
@@ -75,12 +54,23 @@ fetchGithub (Token manager token) path =
   let
     attempt =
       do  request <- Http.parseUrlThrow $ "https://api.github.com" ++ path
-          response <- flip Http.httpLbs manager $ request
-            { Http.requestHeaders =
-                [ (hAuthorization, BS.pack ("token " ++ token))
-                , (hUserAgent, "package.elm-lang.org")
-                ]
-            }
+          response <- Http.httpLbs (addGitHubHeaders token request) manager
           return $ Right $ Http.responseBody response
   in
     attempt `catch` recover
+
+
+recover :: SomeException -> IO (Either String a)
+recover e =
+  return $ Left $ show e
+
+
+addGitHubHeaders :: BS.ByteString -> Http.Request -> Http.Request
+addGitHubHeaders token request =
+  request
+    { Http.requestHeaders =
+        [ (Http.hAuthorization, token)
+        , (Http.hUserAgent, "package.elm-lang.org")
+        , (Http.hAcceptEncoding, "gzip")
+        ]
+    }
