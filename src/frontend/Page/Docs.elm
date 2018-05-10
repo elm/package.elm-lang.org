@@ -256,7 +256,7 @@ viewBrowseSourceLinkHelp user project version =
     url =
       Url.crossOrigin
         "https://github.com"
-        [ user, project, "tree", Version.toString version ]
+        [ user, project, "tree", "alpha-" ++ Version.toString version ]
         []
   in
   a [ class "pkg-nav-module", href url ] [ text "Browse Source" ]
