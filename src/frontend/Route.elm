@@ -129,13 +129,13 @@ toUrl route =
       Url.absolute [] []
 
     User author ->
-      Url.absolute [ "packages", author ] []
+      Url.absolute [ "packages", author, "" ] []
 
     Package author project ->
-      Url.absolute [ "packages", author, project ] []
+      Url.absolute [ "packages", author, project, "" ] []
 
     Version author project vsn Readme ->
-      Url.absolute [ "packages", author, project, vsnToString vsn ] []
+      Url.absolute [ "packages", author, project, vsnToString vsn, "" ] []
 
     Version author project vsn (Module moduleName maybeValue) ->
       Url.custom Url.Absolute
