@@ -346,7 +346,7 @@ viewHeader sessionData page =
             getLatestVersion version latest
         in
         List.intersperse slash <|
-          [ userLink user
+          [ text user
           , packageLink user project
           , versionLink user project vsn
           ]
@@ -354,17 +354,12 @@ viewHeader sessionData page =
 
       Diff { user, project } ->
         List.intersperse slash
-          [ userLink user
+          [ text user
           , packageLink user project
           ]
 
       Search _ ->
         []
-
-
-userLink : String -> Html Msg
-userLink user =
-  toLink (Route.User user) user
 
 
 packageLink : String -> String -> Html Msg
