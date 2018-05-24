@@ -140,7 +140,7 @@ verifyTag token name version commitHash =
 getCommitHash :: Http.Token -> Pkg.Name -> Pkg.Version -> Snap.Snap Text
 getCommitHash token name version =
   do  response <- liftIO $ Http.fetchGithub token $
-        "/repos/" ++ Pkg.toUrl name ++ "/git/refs/tags/alpha-" ++ Pkg.versionToString version
+        "/repos/" ++ Pkg.toUrl name ++ "/git/refs/tags/beta-" ++ Pkg.versionToString version
 
       case response of
         Left _ ->
@@ -288,4 +288,4 @@ writeEndpoint name version dir stream =
 
 toGithubUrl :: Pkg.Name -> Pkg.Version -> Text.Text
 toGithubUrl name version =
-  "https://github.com/" <> Text.pack (Pkg.toUrl name) <> "/zipball/alpha-" <> Pkg.versionToText version <> "/"
+  "https://github.com/" <> Text.pack (Pkg.toUrl name) <> "/zipball/beta-" <> Pkg.versionToText version <> "/"
