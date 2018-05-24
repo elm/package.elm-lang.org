@@ -16,6 +16,7 @@ import qualified Data.Text as Text
 import System.FilePath ((</>))
 
 import qualified Crawl
+import qualified Elm.Name as N
 import qualified Elm.Package as Pkg
 import qualified Elm.Project.Constraint as Con
 import qualified Elm.Project.Json as Project
@@ -87,6 +88,18 @@ instance Json.FromJSON Txt where
 
 
 
+-- NAME
+
+
+instance Json.FromJSON N.Name where
+  parseJSON (Json.String txt) =
+    return $ N.fromText txt
+
+  parseJSON _ =
+    fail "Need a STRING here."
+
+
+
 -- VERSION and CONSTRAINT
 
 
@@ -140,7 +153,7 @@ textToPkgName rawName =
     Right pkg ->
       pkg
 
-    Left err ->
+    Left (err, _) ->
       case Text.splitOn "/" rawName of
         [user, project] ->
           Pkg.Name user (Text.toLower project)
@@ -182,6 +195,7 @@ conversions =
     -- BSD
     [ "BSD" ==> "BSD-3-Clause"
     , "BSD3" ==> "BSD-3-Clause"
+    , "BSD-3" ==> "BSD-3-Clause"
     , "BSD3-Clause" ==> "BSD-3-Clause"
     , "BSD 3-Clause" ==> "BSD-3-Clause"
     , "BSD-3-Clause" ==> "BSD-3-Clause"
@@ -195,6 +209,7 @@ conversions =
     , "GPL3" ==> "GPL-3.0"
 
     -- APACHE
+    , "APACHE2" ==> "Apache-2.0"
     , "Apache2.0" ==> "Apache-2.0"
     , "Apache 2.0" ==> "Apache-2.0"
     , "Apache-2.0" ==> "Apache-2.0"

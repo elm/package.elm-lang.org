@@ -108,7 +108,7 @@ fetchGithub decoder path =
           throwError msg
 
         Right bytestring ->
-          case Decode.parse decoder (LBS.toStrict bytestring) of
+          case Decode.parse "github" (\_ -> []) decoder (LBS.toStrict bytestring) of
             Left _ ->
               throwError ("Bad JSON from GitHub for " ++ path)
 

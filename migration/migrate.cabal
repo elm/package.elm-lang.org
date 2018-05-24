@@ -7,7 +7,7 @@ Synopsis:
 Description:
   Turn elm-package.json into elm.json, fix licenses, get publication dates, etc.
 
-Homepage: http://library.elm-lang.org
+Homepage: http://package.elm-lang.org
 
 License: BSD3
 License-file: LICENSE
@@ -23,13 +23,15 @@ Cabal-version: >=1.9
 
 source-repository head
   type:     git
-  location: git://github.com/elm-lang/package.elm-lang.org.git
+  location: git://github.com/elm/package.elm-lang.org.git
 
 
 Executable migrate
   hs-source-dirs:
-    ../src/backend
     ../migration
+    ../src/backend
+    ../../../compiler/compiler/src
+    ../../../compiler/builder/src
 
   Main-is:
     Migrate.hs
@@ -39,20 +41,27 @@ Executable migrate
 
   Build-depends:
     aeson,
+    ansi-terminal,
+    ansi-wl-pprint,
     base >=4.2 && <5,
-    builder,
+    binary,
     bytestring,
     cmdargs,
     containers,
     directory,
-    elm-compiler == 0.19.0,
+    edit-distance,
     filepath,
     http-client,
     http-client-tls,
     http-types,
     iso8601-time,
+    language-glsl,
     mtl,
     network,
+    parsec,
+    scientific,
     text,
     time,
-    unordered-containers
+    unordered-containers,
+    utf8-string,
+    vector

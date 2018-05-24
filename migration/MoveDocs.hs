@@ -53,7 +53,7 @@ move pkg version =
 updateDocs :: OldDocs -> Docs.Module
 updateDocs (OldDocs (Txt moduleName) (Txt comment) aliases types values) =
   Docs.Module
-    { Docs._name = moduleName
+    { Docs._name = N.fromText moduleName
     , Docs._comment = comment
     , Docs._unions = Map.fromList (map toUnionPair types)
     , Docs._aliases = Map.fromList (map toAliasPair aliases)
@@ -64,12 +64,12 @@ updateDocs (OldDocs (Txt moduleName) (Txt comment) aliases types values) =
 
 toUnionPair :: Union -> (N.Name, Docs.Union)
 toUnionPair (Union (Txt name) (Txt comment) args cases) =
-  ( name, Docs.Union comment args cases )
+  ( N.fromText name, Docs.Union comment args cases )
 
 
 toAliasPair :: Alias -> (N.Name, Docs.Alias)
 toAliasPair (Alias (Txt name) (Txt comment) args tipe) =
-  ( name, Docs.Alias comment args tipe )
+  ( N.fromText name, Docs.Alias comment args tipe )
 
 
 toValuePair :: Value -> Maybe (N.Name, Docs.Value)
@@ -77,14 +77,14 @@ toValuePair (Value (Txt name) (Txt comment) tipe _) =
   if Text.any isSymbol name then
     Nothing
   else
-    Just (name, Docs.Value comment tipe)
+    Just (N.fromText name, Docs.Value comment tipe)
 
 
 toBinopPair :: Value -> Maybe (N.Name, Docs.Binop)
 toBinopPair (Value (Txt name) (Txt comment) tipe fix) =
   if Text.any isSymbol name then
     Just
-      ( name
+      ( N.fromText name
       , case fix of
           Nothing ->
             Docs.Binop comment tipe Docs.Left (Docs.Precedence 9)
@@ -227,6 +227,14 @@ instance Json.FromJSON Txt where
     fail "Need a STRING here."
 
 
+instance Json.FromJSON N.Name where
+  parseJSON (Json.String txt) =
+    return $ N.fromText txt
+
+  parseJSON _ =
+    fail "Need a STRING here."
+
+
 
 -- JSON for TYPES
 
@@ -274,7 +282,7 @@ fromObject obj =
                 case func of
                   Type.Type name [] ->
                     case args of
-                      (a:b:cs) | Text.isPrefixOf "_Tuple" name ->
+                      (a:b:cs) | N.startsWith "_Tuple" name ->
                         return $ Type.Tuple a b cs
 
                       _ ->
