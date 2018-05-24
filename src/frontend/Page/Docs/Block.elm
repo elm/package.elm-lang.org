@@ -61,7 +61,7 @@ view info block =
         [ text "It seems that "
         , code [] [ text name ]
         , text " does not have any docs. Please open a bug report "
-        , a [ href "https://github.com/elm-lang/package.elm-lang.org/issues" ] [ text "here" ]
+        , a [ href "https://github.com/elm/package.elm-lang.org/issues" ] [ text "here" ]
         , text " with the title “UnknownBlock found in docs” and with a link to this page in the description."
         ]
 

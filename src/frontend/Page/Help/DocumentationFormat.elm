@@ -31,8 +31,8 @@ be easy for readers to glance through a file and find the information they
 need. Modules that are missing documentation cannot be uploaded to the catalog.
 
 All documentation can use the same markdown as in Elm. You can check out
-the [Maybe](https://github.com/elm-lang/core/blob/master/src/Maybe.elm)
-and [Result](https://github.com/elm-lang/core/blob/master/src/Result.elm)
+the [Maybe](https://github.com/elm/core/blob/master/src/Maybe.elm)
+and [Result](https://github.com/elm/core/blob/master/src/Result.elm)
 documentation for complete examples.
 
 If you are preparing to publish a package, you should read through the
@@ -42,7 +42,7 @@ documentation](/help/docs-preview).
 
 ## Documenting a value
 
-Here is an example from [the `String` library](/packages/elm-lang/core/latest/String):
+Here is an example from [the `String` library](/packages/elm/core/latest/String):
 
 ```elm
 {-| Convert a list of characters into a String. Can be useful if you
@@ -73,7 +73,7 @@ and writers do not need to argue about style.
 
 ## Documenting a module
 
-Here is the module documentation for [the `Maybe` library](/packages/elm-lang/core/latest/Maybe):
+Here is the module documentation for [the `Maybe` library](/packages/elm/core/latest/Maybe):
 
 ```elm
 module Maybe exposing (Maybe(Just,Nothing), andThen, map, withDefault, oneOf)
@@ -94,7 +94,7 @@ you with optional arguments, error handling, and records with optional fields.
 ```
 
 This represents the text that actually gets displayed as [the
-documentation](/packages/elm-lang/core/latest/Maybe) for a module. Notice that:
+documentation](/packages/elm/core/latest/Maybe) for a module. Notice that:
 
   * The module lists what values are exported. Maybes are not an
     opaque type, as the tags are exported as well.
@@ -105,7 +105,7 @@ documentation](/packages/elm-lang/core/latest/Maybe) for a module. Notice that:
     lines are aligned all the way to the left.
   * The `@docs` keyword precedes a comma-separated list of values that
     are inlined in [the resulting
-    documentation](/packages/elm-lang/core/latest/Maybe).
+    documentation](/packages/elm/core/latest/Maybe).
   * Functions are grouped into related units with titles, declared in
     Markdown. Sometimes it's appropriate to put a little text under
     the title associated with the group but not any one function.

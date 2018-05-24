@@ -233,13 +233,13 @@ getWeight (Pkg.Name author _) =
 --
 -- Download counts - This basically measures CI builds. Furthermore, Elm 0.19
 --   will only download a package once per user. That means everyone downloads
---   elm-lang/core 6.0.0 once ever. If your CI is configured correctly, it
+--   elm/core 6.0.0 once ever. If your CI is configured correctly, it
 --   should be caching to avoid downloads and builds. So in the end this would
 --   measure "have people tried it out once or more?" with a heavy bias towards
 --   misconfigured CI builds.
 --
 -- Time spent in docs - This measures how much time people spend learning a
---   package. So folks probably are not in elm-lang/core very often after a
+--   package. So folks probably are not in elm/core very often after a
 --   certain point, but it is very important! Folks may be in docs because they
 --   do not use it often and forgot or find it really confusing.
 --
@@ -250,7 +250,7 @@ getWeight (Pkg.Name author _) =
 --
 weights :: Map.Map Text.Text Int
 weights =
-  Map.insert "elm-lang" 100000 $
+  Map.insert "elm" 100000 $
   Map.insert "elm-explorations" 1000 $
     foldr (\author dict -> Map.insertWith (+) author 1 dict) Map.empty $
       -- elm-conf 2016 - https://2016.elm-conf.us/speaker/

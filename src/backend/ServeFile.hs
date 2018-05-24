@@ -69,12 +69,20 @@ canonicalLink pkg maybeName =
 renames :: Map.Map Pkg.Name Pkg.Name
 renames =
   Map.fromList
-    [ Pkg.Name "evancz" "elm-http" ==> Pkg.Name "elm-lang" "http"
-    , Pkg.Name "evancz" "elm-html" ==> Pkg.Name "elm-lang" "html"
-    , Pkg.Name "evancz" "elm-svg" ==> Pkg.Name "elm-lang" "svg"
-    , Pkg.Name "evancz" "virtual-dom" ==> Pkg.Name "elm-lang" "virtual-dom"
-    , Pkg.Name "evancz" "start-app" ==> Pkg.Name "elm-lang" "html"
-    , Pkg.Name "evancz" "elm-effects" ==> Pkg.Name "elm-lang" "core"
+    [ Pkg.Name "evancz" "elm-effects" ==> Pkg.Name "elm" "core"
+    , Pkg.Name "evancz" "elm-html" ==> Pkg.Name "elm" "html"
+    , Pkg.Name "evancz" "elm-http" ==> Pkg.Name "elm" "http"
+    , Pkg.Name "evancz" "elm-svg" ==> Pkg.Name "elm" "svg"
+    , Pkg.Name "evancz" "start-app" ==> Pkg.Name "elm" "html"
+    , Pkg.Name "evancz" "virtual-dom" ==> Pkg.Name "elm" "virtual-dom"
+
+    , Pkg.Name "elm-lang" "animation-frame" ==> Pkg.Name "elm" "animation-frame"
+    , Pkg.Name "elm-lang" "core" ==> Pkg.Name "elm" "core"
+    , Pkg.Name "elm-lang" "html" ==> Pkg.Name "elm" "html"
+    , Pkg.Name "elm-lang" "http" ==> Pkg.Name "elm" "http"
+    , Pkg.Name "elm-lang" "svg" ==> Pkg.Name "elm" "svg"
+    , Pkg.Name "elm-lang" "virtual-dom" ==> Pkg.Name "elm" "virtual-dom"
+
     , Pkg.Name "elm-community" "elm-list-extra" ==> Pkg.Name "elm-community" "list-extra"
     , Pkg.Name "elm-community" "elm-linear-algebra" ==> Pkg.Name "elm-community" "linear-algebra"
     , Pkg.Name "elm-community" "elm-lazy-list" ==> Pkg.Name "elm-community" "lazy-list"

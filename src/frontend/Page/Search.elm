@@ -125,7 +125,7 @@ viewSidebar =
         , li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
         , li [] [ App.link Push Route.Guidelines [] [ text "API Design Guidelines" ] ]
         , li [] [ App.link Push Route.DocsHelp [] [ text "Write great docs" ] ]
-        , li [] [ a [ href "http://elm-lang.org" ] [ text "Elm Website" ] ]
+        , li [] [ a [ href "https://elm-lang.org" ] [ text "Elm Website" ] ]
         ]
     ]
 
@@ -135,9 +135,9 @@ viewPopularPackage project =
   li []
     [ App.link
         Push
-        (Route.latest "elm-lang" project)
+        (Route.latest "elm" project)
         []
-        [ span [ class "light" ] [ text "elm-lang/" ]
+        [ span [ class "light" ] [ text "elm/" ]
         , text project
         ]
     ]

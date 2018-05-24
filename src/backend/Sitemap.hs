@@ -65,7 +65,7 @@ genExactUrl name version =
 
 url :: Name -> Text -> Text
 url name version =
-  "http://package.elm-lang.org/packages/"
+  "https://package.elm-lang.org/packages/"
   <> Pkg.toText name <> "/" <> version
 
 
