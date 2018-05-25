@@ -37,12 +37,16 @@ compile =
   do  putStrLn "Compiling artifacts..."
 
       exitCode <-
-        Process.rawSystem "../../compiler/dist/build/elm/elm" ["make" ,"src/frontend/Main.elm", "--optimize"]
+        Process.rawSystem "../../compiler/dist/build/elm/elm"
+          [ "make"
+          , "src/frontend/Main.elm"
+          , "--optimize"
+          , "--output=artifacts/elm.js"
+          ]
 
       case exitCode of
         Exit.ExitSuccess ->
-          do  Dir.createDirectoryIfMissing True "artifacts"
-              Dir.renameFile "elm.js" "artifacts/elm.js"
+          return ()
 
         Exit.ExitFailure _ ->
           do  IO.hPutStrLn IO.stderr "Compilation failed!"
