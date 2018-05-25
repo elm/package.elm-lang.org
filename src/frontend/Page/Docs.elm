@@ -17,7 +17,7 @@ import Html.Events exposing (..)
 import Html.Lazy exposing (..)
 import Page.Docs.Block as Block
 import Route
-import Url
+import Url.Builder as Url
 import Utils.App as App
 import Utils.Markdown as Markdown
 import Version

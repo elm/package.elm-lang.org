@@ -15,7 +15,7 @@ import Page.Search.Entry as Entry
 import Release
 import Result
 import Route
-import Url
+import Url.Builder as Url
 import Utils.OneOrMore exposing (OneOrMore(..))
 import Version
 

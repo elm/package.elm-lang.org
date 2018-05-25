@@ -16,7 +16,7 @@ import Session
 import Session.Query as Query
 import Session.Status exposing (Status(..))
 import Task
-import Url.Parser as Parser
+import Url
 import Utils.App as App
 import Utils.OneOrMore as OneOrMore
 import Version
@@ -77,7 +77,7 @@ subscriptions model =
 -- NAVIGATION
 
 
-onNavigation : Parser.Url -> Msg
+onNavigation : Url.Url -> Msg
 onNavigation url =
   ReactToUrl (Route.fromUrl url)
 

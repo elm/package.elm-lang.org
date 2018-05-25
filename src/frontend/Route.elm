@@ -12,6 +12,7 @@ module Route exposing
 
 
 import Url
+import Url.Builder as Url
 import Url.Parser as Parser exposing (Parser, (</>), custom, fragment, map, oneOf, s, top)
 import Version
 
@@ -64,11 +65,11 @@ getHash info =
 -- LOCATION TO ROUTE
 
 
-fromUrl : Parser.Url -> Route
+fromUrl : Url.Url -> Route
 fromUrl url =
   case Parser.parse parser url of
     Nothing ->
-      NotFound (Parser.fromUrl url)
+      NotFound (Url.toString url)
 
     Just route ->
       route
