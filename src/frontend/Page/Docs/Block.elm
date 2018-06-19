@@ -8,12 +8,11 @@ module Page.Docs.Block exposing
 import Dict
 import Elm.Docs as Docs
 import Elm.Type as Type
+import Elm.Version as V
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Route
-import Utils.App as App
+import Href
 import Utils.Markdown as Markdown
-import Version
 
 
 
@@ -26,18 +25,10 @@ maxWidth =
 
 
 
--- MESSAGES
-
-
-type alias Msg =
-  Route.Route
-
-
-
 -- VIEW
 
 
-view : Info -> Docs.Block -> Html Msg
+view : Info -> Docs.Block -> Html msg
 view info block =
   case block of
     Docs.MarkdownBlock markdown ->
@@ -66,7 +57,7 @@ view info block =
         ]
 
 
-viewCodeBlock : String -> String -> List (Line Msg) -> Html Msg
+viewCodeBlock : String -> String -> List (Line msg) -> Html msg
 viewCodeBlock name comment header =
   div [ class "docs-block", id name ]
     [ div [ class "docs-header" ] (List.map (div []) header)
@@ -78,7 +69,7 @@ viewCodeBlock name comment header =
 -- VIEW VALUE BLOCK
 
 
-viewValue : Info -> Docs.Value -> Html Msg
+viewValue : Info -> Docs.Value -> Html msg
 viewValue info { name, comment, tipe } =
   let
     nameHtml =
@@ -102,7 +93,7 @@ indentFour =
 -- VIEW BINOP BLOCK
 
 
-viewBinop : Info -> Docs.Binop -> Html Msg
+viewBinop : Info -> Docs.Binop -> Html msg
 viewBinop info { name, comment, tipe } =
   let
     nameHtml =
@@ -121,7 +112,7 @@ viewBinop info { name, comment, tipe } =
 -- VIEW ALIAS BLOCK
 
 
-viewAlias : Info -> Docs.Alias -> Html Msg
+viewAlias : Info -> Docs.Alias -> Html msg
 viewAlias info { name, args, comment, tipe } =
   let
     varsString =
@@ -141,7 +132,7 @@ viewAlias info { name, args, comment, tipe } =
 -- VIEW UNION
 
 
-viewUnion : Info -> Docs.Union -> Html Msg
+viewUnion : Info -> Docs.Union -> Html msg
 viewUnion info {name, comment, args, tags} =
   let
     varsString =
@@ -159,7 +150,7 @@ viewUnion info {name, comment, args, tags} =
         nameLine :: linesToList (toMoreLines (unionMore info) t ts)
 
 
-unionMore : Info -> MoreSettings (String, List Type.Type) Msg
+unionMore : Info -> MoreSettings (String, List Type.Type) msg
 unionMore info =
   let
     ctorToLines (ctor,args) =
@@ -179,9 +170,9 @@ unionMore info =
 
 
 type alias Info =
-  { user : String
+  { author : String
   , project : String
-  , version : Route.Version
+  , version : Maybe V.Version
   , moduleName : String
   , typeNameDict : TypeNameDict
   }
@@ -191,8 +182,8 @@ type alias TypeNameDict =
   Dict.Dict String (String, String)
 
 
-makeInfo : String -> String -> Route.Version -> String -> List Docs.Module -> Info
-makeInfo user project version moduleName docsList =
+makeInfo : String -> String -> Maybe V.Version -> String -> List Docs.Module -> Info
+makeInfo author project version moduleName docsList =
   let
     addUnion home union docs =
       Dict.insert (home ++ "." ++ union.name) (home, union.name) docs
@@ -200,7 +191,7 @@ makeInfo user project version moduleName docsList =
     addModule docs dict =
       List.foldl (addUnion docs.name) dict docs.unions
   in
-    Info user project version moduleName <|
+    Info author project version moduleName <|
       List.foldl addModule Dict.empty docsList
 
 
@@ -208,7 +199,7 @@ makeInfo user project version moduleName docsList =
 -- CREATE LINKS
 
 
-toBoldLink : Info -> String -> Html Msg
+toBoldLink : Info -> String -> Html msg
 toBoldLink info name =
   makeLink info [bold] name name
 
@@ -218,17 +209,16 @@ bold =
   style "font-weight" "bold"
 
 
-makeLink : Info -> List (Attribute Msg) -> String -> String -> Html Msg
-makeLink {user, project, version, moduleName} attrs tagName humanName =
+makeLink : Info -> List (Attribute msg) -> String -> String -> Html msg
+makeLink {author, project, version, moduleName} attrs tagName humanName =
   let
-    route =
-      Route.Version user project version <|
-        Route.Module moduleName (Just tagName)
+    url =
+      Href.toModule author project version moduleName (Just tagName)
   in
-  App.link identity route attrs [ text humanName ]
+  a (href url :: attrs) [ text humanName ]
 
 
-toLinkLine : Info -> String -> Lines (Line Msg)
+toLinkLine : Info -> String -> Lines (Line msg)
 toLinkLine info qualifiedName =
   case Dict.get qualifiedName info.typeNameDict of
     Nothing ->
@@ -271,7 +261,7 @@ type Lines line
 type Context = Func | App | Other
 
 
-toLines : Info -> Context -> Type.Type -> Lines (Line Msg)
+toLines : Info -> Context -> Type.Type -> Lines (Line msg)
 toLines info context tipe =
   case tipe of
     Type.Var x ->
