@@ -2,8 +2,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
+
 import Data.Foldable (asum)
-import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Text (Text)
 import GHC.Conc
@@ -95,17 +95,18 @@ serve token memory =
     [
       -- NORMAL ROUTES
       Router.serve $ Router.oneOf $
-        [ top ==> ServeFile.elm "Elm Packages"
+        [ top ==> ServeFile.misc "Elm Packages"
         , s "packages" ==> S.redirect' "/" 301
+        , s "packages" </> text </> text ==> serveProject memory
         , s "packages" </> text </> text </> s "releases.json" ==> serveReleases
-        , s "packages" </> text </> text </> versionStuff ==> serveVersion memory
+        , s "packages" </> text </> text </> version </> info ==> serveVersion memory
         , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "register" ==> Register.register token memory
         , s "help" </>
             Router.oneOf
-              [ s "design-guidelines" ==> ServeFile.elm "Design Guidelines"
-              , s "documentation-format" ==> ServeFile.elm "Documentation Format"
+              [ s "design-guidelines" ==> ServeFile.misc "Design Guidelines"
+              , s "documentation-format" ==> ServeFile.misc "Documentation Format"
               ]
         ]
     ,
@@ -120,7 +121,29 @@ serve token memory =
     ,
       -- NOT FOUND
       do  S.modifyResponse $ S.setResponseStatus 404 "Not Found"
-          ServeFile.elm "Not Found"
+          request <- S.getRequest
+          if S.rqMethod request == S.GET
+            then ServeFile.misc "Not Found"
+            else S.writeBuilder "Not Found"
+
+    ]
+
+
+version :: Route (Pkg.Version -> a) a
+version =
+  Router.custom Pkg.versionFromText
+
+
+data Info
+  = Readme
+  | Module Text
+
+
+info :: Route (Info -> a) a
+info =
+  Router.oneOf
+    [ top ==> Readme
+    , text ==> Module
     ]
 
 
@@ -139,85 +162,60 @@ serveNewPackages memory index =
 -- PACKAGES
 
 
-data PkgInfo
-  = Readme
-  | Module Vsn (Maybe Text)
-
-
-data Vsn = Latest | Exactly Pkg.Version
-
-
-versionRoute :: Route (Pkg.Version -> a) a
-versionRoute =
-  Router.custom Pkg.versionFromText
-
-
-versionStuff :: Route (PkgInfo -> a) a
-versionStuff =
-  let
-    latest = s "latest" ==> Latest
-    exactly = versionRoute ==> Exactly
-    asset = Router.oneOf [ top ==> Nothing, text ==> Just ]
-  in
-    Router.oneOf
-      [ top ==> Readme
-      , latest </> asset ==> Module
-      , exactly </> asset ==> Module
-      ]
+serveProject :: Memory.Memory -> Text -> Text -> S.Snap ()
+serveProject memory author project =
+  do  let name = Pkg.Name author project
+      pkgs <- Memory.getPackages memory
+      if Map.member name pkgs
+        then ServeFile.project name
+        else S.pass
 
 
 serveReleases :: Text -> Text -> S.Snap ()
-serveReleases user project =
-  serveFile (Path.releases (Pkg.Name user project))
+serveReleases author project =
+  serveFile (Path.releases (Pkg.Name author project))
 
 
-serveVersion :: Memory.Memory -> Text -> Text -> PkgInfo -> S.Snap ()
-serveVersion memory user project info =
-  do  let name = Pkg.Name user project
-
+serveVersion :: Memory.Memory -> Text -> Text -> Pkg.Version -> Info -> S.Snap ()
+serveVersion memory author project version info =
+  do  let name = Pkg.Name author project
       pkgs <- Memory.getPackages memory
-
       case Map.lookup name pkgs of
         Nothing ->
           S.pass
 
         Just (Memory.Summary versions _ _) ->
-          case info of
-            Readme ->
-              ServeFile.elm (Pkg.toString name)
+          if notElem version versions
+          then S.pass
+          else
+            case info of
+              Readme ->
+                ServeFile.version name version Nothing
 
-            Module (Exactly version) asset ->
-              if notElem version versions then
-                S.pass
-              else
+              Module asset ->
                 serveVersionHelp name version asset
 
-            Module Latest asset ->
-              serveVersionHelp name (last (List.sort versions)) asset
 
 
-serveVersionHelp :: Pkg.Name -> Pkg.Version -> Maybe Text -> S.Snap ()
-serveVersionHelp name version maybeAsset =
-  case maybeAsset of
-    Nothing ->
-      ServeFile.docsHtml name version Nothing
-
-    Just "endpoint.json" ->
+serveVersionHelp :: Pkg.Name -> Pkg.Version -> Text -> S.Snap ()
+serveVersionHelp name version asset =
+  case asset of
+    "endpoint.json" ->
       serveFile (Path.directory name version ++ "/endpoint.json")
 
-    Just "elm.json" ->
+    "elm.json" ->
       serveFile (Path.directory name version ++ "/elm.json")
 
-    Just "docs.json" ->
+    "docs.json" ->
       serveFile (Path.directory name version ++ "/docs.json")
 
-    Just "README.md" ->
+    "README.md" ->
       serveFile (Path.directory name version ++ "/README.md")
 
-    Just asset ->
+    _ ->
       case Module.fromHyphenPath asset of
+        Just moduleName ->
+          ServeFile.version name version (Just moduleName)
+
         Nothing ->
           S.pass
-
-        Just moduleName ->
-          ServeFile.docsHtml name version (Just moduleName)
