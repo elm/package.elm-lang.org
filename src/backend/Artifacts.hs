@@ -8,7 +8,6 @@ module Artifacts
   where
 
 
-import qualified System.Directory as Dir
 import qualified System.Exit as Exit
 import qualified System.IO as IO
 import qualified System.Process as Process
