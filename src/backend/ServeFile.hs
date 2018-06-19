@@ -1,69 +1,80 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 module ServeFile
-  ( elm
-  , docsHtml
+  ( misc
+  , project
+  , version
   )
   where
 
+
+import qualified Data.ByteString.Builder as B
 import qualified Data.Map as Map
+import Data.Monoid ((<>))
 import qualified Data.Text as Text
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
 import System.IO.Unsafe (unsafePerformIO)
-import Text.Blaze.Html5 ((!))
-import qualified Text.Blaze.Html5 as H
-import qualified Text.Blaze.Html5.Attributes as A
-import qualified Text.Blaze.Html.Renderer.Utf8 as Blaze
+import Text.RawString.QQ (r)
 
 import qualified Elm.Compiler.Module as Module
 import qualified Elm.Package as Pkg
-
-import qualified Artifacts
 
 
 
 -- TYPICAL PAGES / NO PORTS
 
 
-elm :: String -> Snap ()
-elm title =
-  makeHtml title (return ())
+misc :: B.Builder -> Snap ()
+misc title =
+  makeHtml title mempty
 
 
 
--- DOCUMENTATION FOR A PARTICULAR VERSION
+-- PROJECT
 
 
-docsHtml :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
-docsHtml pkg@(Pkg.Name _ project) version maybeName =
+project :: Pkg.Name -> Snap ()
+project pkg =
+  makeHtml (B.stringUtf8 (Pkg.toString pkg)) mempty
+
+
+
+-- VERSION
+
+
+version :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
+version pkg@(Pkg.Name _ prjct) vsn maybeName =
   let
     versionString =
-      Pkg.versionToString version
+      Pkg.versionToString vsn
 
     maybeStringName =
       fmap Module.nameToString maybeName
 
     title =
       maybe "" (++" - ") maybeStringName
-      ++ Text.unpack project ++ " " ++ versionString
+      ++ Text.unpack prjct ++ " " ++ versionString
   in
-    makeHtml title (canonicalLink pkg maybeName)
+  makeHtml (B.stringUtf8 title) (makeCanonicalLink pkg maybeName)
 
 
-canonicalLink :: Pkg.Name -> Maybe Module.Raw -> H.Html
-canonicalLink pkg maybeName =
+
+-- CANONICAL LINKS
+
+
+makeCanonicalLink :: Pkg.Name -> Maybe Module.Raw -> B.Builder
+makeCanonicalLink pkg maybeName =
   let
     canonicalPackage =
       Map.findWithDefault pkg pkg renames
-
-    ending =
-      maybe "" (\name -> "/" ++ Module.nameToString name) maybeName
-
-    url =
-      "/packages/" ++ Pkg.toUrl canonicalPackage ++ "/latest" ++ ending
   in
-    H.link ! A.rel "canonical" ! A.href (H.toValue url)
+  [r|<link rel="canonical" href="/packages/|]
+    <> B.stringUtf8 (Pkg.toUrl canonicalPackage)
+    <> [r|/latest/|]
+    <> maybe "" (B.stringUtf8 . Module.nameToString) maybeName
+    <> [r|">|]
 
 
 renames :: Map.Map Pkg.Name Pkg.Name
@@ -99,37 +110,30 @@ renames =
 -- SKELETON
 
 
-makeHtml :: String -> H.Html -> Snap ()
-makeHtml title canonialLink =
-  writeBuilder $ Blaze.renderHtmlBuilder $ H.docTypeHtml $ do
-    H.head $ do
-      H.meta ! A.charset "UTF-8"
-      favicon
-      H.title (H.toHtml title)
-      canonialLink
-      H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/highlight/styles/default.css")
-      H.link ! A.rel "stylesheet" ! A.href (cacheBuster "/assets/style.css")
-      H.script ! A.src (cacheBuster "/assets/highlight/highlight.pack.js") $ ""
-      H.script ! A.src (cacheBuster Artifacts.js) $ ""
-
-    H.body $ H.script $ H.preEscapedToMarkup ("\nElm.Main.fullscreen()\n" :: String)
-
-
-favicon :: H.Html
-favicon =
-  H.link
-    ! A.rel "shortcut icon"
-    ! A.size "16x16, 32x32, 48x48, 64x64, 128x128, 256x256"
-    ! A.href "/assets/favicon.ico"
+makeHtml :: B.Builder -> B.Builder -> Snap ()
+makeHtml title canonicalLink =
+  writeBuilder $
+    [r|<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" size="16x16, 32x32, 48x48, 64x64, 128x128, 256x256" href="/assets/favicon.ico">
+  <title>|] <> title <> [r|</title>|] <> canonicalLink <> [r|
+  <link rel="stylesheet" href="/assets/highlight/styles/default.css?|] <> uniqueToken <> [r|">
+  <link rel="stylesheet" href="/assets/style.css?|] <> uniqueToken <> [r|">
+  <script src="/assets/highlight/highlight.pack.js?|] <> uniqueToken <> [r|"></script>
+  <script src="/artifacts/elm.js?|] <> uniqueToken <> [r|"></script>
+</head>
+<body>
+<script>
+Elm.Main.init();
+</script>
+</body>
+</html>|]
 
 
-cacheBuster :: String -> H.AttributeValue
-cacheBuster url =
-  H.toValue (url ++ "?" ++ uniqueToken)
-
-
-uniqueToken :: String
+uniqueToken :: B.Builder
 uniqueToken =
   unsafePerformIO $
     do  time <- getPOSIXTime
-        return $ show (floor time :: Integer)
+        return $ B.string7 $ show (floor time :: Integer)

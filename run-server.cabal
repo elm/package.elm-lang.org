@@ -58,6 +58,7 @@ Executable run-server
     mtl,
     parsec,
     process,
+    raw-strings-qq,
     scientific,
     snap-core,
     snap-server,
