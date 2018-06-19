@@ -12,6 +12,7 @@ import Html exposing (..)
 import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
 import Html.Events exposing (..)
 import Html.Lazy exposing (..)
+import Html.Keyed as Keyed
 import Http
 import Href
 import Json.Decode as Decode
@@ -126,7 +127,7 @@ viewSearch query entries =
           text "" -- TODO
 
         Success es ->
-          div [] (List.map viewEntry (Entry.search query es))
+          Keyed.node "div" [] (List.map viewEntry (Entry.search query es))
     ]
 
 
@@ -134,8 +135,15 @@ viewSearch query entries =
 -- VIEW ENTRY
 
 
-viewEntry : Entry.Entry -> Html Msg
-viewEntry ({ author, project, summary } as entry) =
+viewEntry : Entry.Entry -> (String, Html msg)
+viewEntry entry =
+  ( entry.author ++ "/" ++ entry.project
+  , lazy viewEntryHelp entry
+  )
+
+
+viewEntryHelp : Entry.Entry -> Html msg
+viewEntryHelp ({ author, project, summary } as entry) =
   div [ class "pkg-summary" ]
     [ div []
         [ h1 []
@@ -150,7 +158,7 @@ viewEntry ({ author, project, summary } as entry) =
     ]
 
 
-viewExactVersions : Entry.Entry -> Html Msg
+viewExactVersions : Entry.Entry -> Html msg
 viewExactVersions entry =
   let
     exactVersion v =
