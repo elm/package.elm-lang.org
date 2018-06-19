@@ -1,20 +1,25 @@
 module Page.Diff exposing
   ( Model
+  , init
+  , Msg
+  , update
   , view
-  , toTitle
   )
 
 
+import Elm.Version as V
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Html.Lazy exposing (..)
+import Http
+import Href
 import Release
-import Route
-import Url
-import Utils.App as App
+import Session
+import Skeleton
+import Url.Builder as Url
 import Utils.Markdown as Markdown
-import Version
+import Utils.OneOrMore as OneOrMore exposing (OneOrMore(..))
 
 
 
@@ -22,51 +27,104 @@ import Version
 
 
 type alias Model =
-  { user : String
+  { session : Session.Data
+  , author : String
   , project : String
-  , releases : List Release.Release
+  , releases : Releases
   }
 
 
+type Releases
+  = Failure
+  | Loading
+  | Success (OneOrMore Release.Release)
 
--- TO TITLE
+
+init : Session.Data -> String -> String -> ( Model, Cmd Msg )
+init session author project =
+  case Session.getReleases session author project of
+    Just releases ->
+      ( Model session author project (Success releases)
+      , Cmd.none
+      )
+
+    Nothing ->
+      ( Model session author project Loading
+      , Http.send GotReleases (Session.fetchReleases author project)
+      )
 
 
-toTitle : Model -> String
-toTitle model =
-  model.project
+-- UPDATE
+
+
+type Msg
+  = GotReleases (Result Http.Error (OneOrMore Release.Release))
+
+
+update : Msg -> Model -> ( Model, Cmd msg )
+update msg model =
+  case msg of
+    GotReleases result ->
+      case result of
+        Err _ ->
+          ( { model | releases = Failure }
+          , Cmd.none
+          )
+
+        Ok releases ->
+          ( { model
+                | releases = Success releases
+                , session = Session.addReleases model.author model.project releases model.session
+            }
+          , Cmd.none
+          )
 
 
 
 -- VIEW
 
 
-view : Model -> App.Body Route.Route
-view { user, project, releases } =
-  App.body
-    [ class "pkg-overview"
-    ]
-    [ h1 [] [ text "Published Versions" ]
-    , releases
-        |> List.sortBy .time
-        |> List.map .version
-        |> viewReleases user project
-        |> p []
-    ]
+view : Model -> Skeleton.Details msg
+view model =
+  { title = model.author ++ "/" ++ model.project
+  , header =
+      [ Skeleton.authorSegment model.author
+      , Skeleton.projectSegment model.author model.project
+      ]
+  , warning = Skeleton.NoProblems
+  , attrs = [ class "pkg-overview" ]
+  , kids =
+      case model.releases of
+        Failure ->
+          [ text "TODO 404"
+          ]
+
+        Loading ->
+          [ text "TODO waiting..."
+          ]
+
+        Success (OneOrMore r rs) ->
+          [ h1 [] [ text "Published Versions" ]
+          , p [] <|
+              viewReleases model.author model.project <|
+                List.map .version (List.sortBy .time (r::rs))
+          ]
+  }
 
 
-viewReleases : String -> String -> List Version.Version -> List (Html Route.Route)
-viewReleases user project versions =
+
+viewReleases : String -> String -> List V.Version -> List (Html msg)
+viewReleases author project versions =
   case versions of
     v1 :: ((v2 :: _) as vs) ->
       let
         attrs =
-          if Version.sameMajor v1 v2 then [] else [ bold ]
+          if isSameMajor v1 v2 then [] else [ bold ]
       in
-      readmeLink user project v1 attrs :: text ", " :: viewReleases user project vs
+      viewReadmeLink author project v1 attrs :: text ", " :: viewReleases author project vs
 
     r0 :: [] ->
-      [ readmeLink user project r0 [ bold ] ]
+      [ viewReadmeLink author project r0 [ bold ] ]
 
     [] ->
       []
@@ -77,10 +135,19 @@ bold =
   style "font-weight" "bold"
 
 
-readmeLink : String -> String -> Version.Version -> List (Attribute Route.Route) -> Html Route.Route
-readmeLink user project version attrs =
-  App.link
-    identity
-    (Route.Version user project (Route.Exactly version) Route.Readme)
-    attrs
-    [ text (Version.toString version) ]
+viewReadmeLink : String -> String -> V.Version -> List (Attribute msg) -> Html msg
+viewReadmeLink author project version attrs =
+  let
+    url =
+      Href.toVersion author project (Just version)
+  in
+  a (href url :: attrs) [ text (V.toString version) ]
+
+
+isSameMajor : V.Version -> V.Version -> Bool
+isSameMajor v1 v2 =
+  let
+    (major1,_,_) = V.toTuple v1
+    (major2,_,_) = V.toTuple v2
+  in
+  major1 == major2

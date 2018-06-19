@@ -1,20 +1,24 @@
 module Page.Search exposing
   ( Model
+  , init
   , Msg
   , update
   , view
   )
 
-import Browser.Navigation as Navigation
+
+import Elm.Version as V
 import Html exposing (..)
 import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
 import Html.Events exposing (..)
-import String
-
+import Html.Lazy exposing (..)
+import Http
+import Href
+import Json.Decode as Decode
 import Page.Search.Entry as Entry
-import Route
-import Utils.App as App
-import Version
+import Session
+import Skeleton
+import Url.Builder as Url
 
 
 
@@ -22,9 +26,31 @@ import Version
 
 
 type alias Model =
-  { query : String
-  , entries : List Entry.Entry
+  { session : Session.Data
+  , query : String
+  , entries : Entries
   }
+
+
+type Entries
+  = Failure
+  | Loading
+  | Success (List Entry.Entry)
+
+
+init : Session.Data -> ( Model, Cmd Msg )
+init session =
+  case Session.getEntries session of
+    Just entries ->
+      ( Model session "" (Success entries)
+      , Cmd.none
+      )
+
+    Nothing ->
+      ( Model session "" Loading
+      , Http.send GotPackages <|
+          Http.get "/search.json" (Decode.list Entry.decoder)
+      )
 
 
 
@@ -32,38 +58,74 @@ type alias Model =
 
 
 type Msg
-  = Push Route.Route
-  | Query String
+  = QueryChanged String
+  | GotPackages (Result Http.Error (List Entry.Entry))
 
 
 update : Msg -> Model -> ( Model, Cmd msg )
 update msg model =
   case msg of
-    Push route ->
-      ( model, Navigation.pushUrl (Route.toUrl route) )
+    QueryChanged query ->
+      ( { model | query = query }
+      , Cmd.none
+      )
 
-    Query query ->
-      ( { model | query = query }, Cmd.none )
+    GotPackages result ->
+      case result of
+        Err _ ->
+          ( { model | entries = Failure }
+          , Cmd.none
+          )
+
+        Ok entries ->
+          ( { model
+                | entries = Success entries
+                , session = Session.addEntries entries model.session
+            }
+          , Cmd.none
+          )
 
 
 
 -- VIEW
 
 
-view : Model -> App.Body Msg
-view { entries, query } =
-  App.body []
-    [ div [ class "catalog" ]
-        [ input
-            [ placeholder "Search"
-            , value query
-            , onInput Query
-            , autofocus True
-            ]
-            []
-        , div [] (List.map viewEntry (Entry.search query entries))
+view : Model -> Skeleton.Details Msg
+view model =
+  { title = "Elm Packages"
+  , header = []
+  , warning = Skeleton.NoProblems
+  , attrs = []
+  , kids =
+      [ lazy2 viewSearch model.query model.entries
+      , viewSidebar
+      ]
+  }
+
+
+
+-- VIEW SEARCH
+
+
+viewSearch : String -> Entries -> Html Msg
+viewSearch query entries =
+  div [ class "catalog" ]
+    [ input
+        [ placeholder "Search"
+        , value query
+        , onInput QueryChanged
+        , autofocus True
         ]
-    , viewSidebar
+        []
+    , case entries of
+        Failure ->
+          text "load of search data failed" -- TODO better message
+
+        Loading ->
+          text "Loading..." -- TODO better loading message
+
+        Success es ->
+          div [] (List.map viewEntry (Entry.search query es))
     ]
 
 
@@ -76,7 +138,7 @@ viewEntry ({ author, project, summary } as entry) =
   div [ class "pkg-summary" ]
     [ div []
         [ h1 []
-            [ App.link Push (Route.latest author project) []
+            [ a [ href (Href.toProject author project) ]
                 [ span [ class "light" ] [ text (author ++ "/") ]
                 , text project
                 ]
@@ -88,21 +150,24 @@ viewEntry ({ author, project, summary } as entry) =
 
 
 viewExactVersions : Entry.Entry -> Html Msg
-viewExactVersions { author, project, versions } =
+viewExactVersions entry =
   let
-    exactVersion vsn =
-      App.link Push (Route.exactly author project vsn) [] [ text (Version.toString vsn) ]
+    exactVersion v =
+      a [ href (Href.toVersion entry.author entry.project (Just v))
+        ]
+        [ text (V.toString v)
+        ]
 
     allVersions =
-      List.intersperse (text " … ") (List.map exactVersion versions)
+      List.intersperse (text " … ") (List.map exactVersion entry.versions)
       ++
       [ text " — "
-      , App.link Push (Route.Package author project) [] [ text "Overview" ]
+      , a [ href (Href.toProject entry.author entry.project) ] [ text "Overview" ]
       ]
   in
   span [ class "pkg-summary-hints" ] <|
-    case versions of
-      Version.Version 1 0 0 :: _ ->
+    case Maybe.map V.toTuple (List.head entry.versions) of
+      Just (1,0,0) ->
         allVersions
 
       _ ->
@@ -123,8 +188,8 @@ viewSidebar =
     , ul []
         [ li [] [ a [ href "http://klaftertief.github.io/elm-search/" ] [ text "Fancy Search" ] ]
         , li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
-        , li [] [ App.link Push Route.Guidelines [] [ text "API Design Guidelines" ] ]
-        , li [] [ App.link Push Route.DocsHelp [] [ text "Write great docs" ] ]
+        , li [] [ a [ href "/docs/TODO" ] [ text "API Design Guidelines" ] ]
+        , li [] [ a [ href "/docs/TODO" ] [ text "Write great docs" ] ]
         , li [] [ a [ href "https://elm-lang.org" ] [ text "Elm Website" ] ]
         ]
     ]
@@ -133,10 +198,8 @@ viewSidebar =
 viewPopularPackage : String -> Html Msg
 viewPopularPackage project =
   li []
-    [ App.link
-        Push
-        (Route.latest "elm" project)
-        []
+    [ a [ href (Href.toVersion "elm" project Nothing)
+        ]
         [ span [ class "light" ] [ text "elm/" ]
         , text project
         ]

@@ -1,7 +1,7 @@
 module Page.Docs exposing
   ( Model
-  , Metadata
-  , Content(..)
+  , Focus(..)
+  , init
   , Msg
   , update
   , view
@@ -11,16 +11,20 @@ module Page.Docs exposing
 
 import Browser.Navigation as Navigation
 import Elm.Docs as Docs
+import Elm.Version as V
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import Html.Lazy exposing (..)
+import Http
+import Href
 import Page.Docs.Block as Block
-import Route
+import Release
+import Session
+import Skeleton
 import Url.Builder as Url
-import Utils.App as App
 import Utils.Markdown as Markdown
-import Version
+import Utils.OneOrMore exposing (OneOrMore)
 
 
 
@@ -28,24 +32,81 @@ import Version
 
 
 type alias Model =
-  { metadata : Metadata
-  , content : Content
-  , query : String
-  }
-
-
-type alias Metadata =
-  { user : String
+  { session : Session.Data
+  , author : String
   , project : String
-  , version : Route.Version
-  , info : Route.VersionInfo
-  , latest : Maybe Version.Version
+  , version : Maybe V.Version
+  , focus : Focus
+  , query : String
+  , latest : Status V.Version
+  , readme : Status String
+  , docs : Status (List Docs.Module)
   }
 
 
-type Content
-  = Module String Docs.Module (List Docs.Module)
-  | Readme String (List Docs.Module)
+type Focus
+  = Readme
+  | Module String (Maybe String)
+
+
+type Status a
+  = Failure
+  | Loading
+  | Success a
+
+
+type DocsError
+  = NotFound
+  | FoundButMissingModule
+
+
+
+-- INIT
+
+
+init : Session.Data -> String -> String -> Maybe V.Version -> Focus -> ( Model, Cmd Msg )
+init session author project version focus =
+  case Session.getReleases session author project of
+    Just releases ->
+      let
+        latest = Release.getLatest releases
+      in
+      getInfo latest <|
+        Model session author project version focus "" (Success latest) Loading Loading
+
+    Nothing ->
+      ( Model session author project version focus "" Loading Loading Loading
+      , Http.send GotReleases (Session.fetchReleases author project)
+      )
+
+
+getInfo : V.Version -> Model -> ( Model, Cmd Msg )
+getInfo latest model =
+  let
+    author = model.author
+    project = model.project
+    version = Maybe.withDefault latest model.version
+    maybeInfo =
+      Maybe.map2 Tuple.pair
+        (Session.getReadme model.session author project version)
+        (Session.getDocs model.session author project version)
+  in
+  case maybeInfo of
+    Nothing ->
+      ( model
+      , Cmd.batch
+          [ Http.send (GotReadme version) (Session.fetchReadme author project version)
+          , Http.send (GotDocs version) (Session.fetchDocs author project version)
+          ]
+      )
+
+    Just (readme, docs) ->
+      ( { model
+            | readme = Success readme
+            , docs = Success docs
+        }
+      , Cmd.none
+      )
 
 
 
@@ -53,124 +114,303 @@ type Content
 
 
 type Msg
-  = Push Route.Route
-  | Search String
+  = QueryChanged String
+  | GotReleases (Result Http.Error (OneOrMore Release.Release))
+  | GotReadme V.Version (Result Http.Error String)
+  | GotDocs V.Version (Result Http.Error (List Docs.Module))
 
 
-update : Msg -> Model -> ( Model, Cmd msg )
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
-    Push route ->
-      ( model
-      , Navigation.pushUrl (Route.toUrl route)
-      )
-
-    Search query ->
+    QueryChanged query ->
       ( { model | query = query }
       , Cmd.none
       )
 
+    GotReleases result ->
+      case result of
+        Err _ ->
+          ( { model | latest = Failure }
+          , Cmd.none
+          )
 
+        Ok releases ->
+          let
+            latest = Release.getLatest releases
+          in
+          getInfo latest
+            { model
+                | latest = Success latest
+                , session = Session.addReleases model.author model.project releases model.session
+            }
 
--- TO TITLE
+    GotReadme version result ->
+      case result of
+        Err _ ->
+          ( { model | readme = Failure }
+          , Cmd.none
+          )
 
+        Ok readme ->
+          ( { model
+                | readme = Success readme
+                , session = Session.addReadme model.author model.project version readme model.session
+            }
+          , Cmd.none
+          )
 
-toTitle : Model -> String
-toTitle model =
-  metadataToTitle model.metadata
+    GotDocs version result ->
+      case result of
+        Err _ ->
+          ( { model | docs = Failure }
+          , Cmd.none
+          )
 
-
-metadataToTitle : Metadata -> String
-metadataToTitle { project, version, info } =
-  let
-    genericTitle =
-      project ++ " " ++ Route.vsnToString version
-  in
-  case info of
-    Route.Readme ->
-      genericTitle
-
-    Route.Module name _ ->
-      name ++ " - " ++ genericTitle
+        Ok docs ->
+          ( { model
+                | docs = Success docs
+                , session = Session.addDocs model.author model.project version docs model.session
+            }
+          , Cmd.none
+          )
 
 
 
 -- VIEW
 
 
-view : Model -> App.Body Msg
-view { metadata, content, query } =
-  App.body [] <|
-    case content of
-      Readme readme allDocs ->
-        [ div [ class "block-list" ] [ Markdown.block readme ]
-        , lazy3 viewSidebar metadata allDocs query
+view : Model -> Skeleton.Details Msg
+view model =
+  { title = toTitle model
+  , header = toHeader model
+  , warning = toWarning model
+  , attrs = []
+  , kids =
+      [ viewContent model
+      , viewSidebar model
+      ]
+  }
+
+
+
+-- TITLE
+
+
+toTitle : Model -> String
+toTitle model =
+  case model.focus of
+    Readme ->
+      toGenericTitle model
+
+    Module name _ ->
+      name ++ " - " ++ toGenericTitle model
+
+
+toGenericTitle : Model -> String
+toGenericTitle model =
+  case getVersion model of
+    Just version ->
+      model.project ++ " " ++ V.toString version
+
+    Nothing ->
+      model.project
+
+
+getVersion : Model -> Maybe V.Version
+getVersion model =
+  case model.version of
+    Just version ->
+      model.version
+
+    Nothing ->
+      case model.latest of
+        Success version -> Just version
+        Loading -> Nothing
+        Failure -> Nothing
+
+
+
+-- TO HEADER
+
+
+toHeader : Model -> List Skeleton.Segment
+toHeader model =
+  [ Skeleton.authorSegment model.author
+  , Skeleton.projectSegment model.author model.project
+  , Skeleton.versionSegment model.author model.project (getVersion model)
+  ]
+  ++
+    case model.focus of
+      Readme ->
+        []
+
+      Module name _ ->
+        [ Skeleton.moduleSegment model.author model.project model.version name
         ]
 
-      Module name docs allDocs ->
-        [ lazy4 viewModule metadata name docs allDocs
-        , lazy3 viewSidebar metadata allDocs query
+
+
+-- WARNING
+
+
+toWarning : Model -> Skeleton.Warning
+toWarning model =
+  case model.version of
+    Nothing ->
+      Skeleton.NoProblems
+
+    Just version ->
+      case model.latest of
+        Success latest ->
+          if version == latest then
+            Skeleton.NoProblems
+          else
+            Skeleton.NewerVersion (toNewerUrl model) latest
+
+        Loading ->
+          Skeleton.NoProblems
+
+        Failure ->
+          Skeleton.NoProblems
+
+
+toNewerUrl : Model -> String
+toNewerUrl model =
+  case model.focus of
+    Readme ->
+      Href.toVersion model.author model.project Nothing
+
+    Module name tag ->
+      Href.toModule model.author model.project Nothing name tag
+
+
+
+-- VIEW CONTENT
+
+
+viewContent : Model -> Html msg
+viewContent model =
+  case model.focus of
+    Readme ->
+      lazy viewReadme model.readme
+
+    Module name tag ->
+      lazy5 viewModule model.author model.project model.version name model.docs
+
+
+
+-- VIEW README
+
+
+viewReadme : Status String -> Html msg
+viewReadme status =
+  case status of
+    Success readme ->
+      div [ class "block-list" ] [ Markdown.block readme ]
+
+    Loading ->
+      div [ class "block-list" ] [ text "Loading..." ] -- TODO
+
+    Failure ->
+      div [ class "block-list" ] [ text "README.md did not load" ] -- TODO
+
+
+
+-- VIEW MODULE
+
+
+viewModule : String -> String -> Maybe V.Version -> String -> Status (List Docs.Module) -> Html msg
+viewModule author project version name status =
+  case status of
+    Success allDocs ->
+      case findModule name allDocs of
+        Just docs ->
+          let
+            header = h1 [class "block-list-title"] [ text name ]
+            info = Block.makeInfo author project version name allDocs
+            blocks = List.map (Block.view info) (Docs.toBlocks docs)
+          in
+          div [ class "block-list" ] (header :: blocks)
+
+        Nothing ->
+          text ("docs.json exists, but it has no " ++ name ++ " module") -- TODO
+
+    Loading ->
+      div [ class "block-list" ]
+        [ h1 [class "block-list-title"] [ text name ] -- TODO better loading
         ]
 
+    Failure ->
+      div [ class "block-list" ] [ text "docs.json did not load" ] -- TODO
 
-viewModule : Metadata -> String -> Docs.Module -> List Docs.Module -> Html Msg
-viewModule { user, project, version } name docs allDocs =
-  let
-    header =
-      h1 [class "block-list-title"] [ text name ]
 
-    info =
-      Block.makeInfo user project version name allDocs
+findModule : String -> List Docs.Module -> Maybe Docs.Module
+findModule name docsList =
+  case docsList of
+    [] ->
+      Nothing
 
-    blocks =
-      List.map (Block.view info) (Docs.toBlocks docs)
-  in
-  Html.map Push <|
-    div [ class "block-list" ] (header :: blocks)
+    docs :: otherDocs ->
+      if docs.name == name then
+        Just docs
+      else
+        findModule name otherDocs
 
 
 
 -- VIEW SIDEBAR
 
 
-viewSidebar : Metadata -> List Docs.Module -> String -> Html Msg
-viewSidebar metadata allDocs query =
+viewSidebar : Model -> Html Msg
+viewSidebar model =
   div
     [ class "pkg-nav"
     ]
-    [ lazy viewReadmeLink metadata
+    [ lazy4 viewReadmeLink model.author model.project model.version model.focus
     , br [] []
-    , lazy viewBrowseSourceLink metadata
+    , lazy4 viewBrowseSourceLink model.author model.project model.version model.latest
     , h2 [] [ text "Module Docs" ]
     , input
         [ placeholder "Search"
-        , value query
-        , onInput Search
+        , value model.query
+        , onInput QueryChanged
         ]
         []
-    , viewSidebarModules metadata allDocs query
+    , viewSidebarModules model
     ]
 
 
-viewSidebarModules : Metadata -> List Docs.Module -> String -> Html Msg
-viewSidebarModules metadata modules query =
-  if String.isEmpty query then
-    let
-      viewEntry docs =
-        li [] [ viewModuleLink metadata docs.name ]
-    in
-    ul [] (List.map viewEntry modules)
+viewSidebarModules : Model -> Html msg
+viewSidebarModules model =
+  case model.docs of
+    Failure ->
+      text "docs.json not found" -- TODO
 
-  else
-    ul [] <|
-      List.filterMap (viewSearchItem metadata (String.toLower query)) modules
+    Loading ->
+      text "" -- TODO
+
+    Success modules ->
+      if String.isEmpty model.query then
+        let
+          viewEntry docs =
+            li [] [ viewModuleLink model docs.name ]
+        in
+        ul [] (List.map viewEntry modules)
+
+      else
+        let
+          query =
+            String.toLower model.query
+        in
+        ul [] (List.filterMap (viewSearchItem model query) modules)
 
 
-viewSearchItem : Metadata -> String -> Docs.Module -> Maybe (Html Msg)
-viewSearchItem metadata query docs =
+viewSearchItem : Model -> String -> Docs.Module -> Maybe (Html msg)
+viewSearchItem model query docs =
   let
     toItem ownerName valueName =
-      viewValueItem metadata docs.name ownerName valueName
+      viewValueItem model docs.name ownerName valueName
 
     matches =
       List.filterMap (isMatch query toItem) docs.binops
@@ -186,7 +426,7 @@ viewSearchItem metadata query docs =
         li
           [ class "pkg-nav-search-chunk"
           ]
-          [ viewModuleLink metadata docs.name
+          [ viewModuleLink model docs.name
           , ul [] matches
           ]
 
@@ -223,40 +463,43 @@ isTagMatch query toResult tipeName (tagName, _) =
 -- VIEW "README" LINK
 
 
-viewReadmeLink : Metadata -> Html Msg
-viewReadmeLink { user, project, version, info } =
-  navLink
-    "README"
-    (Route.Version user project version Route.Readme)
-    (info == Route.Readme)
+viewReadmeLink : String -> String -> Maybe V.Version -> Focus -> Html msg
+viewReadmeLink author project version focus =
+  navLink "README" (Href.toVersion author project version) <|
+    case focus of
+      Readme -> True
+      Module _ _ -> False
 
 
 
 -- VIEW "BROWSE SOURCE" LINK
 
 
-viewBrowseSourceLink : Metadata -> Html msg
-viewBrowseSourceLink { user, project, version, latest } =
-  case version of
-    Route.Exactly vsn ->
-      viewBrowseSourceLinkHelp user project vsn
+viewBrowseSourceLink : String -> String -> Maybe V.Version -> Status V.Version -> Html msg
+viewBrowseSourceLink author project maybeVersion latest =
+  case maybeVersion of
+    Just version ->
+      viewBrowseSourceLinkHelp author project version
 
-    Route.Latest ->
+    Nothing ->
       case latest of
-        Just vsn ->
-          viewBrowseSourceLinkHelp user project vsn
+        Success version ->
+          viewBrowseSourceLinkHelp author project version
 
-        Nothing ->
+        Loading ->
+          text "Browse Source"
+
+        Failure ->
           text "Browse Source"
 
 
-viewBrowseSourceLinkHelp : String -> String -> Version.Version -> Html msg
-viewBrowseSourceLinkHelp user project version =
+viewBrowseSourceLinkHelp : String -> String -> V.Version -> Html msg
+viewBrowseSourceLinkHelp author project version =
   let
     url =
       Url.crossOrigin
         "https://github.com"
-        [ user, project, "tree", "beta-" ++ Version.toString version ]
+        [ author, project, "tree", "beta-" ++ V.toString version ]
         []
   in
   a [ class "pkg-nav-module", href url ] [ text "Browse Source" ]
@@ -266,41 +509,36 @@ viewBrowseSourceLinkHelp user project version =
 -- VIEW "MODULE" LINK
 
 
-viewModuleLink : Metadata -> String -> Html Msg
-viewModuleLink { user, project, version, info } name =
+viewModuleLink : Model -> String -> Html msg
+viewModuleLink model name =
   let
-    route =
-      Route.Version user project version (Route.Module name Nothing)
+    url =
+      Href.toModule model.author model.project model.version name Nothing
   in
-  navLink name route <|
-    case info of
-      Route.Readme ->
+  navLink name url <|
+    case model.focus of
+      Readme ->
         False
 
-      Route.Module selectedName _ ->
+      Module selectedName _ ->
         selectedName == name
 
 
-viewValueItem : Metadata -> String -> String -> String -> Html Msg
-viewValueItem { user, project, version } moduleName ownerName valueName =
+viewValueItem : Model -> String -> String -> String -> Html msg
+viewValueItem { author, project, version } moduleName ownerName valueName =
   let
-    route =
-      Route.Version user project version (Route.Module moduleName (Just ownerName))
+    url =
+      Href.toModule author project version moduleName (Just ownerName)
   in
-  li [ class "pkg-nav-value" ] [ link valueName route ]
+  li [ class "pkg-nav-value" ] [ navLink valueName url False ]
 
 
 
 -- LINK HELPERS
 
 
-link : String -> Route.Route -> Html Msg
-link name route =
-  navLink name route False
-
-
-navLink : String -> Route.Route -> Bool -> Html Msg
-navLink name route isBold =
+navLink : String -> String -> Bool -> Html msg
+navLink name url isBold =
   let
     attributes =
       if isBold then
@@ -312,4 +550,4 @@ navLink name route isBold =
         [ class "pkg-nav-module"
         ]
   in
-  App.link Push route attributes [ text name ]
+  a (href url :: attributes) [ text name ]
