@@ -1,106 +1,66 @@
 module Page.Problem exposing
-  ( Suggestion(..)
-  , view
-  , toTitle
+  ( styles
+  , notFound
+  , offline
+  , missingModule
   )
 
 
+import Elm.Version as V
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Route
-import Session.Resource as Resource
-import Utils.App as App
+import Href
 
 
 
--- SUGGESTION
+-- NOT FOUND
 
 
-type Suggestion
-  = NoIdea
-  | BadResource Resource.Error
-
-
-
--- TITLE
-
-
-toTitle : Suggestion -> String
-toTitle _ =
-  "Page Not Found!"
-
-
-
--- VIEW
-
-
-view : Suggestion -> App.Body Route.Route
-view suggestion =
-  case suggestion of
-    NoIdea ->
-      toBody [ text "I cannot find this page!" ] []
-
-    BadResource resourceError ->
-      case resourceError of
-        Resource.MissingModule user project vsn name ->
-          missingModule user project vsn name
-
-        Resource.BadDocs user project vsn error ->
-          cannotFind "docs.json"
-
-        Resource.BadReadme user project vsn error ->
-          cannotFind "README.md"
-
-        Resource.BadReleases user project error ->
-          cannotFind "releases.json"
-
-        Resource.BadPackages error ->
-          cannotFind "search.json"
-
-
-
--- CREATE BODY
-
-
-toBody : List (Html msg) -> List (Html msg) -> App.Body msg
-toBody message details =
-  App.body styles <|
-    [ div [ style "font-size" "12em" ] [ text "404" ]
-    , div [ style "font-size" "3em" ] message
-    ]
-    ++ details
+notFound : List (Html msg)
+notFound =
+  [ div [ style "font-size" "12em" ] [ text "404" ]
+  , div [ style "font-size" "3em" ] [ text "I cannot find this page!" ]
+  ]
 
 
 styles : List (Attribute msg)
 styles =
-  [ style "height" "100%"
-  , style "text-align" "center"
+  [ style "text-align" "center"
   , style "color" "#9A9A9A"
   , style "padding" "6em 0"
   ]
 
 
 
--- HELPERS
+-- OFFLINE
 
 
-cannotFind : String -> App.Body msg
-cannotFind file =
-  toBody [ text "Cannot find ", code [] [ text file ] ] []
+offline : String -> List (Html msg)
+offline file =
+  [ div [ style "font-size" "3em" ]
+      [ text "Cannot find "
+      , code [] [ text file ]
+      ]
+  , p [] [ text "Are you offline or something?" ]
+  ]
 
 
-missingModule : String -> String -> Route.Version -> String -> App.Body Route.Route
-missingModule user project vsn name =
-  toBody
-    [ text "I cannot find the "
-    , code [] [ text name ]
-    , text " module!"
-    ]
-    [ p []
-        [ text "Maybe it existed in a "
-        , App.link identity (Route.Package user project) [] [ text "previous release" ]
-        , text "? Maybe the "
-        , App.link identity (Route.Version user project vsn Route.Readme) [] [ text "README" ]
-        , text " will help you figure out what changed?"
-        ]
-    ]
+
+-- MISSING MODULE
+
+
+missingModule : String -> String -> Maybe V.Version -> String -> List (Html msg)
+missingModule author project version name =
+  [ div [ style "font-size" "3em" ]
+      [ text "Module not found"
+      ]
+  , p []
+      [ text "Maybe it existed in a "
+      , a [ href (Href.toProject author project) ] [ text "previous release" ]
+      , text "?"
+      , br [] []
+      , text "Maybe the "
+      , a [ href (Href.toVersion author project version) ] [ text "README" ]
+      , text " will help you figure out what changed?"
+      ]
+  ]

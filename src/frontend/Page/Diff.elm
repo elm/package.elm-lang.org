@@ -14,6 +14,7 @@ import Html.Events exposing (..)
 import Html.Lazy exposing (..)
 import Http
 import Href
+import Page.Problem as Problem
 import Release
 import Session
 import Skeleton
@@ -96,11 +97,11 @@ view model =
   , kids =
       case model.releases of
         Failure ->
-          [ text "TODO 404"
+          [ div Problem.styles (Problem.offline "releases.json")
           ]
 
         Loading ->
-          [ text "TODO waiting..."
+          [ text "" -- TODO
           ]
 
         Success (OneOrMore r rs) ->

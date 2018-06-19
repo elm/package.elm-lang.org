@@ -16,6 +16,7 @@ import Http
 import Href
 import Json.Decode as Decode
 import Page.Search.Entry as Entry
+import Page.Problem as Problem
 import Session
 import Skeleton
 import Url.Builder as Url
@@ -119,10 +120,10 @@ viewSearch query entries =
         []
     , case entries of
         Failure ->
-          text "load of search data failed" -- TODO better message
+          div Problem.styles (Problem.offline "search.json")
 
         Loading ->
-          text "Loading..." -- TODO better loading message
+          text "" -- TODO
 
         Success es ->
           div [] (List.map viewEntry (Entry.search query es))
@@ -138,7 +139,7 @@ viewEntry ({ author, project, summary } as entry) =
   div [ class "pkg-summary" ]
     [ div []
         [ h1 []
-            [ a [ href (Href.toProject author project) ]
+            [ a [ href (Href.toVersion author project Nothing) ]
                 [ span [ class "light" ] [ text (author ++ "/") ]
                 , text project
                 ]

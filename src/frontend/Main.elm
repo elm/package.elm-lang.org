@@ -8,6 +8,7 @@ import Elm.Version as V
 import Html
 import Page.Docs as Docs
 import Page.Diff as Diff
+import Page.Problem as Problem
 import Page.Search as Search
 import Session
 import Skeleton
@@ -41,7 +42,7 @@ type alias Model =
 
 
 type Page
-  = Blank Session.Data
+  = NotFound Session.Data
   | Search Search.Model
   | Docs Docs.Model
   | Diff Diff.Model
@@ -63,10 +64,14 @@ subscriptions model =
 view : Model -> Browser.Document Msg
 view model =
   case model.page of
-    Blank _ ->
-      { title = "???" -- TODO
-      , body = [ Html.text "hello" ]
-      }
+    NotFound _ ->
+      Skeleton.view never
+        { title = "Not Found"
+        , header = []
+        , warning = Skeleton.NoProblems
+        , attrs = Problem.styles
+        , kids = Problem.notFound
+        }
 
     Search search ->
       Skeleton.view SearchMsg (Search.view search)
@@ -86,7 +91,7 @@ init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ url key =
   stepUrl url
     { key = key
-    , page = Blank Session.empty
+    , page = NotFound Session.empty
     }
 
 
@@ -169,7 +174,7 @@ stepDiff model (search, cmds) =
 exit : Model -> Session.Data
 exit model =
   case model.page of
-    Blank session -> session
+    NotFound session -> session
     Search m -> m.session
     Docs m -> m.session
     Diff m -> m.session

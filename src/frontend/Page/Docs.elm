@@ -19,6 +19,7 @@ import Html.Lazy exposing (..)
 import Http
 import Href
 import Page.Docs.Block as Block
+import Page.Problem as Problem
 import Release
 import Session
 import Skeleton
@@ -131,7 +132,11 @@ update msg model =
     GotReleases result ->
       case result of
         Err _ ->
-          ( { model | latest = Failure }
+          ( { model
+                | latest = Failure
+                , readme = Failure
+                , docs = Failure
+            }
           , Cmd.none
           )
 
@@ -310,10 +315,12 @@ viewReadme status =
       div [ class "block-list" ] [ Markdown.block readme ]
 
     Loading ->
-      div [ class "block-list" ] [ text "Loading..." ] -- TODO
+      div [ class "block-list" ] [ text "" ] -- TODO
 
     Failure ->
-      div [ class "block-list" ] [ text "README.md did not load" ] -- TODO
+      div
+        (class "block-list" :: Problem.styles)
+        (Problem.offline "README.md")
 
 
 
@@ -334,7 +341,9 @@ viewModule author project version name status =
           div [ class "block-list" ] (header :: blocks)
 
         Nothing ->
-          text ("docs.json exists, but it has no " ++ name ++ " module") -- TODO
+          div
+            (class "block-list" :: Problem.styles)
+            (Problem.missingModule author project version name)
 
     Loading ->
       div [ class "block-list" ]
@@ -342,7 +351,9 @@ viewModule author project version name status =
         ]
 
     Failure ->
-      div [ class "block-list" ] [ text "docs.json did not load" ] -- TODO
+      div
+        (class "block-list" :: Problem.styles)
+        (Problem.offline "docs.json")
 
 
 findModule : String -> List Docs.Module -> Maybe Docs.Module
@@ -385,7 +396,7 @@ viewSidebarModules : Model -> Html msg
 viewSidebarModules model =
   case model.docs of
     Failure ->
-      text "docs.json not found" -- TODO
+      text "" -- TODO
 
     Loading ->
       text "" -- TODO
