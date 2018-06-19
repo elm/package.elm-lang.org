@@ -1,13 +1,13 @@
 module Release exposing
   ( Release
-  , getLatestVersion
+  , getLatest
   , decoder
   )
 
 
+import Elm.Version as V
 import Json.Decode as D
 import Utils.OneOrMore exposing (OneOrMore(..))
-import Version as Version
 
 
 
@@ -15,7 +15,7 @@ import Version as Version
 
 
 type alias Release =
-  { version : Version.Version
+  { version : V.Version
   , time : Int
   }
 
@@ -24,12 +24,12 @@ type alias Release =
 -- GET LATEST VERSION
 
 
-getLatestVersion : OneOrMore Release -> Version.Version
-getLatestVersion (OneOrMore r rs) =
+getLatest : OneOrMore Release -> V.Version
+getLatest (OneOrMore r rs) =
   getLatestVersionHelp rs r
 
 
-getLatestVersionHelp : List Release -> Release -> Version.Version
+getLatestVersionHelp : List Release -> Release -> V.Version
 getLatestVersionHelp releases maxRelease =
   case releases of
     [] ->
@@ -62,7 +62,7 @@ decoderHelp revReleases pairs =
           D.succeed (OneOrMore r rs)
 
     (str, time) :: otherPairs ->
-      case Version.fromString str of
+      case V.fromString str of
         Nothing ->
           D.fail <| "Field `" ++ str ++ "` must be a valid version, like 3.1.4"
 

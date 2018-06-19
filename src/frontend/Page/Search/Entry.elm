@@ -5,9 +5,8 @@ module Page.Search.Entry exposing
   )
 
 
+import Elm.Version as V
 import Json.Decode as D
-import String
-import Version
 
 
 
@@ -20,7 +19,7 @@ type alias Entry =
   , project : String
   , summary : String
   , license : String
-  , versions : List Version.Version
+  , versions : List V.Version
   }
 
 
@@ -61,10 +60,10 @@ decoder =
     (D.field "name" (D.andThen splitName D.string))
     (D.field "summary" D.string)
     (D.field "license" D.string)
-    (D.field "versions" (D.list Version.decoder))
+    (D.field "versions" (D.list V.decoder))
 
 
-splitName : String -> D.Decoder (String -> String -> List Version.Version -> Entry)
+splitName : String -> D.Decoder (String -> String -> List V.Version -> Entry)
 splitName name =
   case String.split "/" name of
     [author, project] ->
