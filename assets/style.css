@@ -239,6 +239,12 @@ pre {
 }
 
 
+.pkg-hint {
+  padding: 20px;
+  background-color: #fcfcfc;
+  border-radius: 8px;
+}
+
 .pkg-summary {
   padding: 20px 0;
   border-bottom: 1px solid #eeeeee;

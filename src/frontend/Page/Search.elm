@@ -127,7 +127,12 @@ viewSearch query entries =
           text "" -- TODO
 
         Success es ->
-          Keyed.node "div" [] (List.map viewEntry (Entry.search query es))
+          let
+            results =
+              List.map viewEntry (Entry.search query es)
+          in
+          Keyed.node "div" [] <|
+            ("h", viewHint (List.isEmpty results) query) :: results
     ]
 
 
@@ -187,7 +192,7 @@ viewExactVersions entry =
 -- VIEW SIDEBAR
 
 
-viewSidebar : Html Msg
+viewSidebar : Html msg
 viewSidebar =
   div [ class "catalog-sidebar" ]
     [ h2 [] [ text "Popular Packages" ]
@@ -204,7 +209,7 @@ viewSidebar =
     ]
 
 
-viewPopularPackage : String -> Html Msg
+viewPopularPackage : String -> Html msg
 viewPopularPackage project =
   li []
     [ a [ href (Href.toVersion "elm" project Nothing)
@@ -213,3 +218,184 @@ viewPopularPackage project =
         , text project
         ]
     ]
+
+
+
+-- VIEW HINTS
+
+
+viewHint : Bool -> String -> Html msg
+viewHint noAlts query =
+  viewHintHelp noAlts (String.toLower (String.replace "-" " " query)) hints
+
+
+viewHintHelp : Bool -> String -> List (Hint msg) -> Html msg
+viewHintHelp noAlts query remainingHints =
+  case remainingHints of
+    [] ->
+      text ""
+
+    hint :: otherHints ->
+      if String.startsWith query hint.term && (noAlts || String.length query >= hint.min) then
+        hint.html
+      else
+        viewHintHelp noAlts query otherHints
+
+
+type alias Hint msg =
+  { term : String
+  , min : Int
+  , html : Html msg
+  }
+
+
+hints : List (Hint msg)
+hints =
+  [ Hint "spa" 3 singlePageApp
+  , Hint "single page app" 5 singlePageApp
+  , Hint "components" 5 components
+  , Hint "router" 4 router
+  , Hint "routing" 4 router
+  , Hint "routes" 4 router
+  , Hint "scroll" 4 scroll
+  , Hint "scrollheight" 7 scroll
+  , Hint "scrollwidth" 7 scroll
+  , Hint "scrollx" 7 scroll
+  , Hint "scrolly" 7 scroll
+  , Hint "scrollto" 7 scroll
+  , Hint "scrollintoview" 7 scroll
+  , Hint "mouse" 4 mouse
+  , Hint "keyboard" 4 keyboard
+  , Hint "window" 4 window
+  , Hint "visibility" 5 window
+  , Hint "animation" 5 animation
+  , Hint "requestanimationframe" 8 animation
+  ]
+
+
+makeHint : List (Html msg) -> Html msg
+makeHint message =
+  p [ class "pkg-hint" ] <|
+    b [] [ text "Hint:" ] :: text " " :: message
+
+
+singlePageApp : Html msg
+singlePageApp =
+  makeHint
+    [ text "All single-page apps in Elm use "
+    , codeLink (Href.toVersion "elm" "browser" Nothing) "elm/browser"
+    , text " to control the URL, with help from "
+    , codeLink (Href.toVersion "elm" "url" Nothing) "elm/url"
+    , text " convert between URLs and nice structured data. I very highly recommend working through "
+    , guide
+    , text " to learn how! Once you have made one or two single-page apps the standard way, it will be much easier to tell which (if any) of the packages below can make your code any easier."
+    ]
+
+
+components : Html msg
+components =
+  makeHint
+    [ text "Components are objects!"
+    , ul [ style "list-style-type" "none" ]
+        [ li [] [ text "Components = Local State + Methods" ]
+        , li [] [ text "Local State + Methods = Objects" ]
+        ]
+    , text "We get very few folks asking how to structure Elm code with objects. Elm does not have objects! We get a lot of folks asking about how to use components, but it is essentially the same question. Elm emphasizes "
+    , i [] [ text "functions" ]
+    , text " instead. Folks usually have the best experience if they follow the advice in "
+    , guide
+    , text " and "
+    , a [ href "https://youtu.be/XpDsk374LDE" ] [ text "The Life of a File" ]
+    , text ", exploring and understanding the techniques specific to Elm "
+    , i [] [ text "before" ]
+    , text " trying to bring in techniques from other languages."
+    ]
+
+
+router : Html msg
+router =
+  makeHint
+    [ text "The "
+    , codeLink (Href.toVersion "elm" "url" Nothing) "elm/url"
+    , text " package has everything you need to turn paths, queries, and hashes into useful data. But definitely work through "
+    , guide
+    , text " to learn how this fits into a "
+    , codeLink (Href.toModule "elm" "browser" Nothing "Browser" (Just "application")) "Browser.application"
+    , text " that manages the URL!"
+    ]
+
+
+scroll : Html msg
+scroll =
+  makeHint
+    [ text "Check out "
+    , codeLink (Href.toModule "elm" "browser" Nothing "Browser.Dom" Nothing) "Browser.Dom"
+    , text " for getting and setting scroll positions. It uses tasks, so be sure you have learned about "
+    , code [] [ text "Cmd" ]
+    , text " values in "
+    , guide
+    , text " and then read through the "
+    , codeLink (Href.toModule "elm" "core" Nothing "Task" Nothing) "Task"
+    , text " module so you do not have to guess at how anything works!"
+    ]
+
+
+mouse : Html msg
+mouse =
+  makeHint
+    [ text "Folks usually use "
+    , codeLink (Href.toModule "elm" "html" Nothing "Html.Events" Nothing) "Html.Events"
+    , text " to detect clicks on buttons. If you want mouse events for the whole page, you may want "
+    , codeLink (Href.toModule "elm" "browser" Nothing "Browser.Events" Nothing) "Browser.Events"
+    , text " instead. Reading "
+    , guide
+    , text " should give the foundation for using either!"
+    ]
+
+
+keyboard : Html msg
+keyboard =
+  makeHint
+    [ text "Folks usually use "
+    , codeLink (Href.toModule "elm" "html" Nothing "Html.Events" Nothing) "Html.Events"
+    , text " for key presses in text fields. If you want keyboard events for the whole page, you may want "
+    , codeLink (Href.toModule "elm" "browser" Nothing "Browser.Events" Nothing) "Browser.Events"
+    , text " instead. Reading "
+    , guide
+    , text " should give the foundation for using either!"
+    ]
+
+
+window : Html msg
+window =
+  makeHint
+    [ text "Use "
+    , codeLink (Href.toModule "elm" "browser" Nothing "Browser.Dom" Nothing) "Browser.Dom"
+    , text " to get the current window size, and use "
+    , codeLink (Href.toModule "elm" "browser" Nothing "Browser.Events" Nothing) "Browser.Events"
+    , text " to detect when the window changes size or is not visible at the moment."
+    ]
+
+
+animation : Html msg
+animation =
+  makeHint
+    [ text "If you are not using CSS animations, you will need "
+    , codeLink (Href.toModule "elm" "browser" Nothing "Browser.Events" (Just "onAnimationFrame")) "onAnimationFrame"
+    , text " to get smooth animations. The packages below may make one of these paths easier for you, but sometimes it is easier to just do things directly!"
+    ]
+
+
+guide : Html msg
+guide =
+  codeLink "https://guide.elm-lang.org" "guide.elm-lang.org"
+
+
+codeLink : String -> String -> Html msg
+codeLink url txt =
+  a [ href url ] [ codeText txt ]
+
+
+codeText : String -> Html msg
+codeText txt =
+  code [] [ text txt ]
