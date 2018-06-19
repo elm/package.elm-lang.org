@@ -1,217 +1,141 @@
 module Session exposing
   ( Data
   , empty
-  , Msg
-  , update
-  -- queries
-  , Query
-  , packages
-  , latestVersion
-  , releases
-  , readme
-  , allDocs
-  , moduleDocs
+  , getEntries
+  , addEntries
+  , getReleases
+  , addReleases
+  , fetchReleases
+  , getReadme
+  , addReadme
+  , fetchReadme
+  , getDocs
+  , addDocs
+  , fetchDocs
   )
 
 
 import Dict
 import Elm.Docs as Docs
+import Elm.Version as V
 import Http
 import Json.Decode as Decode
-import Page.Problem as Problem
 import Page.Search.Entry as Entry
 import Release
-import Route
-import Session.Query as Query
-import Session.Resource as Resource
-import Session.Status as Status
+import Url.Builder as Url
 import Utils.OneOrMore exposing (OneOrMore(..))
-import Version
 
 
 
 -- SESSION DATA
 
 
-type Data = Data Info
-
-
-type alias Status a =
-  Status.Status Resource.Error a
-
-
-type alias Info =
-  { packages : Maybe (Status (List Entry.Entry))
-  , releases : Dict.Dict String (Status (OneOrMore Release.Release))
-  , readmes : Dict.Dict String (Status String)
-  , docs : Dict.Dict String (Status (List Docs.Module))
+type alias Data =
+  { entries : Maybe (List Entry.Entry)
+  , releases : Dict.Dict String (OneOrMore Release.Release)
+  , readmes : Dict.Dict String String
+  , docs : Dict.Dict String (List Docs.Module)
   }
 
 
 empty : Data
 empty =
-  Data (Info Nothing Dict.empty Dict.empty Dict.empty)
+  Data Nothing Dict.empty Dict.empty Dict.empty
 
 
 
--- KEYS
+-- ENTRIES
+
+
+getEntries : Data -> Maybe (List Entry.Entry)
+getEntries data =
+  data.entries
+
+
+addEntries : List Entry.Entry -> Data -> Data
+addEntries entries data =
+  { data | entries = Just entries }
+
+
+
+-- RELEASES
 
 
 toPkgKey : String -> String -> String
-toPkgKey user project =
-  user ++ "/" ++ project
+toPkgKey author project =
+  author ++ "/" ++ project
 
 
-toVsnKey : String -> String -> Route.Version -> String
-toVsnKey user project vsn =
-  user ++ "/" ++ project ++ "/" ++ Route.vsnToString vsn
+getReleases : Data -> String -> String -> Maybe (OneOrMore Release.Release)
+getReleases data author project =
+  Dict.get (toPkgKey author project) data.releases
 
 
-
--- UPDATE
-
-
-type Msg
-  = Load Resource.Result
-
-
-update : Msg -> Data -> Data
-update (Load resourceResult) (Data info) =
-  Data <|
-    case resourceResult of
-      Resource.Releases user project result ->
-        { info | releases = insert result info.releases (toPkgKey user project) (Resource.BadReleases user project) }
-
-      Resource.Readme user project vsn result ->
-        { info | readmes = insert result info.readmes (toVsnKey user project vsn) (Resource.BadReadme user project vsn) }
-
-      Resource.Docs user project vsn result ->
-        { info | docs = insert result info.docs (toVsnKey user project vsn) (Resource.BadDocs user project vsn) }
-
-      Resource.Packages result ->
-        let
-          status =
-            case result of
-              Err err ->
-                Status.Failure (Resource.BadPackages err) []
-
-              Ok entries ->
-                Status.Success entries
-        in
-        { info | packages = Just status }
+addReleases : String -> String -> OneOrMore Release.Release -> Data -> Data
+addReleases author project releases data =
+  let
+    newReleases =
+      Dict.insert (toPkgKey author project) releases data.releases
+  in
+  { data | releases = newReleases }
 
 
-insert : Result Http.Error a -> Dict.Dict String (Status a) -> String -> (Http.Error -> Resource.Error) -> Dict.Dict String (Status a)
-insert result dict key toError =
-  case result of
-    Err err ->
-      Dict.insert key (Status.Failure (toError err) []) dict
-
-    Ok a ->
-      Dict.insert key (Status.Success a) dict
+fetchReleases : String -> String -> Http.Request (OneOrMore Release.Release)
+fetchReleases author project =
+  Http.get
+    (Url.absolute [ "packages", author, project, "releases.json" ] [])
+    Release.decoder
 
 
 
--- QUERIES
+-- README
 
 
-type alias Query a =
-  Query.Query Data Msg Resource.Error a
+toVsnKey : String -> String -> V.Version -> String
+toVsnKey author project version =
+  author ++ "/" ++ project ++ "@" ++ V.toString version
 
 
-packages : Query (List Entry.Entry)
-packages =
-  Query.required <|
-    \(Data info as data) ->
-      case info.packages of
-        Just status ->
-          ( data, Cmd.none, status )
-
-        Nothing ->
-          ( Data { info | packages = Just Status.Loading }
-          , Cmd.map Load Resource.getPackages
-          , Status.Loading
-          )
+getReadme : Data -> String -> String -> V.Version -> Maybe String
+getReadme data author project version =
+  Dict.get (toVsnKey author project version) data.readmes
 
 
-latestVersion : String -> String -> Query Version.Version
-latestVersion user project =
-  Query.map Release.getLatestVersion (releases user project)
+addReadme : String -> String -> V.Version -> String -> Data -> Data
+addReadme author project version readme data =
+  let
+    newReadmes =
+      Dict.insert (toVsnKey author project version) readme data.readmes
+  in
+  { data | readmes = newReadmes }
 
 
-releases : String -> String -> Query (OneOrMore Release.Release)
-releases user project =
-  Query.required <|
-    \(Data info as data) ->
-      let key = toPkgKey user project in
-      case Dict.get key info.releases of
-        Just status ->
-          ( data, Cmd.none, status )
-
-        Nothing ->
-          ( Data { info | releases = Dict.insert key Status.Loading info.releases }
-          , Cmd.map Load (Resource.getReleases user project)
-          , Status.Loading
-          )
+fetchReadme : String -> String -> V.Version -> Http.Request String
+fetchReadme author project version =
+  Http.getString <|
+    Url.absolute [ "packages", author, project, V.toString version, "README.md" ] []
 
 
-readme : String -> String -> Route.Version -> Query String
-readme user project version =
-  Query.required <|
-    \(Data info as data) ->
-      let key = toVsnKey user project version in
-      case Dict.get key info.readmes of
-        Just status ->
-          ( data, Cmd.none, status )
 
-        Nothing ->
-          ( Data { info | readmes = Dict.insert key Status.Loading info.readmes }
-          , Cmd.map Load (Resource.getReadme user project version)
-          , Status.Loading
-          )
+-- DOCS
 
 
-allDocs : String -> String -> Route.Version -> Query (List Docs.Module)
-allDocs user project version =
-  Query.required <|
-    \(Data info as data) ->
-      let key = toVsnKey user project version in
-      case Dict.get key info.docs of
-        Just status ->
-          ( data, Cmd.none, status )
-
-        Nothing ->
-          ( Data { info | docs = Dict.insert key Status.Loading info.docs }
-          , Cmd.map Load (Resource.getDocs user project version)
-          , Status.Loading
-          )
+getDocs : Data -> String -> String -> V.Version -> Maybe (List Docs.Module)
+getDocs data author project version =
+  Dict.get (toVsnKey author project version) data.docs
 
 
-moduleDocs : String -> String -> Route.Version -> String -> Query (Docs.Module, List Docs.Module)
-moduleDocs user project version moduleName =
-  Query.andThen
-    (findModule user project version moduleName)
-    (allDocs user project version)
+addDocs : String -> String -> V.Version -> List Docs.Module -> Data -> Data
+addDocs author project version docs data =
+  let
+    newDocs =
+      Dict.insert (toVsnKey author project version) docs data.docs
+  in
+  { data | docs = newDocs }
 
 
-findModule : String -> String -> Route.Version -> String -> List Docs.Module -> Query (Docs.Module, List Docs.Module)
-findModule user project version name docsList =
-  case findModuleHelp name docsList of
-    Just docs ->
-      Query.success (docs, docsList)
-
-    Nothing ->
-      Query.failure (Resource.MissingModule user project version name)
-
-
-findModuleHelp : String -> List Docs.Module -> Maybe Docs.Module
-findModuleHelp name docsList =
-  case docsList of
-    [] ->
-      Nothing
-
-    docs :: otherDocs ->
-      if docs.name == name then
-        Just docs
-      else
-        findModuleHelp name otherDocs
+fetchDocs : String -> String -> V.Version -> Http.Request (List Docs.Module)
+fetchDocs author project version =
+  Http.get
+    (Url.absolute [ "packages", author, project, V.toString version, "docs.json" ] [])
+    (Decode.list Docs.decoder)
