@@ -210,7 +210,9 @@ stepUrl url model =
       answer
 
     Nothing ->
-      (model, Cmd.none)
+      ( { model | page = NotFound session }
+      , Cmd.none
+      )
 
 
 route : Parser a b -> a -> Parser (b -> c) c
