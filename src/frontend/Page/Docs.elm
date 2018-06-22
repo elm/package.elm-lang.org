@@ -9,7 +9,7 @@ module Page.Docs exposing
   )
 
 
-import Browser.Navigation as Navigation
+import Browser.Dom as Dom
 import Elm.Docs as Docs
 import Elm.Version as V
 import Html exposing (..)
@@ -23,6 +23,7 @@ import Page.Problem as Problem
 import Release
 import Session
 import Skeleton
+import Task
 import Url.Builder as Url
 import Utils.Markdown as Markdown
 import Utils.OneOrMore exposing (OneOrMore)
@@ -106,8 +107,21 @@ getInfo latest model =
             | readme = Success readme
             , docs = Success docs
         }
-      , Cmd.none
+      , scrollIfNeeded model.focus
       )
+
+
+scrollIfNeeded : Focus -> Cmd Msg
+scrollIfNeeded focus =
+  case focus of
+    Module _ (Just tag) ->
+      Task.attempt ScrollAttempted (
+        Dom.getElement tag
+          |> Task.andThen (\info -> Dom.setViewport 0 info.element.y)
+      )
+
+    _ ->
+      Cmd.none
 
 
 
@@ -116,6 +130,7 @@ getInfo latest model =
 
 type Msg
   = QueryChanged String
+  | ScrollAttempted (Result Dom.Error ())
   | GotReleases (Result Http.Error (OneOrMore Release.Release))
   | GotReadme V.Version (Result Http.Error String)
   | GotDocs V.Version (Result Http.Error (List Docs.Module))
@@ -126,6 +141,11 @@ update msg model =
   case msg of
     QueryChanged query ->
       ( { model | query = query }
+      , Cmd.none
+      )
+
+    ScrollAttempted _ ->
+      ( model
       , Cmd.none
       )
 
@@ -177,7 +197,7 @@ update msg model =
                 | docs = Success docs
                 , session = Session.addDocs model.author model.project version docs model.session
             }
-          , Cmd.none
+          , scrollIfNeeded model.focus
           )
 
 
@@ -510,7 +530,7 @@ viewBrowseSourceLinkHelp author project version =
     url =
       Url.crossOrigin
         "https://github.com"
-        [ author, project, "tree", "beta-" ++ V.toString version ]
+        [ author, project, "tree", "rc1-" ++ V.toString version ]
         []
   in
   a [ class "pkg-nav-module", href url ] [ text "Browse Source" ]
