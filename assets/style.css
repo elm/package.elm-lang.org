@@ -159,9 +159,12 @@ pre {
 
 .docs-comment {
   overflow: hidden;
-  padding-left: 3em;
+  padding-left: 36px;
 }
 
+.docs-comment img {
+  max-width: 500px;
+}
 
 
 /* PACKAGE NAVIGATION */
