@@ -301,6 +301,36 @@ pre {
   padding-bottom: 10px;
 }
 
+/* RESPONSIVENESS */
+@media (max-width: 960px) {
+  .center {
+    width: auto;
+    margin-left: 10px;
+    margin-right: 10px;
+    flex-direction: column;
+    display: flex;
+  }
+
+  .block-list, .catalog {
+    width: auto;
+    display: block;
+  }
+ 
+  .pkg-nav, .catalog-sidebar {
+    width: auto;
+    display: block;
+    padding: 0px;
+    margin: 20px;
+    border-left: none;
+    order: -1;
+  }
+
+  .catalog input {
+    width: 90%;
+    margin: 10px auto;
+  }
+}
+
 
 
 /* CODE */
