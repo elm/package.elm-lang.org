@@ -270,6 +270,7 @@ hints =
   , Hint "visibility" 5 window
   , Hint "animation" 5 animation
   , Hint "requestanimationframe" 8 animation
+  , Hint "lenses" 4 lenses
   ]
 
 
@@ -383,6 +384,29 @@ animation =
     [ text "If you are not using CSS animations, you will need "
     , codeLink (Href.toModule "elm" "browser" Nothing "Browser.Events" (Just "onAnimationFrame")) "onAnimationFrame"
     , text " to get smooth animations. The packages below may make one of these paths easier for you, but sometimes it is easier to just do things directly!"
+    ]
+
+
+lenses : Html msg
+lenses =
+  makeHint
+    [ text "Lenses are not commonly used in Elm. Their design focuses on manipulating deeply nested data structures, like records in records in dictionaries in lists. But rather than introducing a complex system to help with already complex data structures, we encourage folks to first work on simplifying the data structure."
+    , br [] []
+    , br [] []
+    , text "Maybe this means flattening records. Or using "
+    , a [ href "https://guide.elm-lang.org/types/union_types.html" ] [ text "union types" ]
+    , text " to model different possibilities more precisely. Or representing graphs with "
+    , codeText "Dict"
+    , text " values as described "
+    , a [ href "https://evancz.gitbooks.io/functional-programming-in-elm/graphs/" ] [ text "here" ]
+    , text ". Or using the module system to create strong boundaries, using opaque types with helper functions to contain complexity."
+    , br [] []
+    , br [] []
+    , text "Point is, there are many paths to explore that will produce easier code with stronger guarantees, and folks are always happy to help if you share your situation on "
+    , a [ href "http://elmlang.herokuapp.com/" ] [ text "Slack" ]
+    , text " or "
+    , a [ href "https://discourse.elm-lang.org/" ] [ text "Discourse" ]
+    , text "!"
     ]
 
 
