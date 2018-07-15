@@ -195,9 +195,9 @@ Experienced users can go see if they like them and define them if they really wa
 That way the API can be nice and human readable *and* encourage its users to write code
 that is nice and human readable.
 
-Okay, but let's say you just don't care about recommendations and you have a great
+Finally, let's say you don't care about these recommendations and you have a great
 infix operator. Add them in a separate module. When someone sees an infix operator
 they are unfamiliar with, they can scan the imports for a `Whatever.Infix` module
-and limit the scope of their annoying search for your dumb operator.
+and limit the scope of their search for your operator.
 
 """
