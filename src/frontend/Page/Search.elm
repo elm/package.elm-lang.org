@@ -394,7 +394,7 @@ lenses =
     , br [] []
     , br [] []
     , text "Maybe this means flattening records. Or using "
-    , a [ href "https://guide.elm-lang.org/types/union_types.html" ] [ text "union types" ]
+    , a [ href "https://guide.elm-lang.org/types/custom_types.html" ] [ text "custom types" ]
     , text " to model different possibilities more precisely. Or representing graphs with "
     , codeText "Dict"
     , text " values as described "
