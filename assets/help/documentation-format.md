@@ -67,5 +67,3 @@ This represents the text that actually gets displayed as [the documentation](/pa
 Again, the goal is to have consistency, so readers can glance through easily and writers do not need to argue about style.
 
 Finally, modules need to be listed as exposed in `elm.json`. Some of the compiler's rules about the documentation format will only be enforced for these modules.
-
-"""
