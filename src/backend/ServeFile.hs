@@ -87,7 +87,7 @@ renames =
     , Pkg.Name "evancz" "start-app" ==> Pkg.Name "elm" "html"
     , Pkg.Name "evancz" "virtual-dom" ==> Pkg.Name "elm" "virtual-dom"
 
-    , Pkg.Name "elm-lang" "animation-frame" ==> Pkg.Name "elm" "animation-frame"
+    , Pkg.Name "elm-lang" "animation-frame" ==> Pkg.Name "elm" "browser"
     , Pkg.Name "elm-lang" "core" ==> Pkg.Name "elm" "core"
     , Pkg.Name "elm-lang" "html" ==> Pkg.Name "elm" "html"
     , Pkg.Name "elm-lang" "http" ==> Pkg.Name "elm" "http"
