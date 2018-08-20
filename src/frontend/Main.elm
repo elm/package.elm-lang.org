@@ -8,6 +8,7 @@ import Elm.Version as V
 import Html
 import Page.Docs as Docs
 import Page.Diff as Diff
+import Page.Help as Help
 import Page.Problem as Problem
 import Page.Search as Search
 import Session
@@ -46,6 +47,7 @@ type Page
   | Search Search.Model
   | Docs Docs.Model
   | Diff Diff.Model
+  | Help Help.Model
 
 
 
@@ -82,6 +84,9 @@ view model =
     Diff diff ->
       Skeleton.view never (Diff.view diff)
 
+    Help help ->
+      Skeleton.view never (Help.view help)
+
 
 
 -- INIT
@@ -106,6 +111,7 @@ type Msg
   | SearchMsg Search.Msg
   | DiffMsg Diff.Msg
   | DocsMsg Docs.Msg
+  | HelpMsg Help.Msg
 
 
 
@@ -145,6 +151,11 @@ update message model =
         Docs docs -> stepDocs model (Docs.update msg docs)
         _         -> ( model, Cmd.none )
 
+    HelpMsg msg ->
+      case model.page of
+        Help docs -> stepHelp model (Help.update msg docs)
+        _         -> ( model, Cmd.none )
+
 
 stepSearch : Model -> ( Search.Model, Cmd Search.Msg ) -> ( Model, Cmd Msg )
 stepSearch model (search, cmds) =
@@ -154,16 +165,23 @@ stepSearch model (search, cmds) =
 
 
 stepDocs : Model -> ( Docs.Model, Cmd Docs.Msg ) -> ( Model, Cmd Msg )
-stepDocs model (search, cmds) =
-  ( { model | page = Docs search }
+stepDocs model (docs, cmds) =
+  ( { model | page = Docs docs }
   , Cmd.map DocsMsg cmds
   )
 
 
 stepDiff : Model -> ( Diff.Model, Cmd Diff.Msg ) -> ( Model, Cmd Msg )
-stepDiff model (search, cmds) =
-  ( { model | page = Diff search }
+stepDiff model (diff, cmds) =
+  ( { model | page = Diff diff }
   , Cmd.map DiffMsg cmds
+  )
+
+
+stepHelp : Model -> ( Help.Model, Cmd Help.Msg ) -> ( Model, Cmd Msg )
+stepHelp model (help, cmds) =
+  ( { model | page = Help help }
+  , Cmd.map HelpMsg cmds
   )
 
 
@@ -178,6 +196,7 @@ exit model =
     Search m -> m.session
     Docs m -> m.session
     Diff m -> m.session
+    Help m -> m.session
 
 
 
@@ -203,6 +222,10 @@ stepUrl url model =
             (\author project version focus ->
                 stepDocs model (Docs.init session author project version focus)
             )
+        , route (s "help" </> s "design-guidelines")
+            (stepHelp model (Help.init session "Design Guidelines" "/assets/help/design-guidelines.md"))
+        , route (s "help" </> s "documentation-format")
+            (stepHelp model (Help.init session "Documentation Format" "/assets/help/documentation-format.md"))
         ]
   in
   case Parser.parse parser url of

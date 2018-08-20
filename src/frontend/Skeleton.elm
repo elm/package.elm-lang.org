@@ -3,6 +3,7 @@ module Skeleton exposing
   , Warning(..)
   , view
   , Segment
+  , helpSegment
   , authorSegment
   , projectSegment
   , versionSegment
@@ -45,6 +46,11 @@ type Warning
 type Segment
   = Text String
   | Link String String
+
+
+helpSegment : Segment
+helpSegment =
+  Text "help"
 
 
 authorSegment : String -> Segment
