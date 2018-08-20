@@ -136,11 +136,7 @@ viewWarning warning =
   div [ class "header-underbar" ] <|
     case warning of
       NoProblems ->
-        [ p [ class "version-warning" ]
-            [ text "NOT FOR SHARING. For alpha testers only! Learn why "
-            , a [ href "https://www.deconstructconf.com/2017/evan-czaplicki-on-storytelling" ] [ text "here" ]
-            ]
-        ]
+        []
 
       NewerVersion url version ->
         [ p [ class "version-warning" ]
