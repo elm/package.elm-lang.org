@@ -4,7 +4,7 @@ This documentation format strives for simplicity and regularity. It should be ea
 
 All documentation can use the same markdown as in Elm. You can check out the [Maybe](https://github.com/elm/core/blob/master/src/Maybe.elm) and [Result](https://github.com/elm/core/blob/master/src/Result.elm) documentation for complete examples.
 
-If you are preparing to publish a package, you should read through the [API design guidelines](/help/design-guidelines) and [preview your documentation](/help/docs-preview).
+If you are preparing to publish a package, you should also read through the [API design guidelines](/help/design-guidelines)!
 
 
 ## Documenting a value
