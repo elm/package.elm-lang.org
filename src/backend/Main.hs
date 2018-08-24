@@ -129,9 +129,12 @@ serve token memory =
     ]
 
 
-version :: Route (Pkg.Version -> a) a
+version :: Route (Maybe Pkg.Version -> a) a
 version =
-  Router.custom Pkg.versionFromText
+  Router.oneOf
+    [ s "latest" ==> Nothing
+    , Router.custom Pkg.versionFromText ==> Just
+    ]
 
 
 data Info
@@ -176,8 +179,8 @@ serveReleases author project =
   serveFile (Path.releases (Pkg.Name author project))
 
 
-serveVersion :: Memory.Memory -> Text -> Text -> Pkg.Version -> Info -> S.Snap ()
-serveVersion memory author project version info =
+serveVersion :: Memory.Memory -> Text -> Text -> Maybe Pkg.Version -> Info -> S.Snap ()
+serveVersion memory author project maybeVersion info =
   do  let name = Pkg.Name author project
       pkgs <- Memory.getPackages memory
       case Map.lookup name pkgs of
@@ -185,15 +188,17 @@ serveVersion memory author project version info =
           S.pass
 
         Just (Memory.Summary versions _ _) ->
-          if notElem version versions
-          then S.pass
-          else
-            case info of
-              Readme ->
-                ServeFile.version name version Nothing
+          case verifyVersion maybeVersion versions of
+            Nothing ->
+              S.pass
 
-              Module asset ->
-                serveVersionHelp name version asset
+            Just version ->
+              case info of
+                Readme ->
+                  ServeFile.version name version Nothing
+
+                Module asset ->
+                  serveVersionHelp name version asset
 
 
 
@@ -219,3 +224,20 @@ serveVersionHelp name version asset =
 
         Nothing ->
           S.pass
+
+
+verifyVersion :: Maybe Pkg.Version -> [Pkg.Version] -> Maybe Pkg.Version
+verifyVersion maybeVersion versions =
+  case versions of
+    [] ->
+      Nothing
+
+    _:_ ->
+      case maybeVersion of
+        Nothing ->
+          Just (maximum versions)
+
+        Just version ->
+          if elem version versions
+          then Just version
+          else Nothing
