@@ -36,7 +36,7 @@ compile =
   do  putStrLn "Compiling artifacts..."
 
       exitCode <-
-        Process.rawSystem "../../compiler/dist/build/elm/elm"
+        Process.rawSystem "elm"
           [ "make"
           , "src/frontend/Main.elm"
           , "--optimize"
