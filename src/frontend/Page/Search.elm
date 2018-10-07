@@ -135,9 +135,11 @@ viewSearch query entries =
             [ Keyed.node "div" [] <|
                 ("h", viewHint (List.isEmpty results) query) :: results
             , p [ class "pkg-hint" ]
-                [ text "Need documentation for a 0.18 package? Read "
-                , a [ href "https://gist.github.com/evancz/9031e37902dfaec250a08a7aa6e17b10" ] [ text "this" ]
-                , text " for help finding it."
+                [ text "Need 0.18 packages? For "
+                , a [ href "https://gist.github.com/evancz/9031e37902dfaec250a08a7aa6e17b10" ] [ text "technical reasons" ]
+                , text ", search "
+                , a [ href "https://dmy.github.io/elm-0.18-packages/" ] [ text "here" ]
+                , text " instead!"
                 ]
             ]
     ]
