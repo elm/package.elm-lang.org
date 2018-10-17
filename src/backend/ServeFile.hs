@@ -28,7 +28,7 @@ import qualified Elm.Package as Pkg
 
 misc :: B.Builder -> Snap ()
 misc title =
-  makeHtml title mempty
+  makeHtml title mempty (makeOgpMetadata title Nothing)
 
 
 
@@ -37,15 +37,18 @@ misc title =
 
 project :: Pkg.Name -> Snap ()
 project pkg =
-  makeHtml (B.stringUtf8 (Pkg.toString pkg)) mempty
+  let
+    title = (B.stringUtf8 (Pkg.toString pkg))
+  in
+  makeHtml title mempty (makeOgpMetadata title Nothing)
 
 
 
 -- VERSION
 
 
-version :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
-version pkg@(Pkg.Name _ prjct) vsn maybeName =
+version :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Maybe Text.Text -> Snap ()
+version pkg@(Pkg.Name _ prjct) vsn maybeName maybeDescription =
   let
     versionString =
       Pkg.versionToString vsn
@@ -56,8 +59,14 @@ version pkg@(Pkg.Name _ prjct) vsn maybeName =
     title =
       maybe "" (++" - ") maybeStringName
       ++ Text.unpack prjct ++ " " ++ versionString
+
+    ogpTitle =
+      maybe "" (++" - ") maybeStringName
+      ++ Pkg.toString pkg ++ " " ++ versionString
+
   in
   makeHtml (B.stringUtf8 title) (makeCanonicalLink pkg maybeName)
+    (makeOgpMetadata (B.stringUtf8 ogpTitle) maybeDescription)
 
 
 
@@ -106,19 +115,35 @@ renames =
   (,)
 
 
+-- OGP METADATA
+
+makeOgpMetadata :: B.Builder -> Maybe Text.Text -> B.Builder
+makeOgpMetadata title maybeDescription =
+  let
+    description =
+      maybe "" (B.stringUtf8 . Text.unpack . \d ->
+          [r|<meta property="og:description" content="|] <> d <> [r|">|]
+        ) maybeDescription
+  in
+  [r|<meta property="og:type" content="website">
+  <meta property="og:site_name" content="Elm Packages">
+  <meta property="og:title" content="|] <> title <> [r|">
+  <meta property="og:image" content="http://localhost:8080/assets/elm_logo.svg">|]
+    <> description
+
 
 -- SKELETON
 
 
-makeHtml :: B.Builder -> B.Builder -> Snap ()
-makeHtml title canonicalLink =
+makeHtml :: B.Builder -> B.Builder -> B.Builder -> Snap ()
+makeHtml title canonicalLink ogpMetadata =
   writeBuilder $
     [r|<!DOCTYPE HTML>
 <html>
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" size="16x16, 32x32, 48x48, 64x64, 128x128, 256x256" href="/assets/favicon.ico">
-  <title>|] <> title <> [r|</title>|] <> canonicalLink <> [r|
+  <title>|] <> title <> [r|</title>|] <> canonicalLink <> ogpMetadata <> [r|
   <link rel="stylesheet" href="/assets/highlight/styles/default.css?|] <> uniqueToken <> [r|">
   <link rel="stylesheet" href="/assets/style.css?|] <> uniqueToken <> [r|">
   <script src="/assets/highlight/highlight.pack.js?|] <> uniqueToken <> [r|"></script>

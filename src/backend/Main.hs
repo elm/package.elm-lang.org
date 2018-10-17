@@ -187,7 +187,7 @@ serveVersion memory author project maybeVersion info =
         Nothing ->
           S.pass
 
-        Just (Memory.Summary versions _ _) ->
+        Just (Memory.Summary versions maybeDetails _) ->
           case verifyVersion maybeVersion versions of
             Nothing ->
               S.pass
@@ -195,7 +195,8 @@ serveVersion memory author project maybeVersion info =
             Just version ->
               case info of
                 Readme ->
-                  ServeFile.version name version Nothing
+                  ServeFile.version name version Nothing $
+                    maybe Nothing (Just . fst) maybeDetails
 
                 Module asset ->
                   serveVersionHelp name version asset
@@ -220,7 +221,7 @@ serveVersionHelp name version asset =
     _ ->
       case Module.fromHyphenPath asset of
         Just moduleName ->
-          ServeFile.version name version (Just moduleName)
+          ServeFile.version name version (Just moduleName) Nothing
 
         Nothing ->
           S.pass
