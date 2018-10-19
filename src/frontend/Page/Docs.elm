@@ -12,6 +12,8 @@ module Page.Docs exposing
 import Browser.Dom as Dom
 import Elm.Docs as Docs
 import Elm.Version as V
+import Elm.Project as Project
+import Elm.Constraint as Constraint
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -43,6 +45,7 @@ type alias Model =
   , latest : Status V.Version
   , readme : Status String
   , docs : Status (List Docs.Module)
+  , packageInfo : Status Project.PackageInfo
   }
 
 
@@ -74,10 +77,10 @@ init session author project version focus =
         latest = Release.getLatest releases
       in
       getInfo latest <|
-        Model session author project version focus "" (Success latest) Loading Loading
+        Model session author project version focus "" (Success latest) Loading Loading Loading
 
     Nothing ->
-      ( Model session author project version focus "" Loading Loading Loading
+      ( Model session author project version focus "" Loading Loading Loading Loading
       , Http.send GotReleases (Session.fetchReleases author project)
       )
 
@@ -89,9 +92,10 @@ getInfo latest model =
     project = model.project
     version = Maybe.withDefault latest model.version
     maybeInfo =
-      Maybe.map2 Tuple.pair
+      Maybe.map3 (\r d p -> (r, d, p))
         (Session.getReadme model.session author project version)
         (Session.getDocs model.session author project version)
+        (Session.getPackageInfo model.session author project version)
   in
   case maybeInfo of
     Nothing ->
@@ -99,13 +103,15 @@ getInfo latest model =
       , Cmd.batch
           [ Http.send (GotReadme version) (Session.fetchReadme author project version)
           , Http.send (GotDocs version) (Session.fetchDocs author project version)
+          , Http.send (GotPackageInfo version) (Session.fetchPackageInfo author project version)
           ]
       )
 
-    Just (readme, docs) ->
+    Just (readme, docs, packageInfo) ->
       ( { model
             | readme = Success readme
             , docs = Success docs
+            , packageInfo = verifyPackageInfo packageInfo
         }
       , scrollIfNeeded model.focus
       )
@@ -134,6 +140,7 @@ type Msg
   | GotReleases (Result Http.Error (OneOrMore Release.Release))
   | GotReadme V.Version (Result Http.Error String)
   | GotDocs V.Version (Result Http.Error (List Docs.Module))
+  | GotPackageInfo V.Version (Result Http.Error Project.Project)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -200,6 +207,29 @@ update msg model =
           , scrollIfNeeded model.focus
           )
 
+    GotPackageInfo version result ->
+      case result of
+        Err _ ->
+          ( { model | packageInfo = Failure }
+          , Cmd.none
+          )
+
+        Ok packageInfo ->
+          ( { model
+                | packageInfo = verifyPackageInfo packageInfo
+                , session = Session.addPackageInfo model.author model.project version packageInfo model.session
+            }
+          , scrollIfNeeded model.focus
+          )
+
+
+verifyPackageInfo projectInfo =
+  case projectInfo of
+    Project.Application _ ->
+      Failure
+
+    Project.Package packageInfo ->
+      Success packageInfo
 
 
 -- VIEW
@@ -401,6 +431,8 @@ viewSidebar model =
     [ lazy4 viewReadmeLink model.author model.project model.version model.focus
     , br [] []
     , lazy4 viewBrowseSourceLink model.author model.project model.version model.latest
+    , p [] []
+    , lazy viewElmVersion model.packageInfo
     , h2 [] [ text "Module Docs" ]
     , input
         [ placeholder "Search"
@@ -488,6 +520,29 @@ isTagMatch query toResult tipeName (tagName, _) =
     Just (toResult tipeName tagName)
   else
     Nothing
+
+
+
+-- VIEW ELM VERSION
+
+
+viewElmVersion : Status Project.PackageInfo -> Html msg
+viewElmVersion packageInfo =
+  case packageInfo of
+    Success { elm } ->
+      div
+        [ class "pkg-nav-module"
+        ]
+        [ span [] [ text "Elm version" ]
+        , br [] []
+        , span [ class "pkg-nav-version" ] [ text (Constraint.toString elm) ]
+        ]
+
+    Loading ->
+      text ""
+
+    Failure ->
+      text ""
 
 
 

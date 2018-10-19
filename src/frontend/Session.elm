@@ -12,11 +12,15 @@ module Session exposing
   , getDocs
   , addDocs
   , fetchDocs
+  , getPackageInfo
+  , addPackageInfo
+  , fetchPackageInfo
   )
 
 
 import Dict
 import Elm.Docs as Docs
+import Elm.Project as Project
 import Elm.Version as V
 import Http
 import Json.Decode as Decode
@@ -35,12 +39,13 @@ type alias Data =
   , releases : Dict.Dict String (OneOrMore Release.Release)
   , readmes : Dict.Dict String String
   , docs : Dict.Dict String (List Docs.Module)
+  , packageInfos : Dict.Dict String Project.Project
   }
 
 
 empty : Data
 empty =
-  Data Nothing Dict.empty Dict.empty Dict.empty
+  Data Nothing Dict.empty Dict.empty Dict.empty Dict.empty
 
 
 
@@ -139,3 +144,28 @@ fetchDocs author project version =
   Http.get
     (Url.absolute [ "packages", author, project, V.toString version, "docs.json" ] [])
     (Decode.list Docs.decoder)
+
+
+
+-- PACKAGE INFO
+
+
+getPackageInfo : Data -> String -> String -> V.Version -> Maybe Project.Project
+getPackageInfo data author project version =
+  Dict.get (toVsnKey author project version) data.packageInfos
+
+
+addPackageInfo : String -> String -> V.Version -> Project.Project -> Data -> Data
+addPackageInfo author project version packageInfo data =
+  let
+    newPackageInfos =
+      Dict.insert (toVsnKey author project version) packageInfo data.packageInfos
+  in
+  { data | packageInfos = newPackageInfos }
+
+
+fetchPackageInfo : String -> String -> V.Version -> Http.Request Project.Project
+fetchPackageInfo author project version =
+  Http.get
+    (Url.absolute [ "packages", author, project, V.toString version, "elm.json" ] [])
+    Project.decoder
