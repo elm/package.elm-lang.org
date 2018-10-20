@@ -96,10 +96,13 @@ indentFour =
 viewBinop : Info -> Docs.Binop -> Html msg
 viewBinop info { name, comment, tipe } =
   let
+    nameInParens =
+      "(" ++ name ++ ")"
+
     nameHtml =
-      toBoldLink info ("(" ++ name ++ ")")
+      toBoldLink info nameInParens
   in
-  viewCodeBlock name comment <|
+  viewCodeBlock nameInParens comment <|
     case toLines info Other tipe of
       One _ line ->
         [ nameHtml :: space :: colon :: space :: line ]
