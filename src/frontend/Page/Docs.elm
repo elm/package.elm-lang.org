@@ -401,6 +401,8 @@ viewSidebar model =
     [ lazy4 viewReadmeLink model.author model.project model.version model.focus
     , br [] []
     , lazy4 viewBrowseSourceLink model.author model.project model.version model.latest
+    , h2 [] [ text "Install" ]
+    , lazy2 viewInstallInstruction model.author model.project
     , h2 [] [ text "Module Docs" ]
     , input
         [ placeholder "Search"
@@ -535,6 +537,17 @@ viewBrowseSourceLinkHelp author project version =
   in
   a [ class "pkg-nav-module", href url ] [ text "Browse Source" ]
 
+
+
+-- VIEW INSTALL INSTRUCTION
+
+
+viewInstallInstruction : String -> String -> Html msg
+viewInstallInstruction author project =
+  code [ class "pkg-nav-install" ]
+    [ span [] [ text "> "]
+    , text ("elm install " ++ author ++ "/" ++ project)
+    ]
 
 
 -- VIEW "MODULE" LINK
