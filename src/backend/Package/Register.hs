@@ -288,4 +288,4 @@ writeEndpoint name version dir stream =
 
 toGithubUrl :: Pkg.Name -> Pkg.Version -> Text.Text
 toGithubUrl name version =
-  "https://github.com/" <> Text.pack (Pkg.toUrl name) <> "/zipball/" <> Pkg.versionToText version <> "/"
+  "https://github.com/" <> Text.pack (Pkg.toUrl name) <> "/zipball/" <> Pkg.versionToText version
