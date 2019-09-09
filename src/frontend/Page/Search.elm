@@ -266,6 +266,8 @@ hints =
   , Hint "router" 4 router
   , Hint "routing" 4 router
   , Hint "routes" 4 router
+  , Hint "focus" 4 focus
+  , Hint "blur" 4 focus
   , Hint "scroll" 4 scroll
   , Hint "scrollheight" 7 scroll
   , Hint "scrollwidth" 7 scroll
@@ -332,6 +334,21 @@ router =
     , text " to learn how this fits into a "
     , codeLink (Href.toModule "elm" "browser" Nothing "Browser" (Just "application")) "Browser.application"
     , text " that manages the URL!"
+    ]
+
+
+focus : Html msg
+focus =
+  makeHint
+    [ text "Check out "
+    , codeLink (Href.toModule "elm" "browser" Nothing "Browser.Dom" Nothing) "Browser.Dom"
+    , text " for focusing on certain nodes. It uses tasks, so be sure you have learned about "
+    , code [] [ text "Cmd" ]
+    , text " values in "
+    , guide
+    , text " and then read through the "
+    , codeLink (Href.toModule "elm" "core" Nothing "Task" Nothing) "Task"
+    , text " module so you do not have to guess at how anything works!"
     ]
 
 
