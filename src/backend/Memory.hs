@@ -106,7 +106,7 @@ init =
       _ <- forkIO $ forever (join (readChan worker))
 
       generateAllPackagesJson packages
-      Sitemap.generate (Map.filter (Maybe.isJust . _details) packages)
+      generateSitemap packages
       generateSearchJson packages
 
       return $ Memory state worker
@@ -136,7 +136,7 @@ addPackage (Memory mvar worker) info@(Project.PkgInfo name _ _ version _ _ _ _) 
 
       generateAllPackagesJson newPackages
       writeChan worker $
-        do  Sitemap.generate _versions newPackages
+        do  generateSitemap newPackages
             generateSearchJson newPackages
 
       putMVar mvar $ State newHistory newPackages
@@ -166,6 +166,16 @@ generateAllPackagesJson :: Map.Map Pkg.Name Summary -> IO ()
 generateAllPackagesJson packages =
   write "all-packages.json" $
     Encode.dict Pkg.toText (Encode.list Pkg.encodeVersion . _versions) packages
+
+
+
+
+-- GENERATE sitemap.xml
+
+
+generateSitemap :: Map.Map Pkg.Name Summary -> IO ()
+generateSitemap packages =
+  Sitemap.generate (Map.filter (Maybe.isJust . _details) packages)
 
 
 

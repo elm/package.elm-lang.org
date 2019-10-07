@@ -24,7 +24,7 @@ import qualified Elm.Package as Pkg
 -- GENERATE
 
 
-generate :: Map Name () -> IO ()
+generate :: Map Name a -> IO ()
 generate packages =
   BS.writeFile "sitemap.xml" $
     Blaze.renderMarkup (generateSitemap packages)
