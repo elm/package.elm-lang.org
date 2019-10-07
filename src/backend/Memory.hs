@@ -106,7 +106,7 @@ init =
       _ <- forkIO $ forever (join (readChan worker))
 
       generateAllPackagesJson packages
-      Sitemap.generate _versions packages
+      Sitemap.generate (Map.filter (Maybe.isJust . _details) packages)
       generateSearchJson packages
 
       return $ Memory state worker
