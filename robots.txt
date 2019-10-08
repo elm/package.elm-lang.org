@@ -1,3 +1,5 @@
 User-agent: *
-Disallow:
+Disallow: /packages/elm-lang/
+Disallow: /packages/elm-tools/
+Disallow: /packages/elm-community/elm-test/
 Sitemap: http://package.elm-lang.org/sitemap.xml
