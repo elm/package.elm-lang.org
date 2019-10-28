@@ -10,7 +10,6 @@ import qualified Data.Either as Either
 import qualified Data.Time.Clock.POSIX as Time
 import qualified Data.Map as Map
 import Data.Monoid ((<>))
-import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
