@@ -181,25 +181,37 @@ uploadFiles name version time =
       results <- Snap.handleMultipart Snap.defaultUploadPolicy (handlePart name version dir)
       case Either.partitionEithers results of
         ([], files) ->
-          if Set.fromList files /= requiredFiles then
-            revert name version $ "Malformed request. Missing some metadata files."
-          else
-            do  bytes <- liftIO $ BS.readFile (dir </> "elm.json")
-                case Decode.parse "project" (const []) Project.pkgDecoder bytes of
-                  Left _ ->
-                    revert name version $ "Invalid content in elm.json file."
+          do  requireFile name version "README.md" files
+              requireFile name version "elm.json" files
+              requireFile name version "docs.json" files
+              requireHash name version dir files
+              bytes <- liftIO $ BS.readFile (dir </> "elm.json")
+              case Decode.parse "project" (const []) Project.pkgDecoder bytes of
+                Left _ ->
+                  revert name version $ "Invalid content in elm.json file."
 
-                  Right info ->
-                    do  liftIO $ writeFile (dir </> "time.dat") (show (floor time :: Integer))
-                        return info
+                Right info ->
+                  do  liftIO $ writeFile (dir </> "time.dat") (show (floor time :: Integer))
+                      return info
 
         (problems, _) ->
           revert name version $ "Failure uploading your package:" ++ concatMap ("\n  - " ++) problems
 
 
-requiredFiles :: Set.Set FilePath
-requiredFiles =
-  Set.fromList [ "README.md", "elm.json", "docs.json", "endpoint.json" ]
+requireFile :: Pkg.Name -> Pkg.Version -> FilePath -> [FilePath] -> Snap.Snap ()
+requireFile name version fileName uploadedFiles =
+  if elem fileName uploadFiles
+  then return ()
+  else revert name version $ "Malformed request. Missing the " ++ fileName ++ " file."
+
+
+requireHash :: Pkg.Name -> Pkg.Version -> FilePath -> [FilePath] -> Snap.Snap ()
+requireHash name version dir uploadFiles =
+  if elem "endpoint.json" uploadFiles
+  then return ()
+  else
+    do  hash <- getQueryParam "github-hash"
+        liftIO (writeEndpoint name version dir hash)
 
 
 revert :: Pkg.Name -> Pkg.Version -> String -> Snap.Snap a
@@ -221,7 +233,7 @@ handlePart name version dir info stream =
       boundedWrite dir "docs.json" stream
 
     "github-hash" ->
-      writeEndpoint name version dir stream
+      boundedWriteEndpoint name version dir stream
 
     path ->
       return $ Left $ "Did not recognize " ++ show path ++ " part in form-data"
@@ -257,8 +269,8 @@ boundedWriteHelp path handle size stream =
 -- WRITE ENDPOINTS
 
 
-writeEndpoint :: Pkg.Name -> Pkg.Version -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
-writeEndpoint name version dir stream =
+boundedWriteEndpoint :: Pkg.Name -> Pkg.Version -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
+boundedWriteEndpoint name version dir stream =
     boundedRead 0 ""
   where
     boundedRead size bits =
@@ -277,13 +289,17 @@ writeEndpoint name version dir stream =
                     return $ Left "The hash of your assets is malformed"
 
                   Right hash ->
-                    do  Encode.writeUgly (dir </> "endpoint.json") $
-                          Encode.object
-                            [ ("url", Encode.text (toGithubUrl name version))
-                            , ("hash", Encode.text hash)
-                            ]
-
+                    do  writeEndpoint name version dir hash
                         return $ Right "endpoint.json"
+
+
+writeEndpoint :: Pkg.Name -> Pkg.Version -> FilePath -> Text -> IO ()
+writeEndpoint name version dir hash =
+  Encode.writeUgly (dir </> "endpoint.json") $
+    Encode.object
+      [ ("url", Encode.text (toGithubUrl name version))
+      , ("hash", Encode.text hash)
+      ]
 
 
 toGithubUrl :: Pkg.Name -> Pkg.Version -> Text.Text
