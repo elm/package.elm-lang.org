@@ -30,6 +30,6 @@ removeDirectory name version =
   do  Dir.removeDirectoryRecursive $
         "packages" </> Pkg.toFilePath name </> Pkg.versionToString version
 
-      if version == Pkg.initial
+      if version == Pkg.initialVersion
         then Dir.removeDirectoryRecursive ("packages" </> Pkg.toFilePath name)
         else return ()
