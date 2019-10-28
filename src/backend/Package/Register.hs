@@ -205,7 +205,7 @@ requiredFiles =
 revert :: FilePath -> String -> Snap.Snap a
 revert dir details =
   do  liftIO (Dir.removeDirectoryRecursive dir)
-      Error.string 404 details
+      Error.string 400 details
 
 
 handlePart :: Pkg.Name -> Pkg.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
