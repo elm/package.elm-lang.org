@@ -200,14 +200,14 @@ uploadFiles name version time =
 
 requireFile :: Pkg.Name -> Pkg.Version -> FilePath -> [FilePath] -> Snap.Snap ()
 requireFile name version fileName uploadedFiles =
-  if elem fileName uploadFiles
+  if elem fileName uploadedFiles
   then return ()
   else revert name version $ "Malformed request. Missing the " ++ fileName ++ " file."
 
 
 requireHash :: Pkg.Name -> Pkg.Version -> FilePath -> [FilePath] -> Snap.Snap ()
-requireHash name version dir uploadFiles =
-  if elem "endpoint.json" uploadFiles
+requireHash name version dir uploadedFiles =
+  if elem "endpoint.json" uploadedFiles
   then return ()
   else
     do  hash <- getQueryParam "github-hash"
