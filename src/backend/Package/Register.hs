@@ -182,19 +182,19 @@ uploadFiles name version time =
       case Either.partitionEithers results of
         ([], files) ->
           if Set.fromList files /= requiredFiles then
-            revert dir $ "Malformed request. Missing some metadata files."
+            revert name version $ "Malformed request. Missing some metadata files."
           else
             do  bytes <- liftIO $ BS.readFile (dir </> "elm.json")
                 case Decode.parse "project" (const []) Project.pkgDecoder bytes of
                   Left _ ->
-                    revert dir $ "Invalid content in elm.json file."
+                    revert name version $ "Invalid content in elm.json file."
 
                   Right info ->
                     do  liftIO $ writeFile (dir </> "time.dat") (show (floor time :: Integer))
                         return info
 
         (problems, _) ->
-          revert dir $ "Failure uploading your package:" ++ concatMap ("\n  - " ++) problems
+          revert name version $ "Failure uploading your package:" ++ concatMap ("\n  - " ++) problems
 
 
 requiredFiles :: Set.Set FilePath
@@ -202,9 +202,9 @@ requiredFiles =
   Set.fromList [ "README.md", "elm.json", "docs.json", "endpoint.json" ]
 
 
-revert :: FilePath -> String -> Snap.Snap a
-revert dir details =
-  do  liftIO (Dir.removeDirectoryRecursive dir)
+revert :: Pkg.Name -> Pkg.Version -> String -> Snap.Snap a
+revert name version details =
+  do  liftIO (Path.removeDirectory name version)
       Error.string 400 details
 
 
