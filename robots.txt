@@ -2,4 +2,9 @@ User-agent: *
 Disallow: /packages/elm-lang/
 Disallow: /packages/elm-tools/
 Disallow: /packages/elm-community/elm-test/
+Disallow: /packages/evancz/elm-html/
+Disallow: /packages/evancz/elm-http/
+Disallow: /packages/evancz/elm-svg/
+Disallow: /packages/evancz/url-parser/
+Disallow: /packages/evancz/virtual-dom/
 Sitemap: http://package.elm-lang.org/sitemap.xml
