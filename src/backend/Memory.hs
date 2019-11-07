@@ -149,7 +149,7 @@ add (Project.PkgInfo name summary license version _ _ _ constraint) maybeSummary
       maybe [] _versions maybeSummary ++ [version]
 
     details =
-      if Con.goodElm constraint then
+      if any (Con.satisfies constraint) [ Pkg.Version 0 19 0, Pkg.Version 0 19 1 ] then -- 0.19.1
         Just ( summary, license )
       else
         Nothing
