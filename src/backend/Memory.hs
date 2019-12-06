@@ -80,7 +80,7 @@ toSummary name versions =
         Right (Project.PkgInfo _ summary license _ _ _ _ constraint) ->
           let
             details =
-              if Con.goodElm constraint
+              if is19 constraint
                 then Just ( summary, license )
                 else Nothing
           in
@@ -149,13 +149,17 @@ add (Project.PkgInfo name summary license version _ _ _ constraint) maybeSummary
       maybe [] _versions maybeSummary ++ [version]
 
     details =
-      if any (Con.satisfies constraint) [ Pkg.Version 0 19 0, Pkg.Version 0 19 1 ] then -- 0.19.1
+      if is19 constraint then
         Just ( summary, license )
       else
         Nothing
   in
   Summary versions details (getWeight name)
 
+
+is19 :: Con.Constraint -> Bool
+is19 constraint =
+  any (Con.satisfies constraint) [ Pkg.Version 0 19 0, Pkg.Version 0 19 1 ]
 
 
 
