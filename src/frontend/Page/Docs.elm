@@ -11,6 +11,7 @@ module Page.Docs exposing
 
 import Browser.Dom as Dom
 import Elm.Docs as Docs
+import Elm.Project as Project
 import Elm.Version as V
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -43,6 +44,14 @@ type alias Model =
   , latest : Status V.Version
   , readme : Status String
   , docs : Status (List Docs.Module)
+  , manifest : Status Project.PackageInfo
+  }
+
+
+type alias Info =
+  { readme : String
+  , docs : List Docs.Module
+  , manifest : Project.PackageInfo
   }
 
 
@@ -68,16 +77,29 @@ type DocsError
 
 init : Session.Data -> String -> String -> Maybe V.Version -> Focus -> ( Model, Cmd Msg )
 init session author project version focus =
+  let
+    model =
+      { session = session
+      , author = author
+      , project = project
+      , version = version
+      , focus = focus
+      , query = ""
+      , latest = Loading
+      , readme = Loading
+      , docs = Loading
+      , manifest = Loading
+      }
+  in
   case Session.getReleases session author project of
     Just releases ->
       let
         latest = Release.getLatest releases
       in
-      getInfo latest <|
-        Model session author project version focus "" (Success latest) Loading Loading
+        getInfo latest { model | latest = Success latest }
 
     Nothing ->
-      ( Model session author project version focus "" Loading Loading Loading
+      ( model
       , Http.send GotReleases (Session.fetchReleases author project)
       )
 
@@ -89,9 +111,10 @@ getInfo latest model =
     project = model.project
     version = Maybe.withDefault latest model.version
     maybeInfo =
-      Maybe.map2 Tuple.pair
+      Maybe.map3 Info
         (Session.getReadme model.session author project version)
         (Session.getDocs model.session author project version)
+        (Session.getManifest model.session author project version)
   in
   case maybeInfo of
     Nothing ->
@@ -99,13 +122,15 @@ getInfo latest model =
       , Cmd.batch
           [ Http.send (GotReadme version) (Session.fetchReadme author project version)
           , Http.send (GotDocs version) (Session.fetchDocs author project version)
+          , Http.send (GotManifest version) (Session.fetchManifest author project version)
           ]
       )
 
-    Just (readme, docs) ->
+    Just info ->
       ( { model
-            | readme = Success readme
-            , docs = Success docs
+            | readme = Success info.readme
+            , docs = Success info.docs
+            , manifest = Success info.manifest
         }
       , scrollIfNeeded model.focus
       )
@@ -134,6 +159,7 @@ type Msg
   | GotReleases (Result Http.Error (OneOrMore Release.Release))
   | GotReadme V.Version (Result Http.Error String)
   | GotDocs V.Version (Result Http.Error (List Docs.Module))
+  | GotManifest V.Version (Result Http.Error Project.PackageInfo)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -200,6 +226,20 @@ update msg model =
           , scrollIfNeeded model.focus
           )
 
+    GotManifest version result ->
+      case result of
+        Err _ ->
+          ( { model | manifest = Failure }
+          , Cmd.none
+          )
+
+        Ok manifest ->
+          ( { model
+                | manifest = Success manifest
+                , session = Session.addManifest model.author model.project version manifest model.session
+            }
+          , Cmd.none
+          )
 
 
 -- VIEW
