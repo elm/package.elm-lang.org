@@ -1,6 +1,6 @@
 module Release exposing
   ( Release
-  , getLatest
+  , getLatestVersion
   , decoder
   )
 
@@ -8,6 +8,7 @@ module Release exposing
 import Elm.Version as V
 import Json.Decode as D
 import Utils.OneOrMore exposing (OneOrMore(..))
+import Time
 
 
 
@@ -16,7 +17,7 @@ import Utils.OneOrMore exposing (OneOrMore(..))
 
 type alias Release =
   { version : V.Version
-  , time : Int
+  , time : Time.Posix
   }
 
 
@@ -24,8 +25,8 @@ type alias Release =
 -- GET LATEST VERSION
 
 
-getLatest : OneOrMore Release -> V.Version
-getLatest (OneOrMore r rs) =
+getLatestVersion : OneOrMore Release -> V.Version
+getLatestVersion (OneOrMore r rs) =
   getLatestVersionHelp rs r
 
 
@@ -37,7 +38,10 @@ getLatestVersionHelp releases maxRelease =
 
     release :: otherReleases ->
       getLatestVersionHelp otherReleases <|
-        if release.time > maxRelease.time then release else maxRelease
+        if Time.posixToMillis release.time > Time.posixToMillis maxRelease.time then
+            release
+        else
+            maxRelease
 
 
 
@@ -46,11 +50,11 @@ getLatestVersionHelp releases maxRelease =
 
 decoder : D.Decoder (OneOrMore Release)
 decoder =
-  D.keyValuePairs D.int
+  D.keyValuePairs (D.map (\i -> Time.millisToPosix (i * 1000)) D.int)
     |> D.andThen (decoderHelp [])
 
 
-decoderHelp : List Release -> List (String, Int) -> D.Decoder (OneOrMore Release)
+decoderHelp : List Release -> List (String, Time.Posix) -> D.Decoder (OneOrMore Release)
 decoderHelp revReleases pairs =
   case pairs of
     [] ->

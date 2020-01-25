@@ -21,6 +21,7 @@ import Skeleton
 import Url.Builder as Url
 import Utils.Markdown as Markdown
 import Utils.OneOrMore as OneOrMore exposing (OneOrMore(..))
+import Time
 
 
 
@@ -108,7 +109,7 @@ view model =
           [ h1 [] [ text "Published Versions" ]
           , p [] <|
               viewReleases model.author model.project <|
-                List.map .version (List.sortBy .time (r::rs))
+                List.map .version (List.sortBy (.time >> Time.posixToMillis) (r::rs))
           ]
   }
 
