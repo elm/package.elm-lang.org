@@ -1,18 +1,21 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Package.Register (register) where
+module Package.Register
+  ( register
+  )
+  where
+
 
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.ByteString.Validate as BSV
 import qualified Data.Either as Either
 import qualified Data.Time.Clock.POSIX as Time
 import qualified Data.Map as Map
 import Data.Monoid ((<>))
-import Data.Text (Text)
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 import qualified Snap.Core as Snap
 import qualified Snap.Util.FileUploads as Snap
 import qualified System.Directory as Dir
@@ -20,11 +23,16 @@ import System.FilePath ((</>))
 import qualified System.IO as IO
 import qualified System.IO.Streams as Stream
 
+import qualified Elm.Outline as Outline
 import qualified Elm.Package as Pkg
-import qualified Elm.Project.Json as Project
-import qualified Http
-import qualified Json.Decode as Decode
-import qualified Json.Encode as Encode
+import qualified Elm.Version as V
+import qualified Json.Decode as D
+import qualified Json.Encode as E
+import Json.Encode ((==>))
+import qualified Json.String as Json
+import qualified Parse.Primitives as P
+
+import qualified GitHub
 import qualified Memory
 import qualified Package.Path as Path
 import qualified Package.Releases as Releases
@@ -41,122 +49,112 @@ import qualified Server.Error as Error
 
 -}
 
-register :: Http.Token -> Memory.Memory -> Snap.Snap ()
+register :: GitHub.Token -> Memory.Memory -> Snap.Snap ()
 register token memory =
-  do  name <- verifyName =<< getQueryParam "name"
-      commitHash <- getQueryParam "commit-hash"
-      version <- verifyVersion token memory name commitHash =<< getQueryParam "version"
+  do  commitHash <- BSC.unpack <$> getQueryParam "commit-hash"
+      pkg <- verifyName =<< getQueryParam "name"
+      vsn <- verifyVersion token memory pkg commitHash =<< getQueryParam "version"
 
       time <- liftIO Time.getPOSIXTime
 
-      info <- uploadFiles name version time
+      outline <- uploadFiles pkg vsn time
 
-      liftIO $ Releases.add name version time
-      Memory.addPackage memory info
+      liftIO $ Releases.add pkg vsn time
+      Memory.addPackage memory outline
 
       return ()
 
 
-getQueryParam :: BS.ByteString -> Snap.Snap Text
+getQueryParam :: BS.ByteString -> Snap.Snap BS.ByteString
 getQueryParam param =
   do  maybeValue <- Snap.getParam param
       case maybeValue of
         Nothing ->
-          Error.string 400 $ "I need a `" ++ BS.unpack param ++ "` query parameter."
+          Error.string 400 $
+            "I need a `" ++ BSC.unpack param ++ "` query parameter."
 
-        Just bits ->
-          case Text.decodeUtf8' bits of
-            Left _ ->
-              Error.string 400 $ "The value of query parameter `" ++ BS.unpack param ++ "` is not valid UTF-8."
-
-            Right value ->
-              return value
+        Just bytes ->
+          if BSV.isUtf8 bytes
+          then return bytes
+          else
+            Error.bytestring 400 $ BS.concat $
+              [ "The value of query parameter `"
+              , param, "` is not valid UTF-8: ", bytes
+              ]
 
 
 
 -- VERIFY NAME
 
 
-verifyName :: Text -> Snap.Snap Pkg.Name
-verifyName rawName =
-  case Pkg.fromText rawName of
-    Right name ->
-      return name
+verifyName :: BS.ByteString -> Snap.Snap Pkg.Name
+verifyName pkgBytes =
+  case P.fromByteString Pkg.parser (,) pkgBytes of
+    Right pkg ->
+      return pkg
 
-    Left (problem, _) ->
-       Error.string 400 (badNameMessage rawName problem)
-
-
-badNameMessage :: Text -> String -> String
-badNameMessage name problem =
-  unlines
-    [ "The name `" ++ Text.unpack name ++ "` has a problem:"
-    , ""
-    , "    " ++ problem
-    , ""
-    , "Change the name of your REPO on GitHub and it should be fine."
-    , ""
-    , "NOTE: Your user name is fine. The rules are only for repo names!"
-    ]
+    Left _ ->
+      Error.bytestring 400 $
+        "I am seeing an invalid package name: " <> pkgBytes
 
 
 
 -- VERIFY VERSION
 
 
-verifyVersion :: Http.Token -> Memory.Memory -> Pkg.Name -> Text -> Text -> Snap.Snap Pkg.Version
-verifyVersion token memory name commitHash rawVersion =
-  case Pkg.versionFromText rawVersion of
-    Nothing ->
-      Error.string 400 $
-        "I was given an invalid version: " ++ Text.unpack rawVersion
+verifyVersion :: GitHub.Token -> Memory.Memory -> Pkg.Name -> String -> BS.ByteString -> Snap.Snap V.Version
+verifyVersion token memory pkg commitHash vsnBytes =
+  case P.fromByteString V.parser (,) vsnBytes of
+    Left _ ->
+      Error.bytestring 400 $
+        "I was given an invalid version: " <> vsnBytes
 
-    Just version ->
-      do  verifyIsNew memory name version
-          verifyTag token name version commitHash
-          return version
+    Right vsn ->
+      do  verifyIsNew memory pkg vsn
+          verifyTag token pkg vsn commitHash
+          return vsn
 
 
-verifyIsNew :: Memory.Memory -> Pkg.Name -> Pkg.Version -> Snap.Snap ()
-verifyIsNew memory name vsn =
+verifyIsNew :: Memory.Memory -> Pkg.Name -> V.Version -> Snap.Snap ()
+verifyIsNew memory pkg vsn =
   do  pkgs <- Memory.getPackages memory
-      case Map.lookup name pkgs of
+      case Map.lookup pkg pkgs of
         Nothing ->
           return ()
 
         Just (Memory.Summary versions _ _) ->
           when (elem vsn versions) $ Error.string 400 $
-            "Version " ++ Pkg.versionToString vsn ++ " has already been published."
+            "Version " ++ V.toChars vsn ++ " has already been published."
 
 
-verifyTag :: Http.Token -> Pkg.Name -> Pkg.Version -> Text -> Snap.Snap ()
-verifyTag token name version commitHash =
-  do  githubHash <- getCommitHash token name version
+verifyTag :: GitHub.Token -> Pkg.Name -> V.Version -> String -> Snap.Snap ()
+verifyTag token pkg vsn commitHash =
+  do  githubHash <- getCommitHash token pkg vsn
       when (commitHash /= githubHash) $ Error.string 400 $
-        "The commit tagged on github as " ++ Pkg.versionToString version ++ " is not the one I was expecting."
+        "The commit tagged on github as " ++ V.toChars vsn ++ " is not the one I was expecting."
 
 
-getCommitHash :: Http.Token -> Pkg.Name -> Pkg.Version -> Snap.Snap Text
-getCommitHash token name version =
-  do  response <- liftIO $ Http.fetchGithub token $
-        "/repos/" ++ Pkg.toUrl name ++ "/git/refs/tags/" ++ Pkg.versionToString version
+getCommitHash :: GitHub.Token -> Pkg.Name -> V.Version -> Snap.Snap String
+getCommitHash token pkg vsn =
+  do  response <- liftIO $ GitHub.fetchPath token $
+        "/repos/" ++ Pkg.toUrl pkg ++ "/git/refs/tags/" ++ V.toChars vsn
 
       case response of
         Left _ ->
           Error.bytestring 500 "Request to GitHub API failed."
 
         Right body ->
-          case Decode.parse "commit" id tagDecoder (LBS.toStrict body) of
+          case D.fromByteString tagDecoder (LBS.toStrict body) of
             Right hash ->
-              return hash
+              return (Json.toChars hash)
 
             Left _ ->
               Error.bytestring 500 "Request to GitHub API failed due to unexpected JSON."
 
 
-tagDecoder :: Decode.Decoder e Text
+tagDecoder :: D.Decoder e Json.String
 tagDecoder =
-  Decode.at ["object","sha"] Decode.text
+  D.field "object" (D.field "sha" D.string)
 
 
 
@@ -173,54 +171,57 @@ tagDecoder =
         time.dat
 
 -}
-uploadFiles :: Pkg.Name -> Pkg.Version -> Time.POSIXTime -> Snap.Snap Project.PkgInfo
-uploadFiles name version time =
-  do  let dir = Path.directory name version
+uploadFiles :: Pkg.Name -> V.Version -> Time.POSIXTime -> Snap.Snap Outline.PkgOutline
+uploadFiles pkg vsn time =
+  do  let dir = Path.directory pkg vsn
       liftIO (Dir.createDirectoryIfMissing True dir)
-      results <- Snap.handleMultipart Snap.defaultUploadPolicy (handlePart name version dir)
+      results <- Snap.handleMultipart Snap.defaultUploadPolicy (handlePart pkg vsn dir)
       case Either.partitionEithers results of
         ([], files) ->
-          do  requireFile name version "README.md" files
-              requireFile name version "elm.json" files
-              requireFile name version "docs.json" files
-              requireHash name version dir files
+          do  requireFile pkg vsn "README.md" files
+              requireFile pkg vsn "elm.json" files
+              requireFile pkg vsn "docs.json" files
+              requireHash pkg vsn dir files
               bytes <- liftIO $ BS.readFile (dir </> "elm.json")
-              case Decode.parse "project" (const []) Project.pkgDecoder bytes of
+              case D.fromByteString Outline.decoder bytes of
                 Left _ ->
-                  revert name version $ "Invalid content in elm.json file."
+                  revert pkg vsn $ "Invalid content in elm.json file."
 
-                Right info ->
+                Right (Outline.App _) ->
+                  revert pkg vsn $ "Invalid content in elm.json file."
+
+                Right (Outline.Pkg outline) ->
                   do  liftIO $ writeFile (dir </> "time.dat") (show (floor time :: Integer))
-                      return info
+                      return outline
 
         (problems, _) ->
-          revert name version $ "Failure uploading your package:" ++ concatMap ("\n  - " ++) problems
+          revert pkg vsn $ "Failure uploading your package:" ++ concatMap ("\n  - " ++) problems
 
 
-requireFile :: Pkg.Name -> Pkg.Version -> FilePath -> [FilePath] -> Snap.Snap ()
-requireFile name version fileName uploadedFiles =
+requireFile :: Pkg.Name -> V.Version -> FilePath -> [FilePath] -> Snap.Snap ()
+requireFile pkg vsn fileName uploadedFiles =
   if elem fileName uploadedFiles
   then return ()
-  else revert name version $ "Malformed request. Missing the " ++ fileName ++ " file."
+  else revert pkg vsn $ "Malformed request. Missing the " ++ fileName ++ " file."
 
 
-requireHash :: Pkg.Name -> Pkg.Version -> FilePath -> [FilePath] -> Snap.Snap ()
-requireHash name version dir uploadedFiles =
+requireHash :: Pkg.Name -> V.Version -> FilePath -> [FilePath] -> Snap.Snap ()
+requireHash pkg vsn dir uploadedFiles =
   if elem "endpoint.json" uploadedFiles
   then return ()
   else
-    do  hash <- getQueryParam "github-hash"
-        liftIO (writeEndpoint name version dir hash)
+    do  hash <- BSC.unpack <$> getQueryParam "github-hash"
+        liftIO (writeEndpoint pkg vsn dir hash)
 
 
-revert :: Pkg.Name -> Pkg.Version -> String -> Snap.Snap a
-revert name version details =
-  do  liftIO (Path.removeDirectory name version)
+revert :: Pkg.Name -> V.Version -> String -> Snap.Snap a
+revert pkg vsn details =
+  do  liftIO (Path.removeDirectory pkg vsn)
       Error.string 400 details
 
 
-handlePart :: Pkg.Name -> Pkg.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
-handlePart name version dir info stream =
+handlePart :: Pkg.Name -> V.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
+handlePart pkg vsn dir info stream =
   case Snap.partFieldName info of
     "README.md" ->
       boundedWrite dir "README.md" stream
@@ -232,7 +233,7 @@ handlePart name version dir info stream =
       boundedWrite dir "docs.json" stream
 
     "github-hash" ->
-      boundedWriteEndpoint name version dir stream
+      boundedWriteEndpoint pkg vsn dir stream
 
     path ->
       return $ Left $ "Did not recognize " ++ show path ++ " part in form-data"
@@ -268,11 +269,11 @@ boundedWriteHelp path handle size stream =
 -- WRITE ENDPOINTS
 
 
-boundedWriteEndpoint :: Pkg.Name -> Pkg.Version -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
-boundedWriteEndpoint name version dir stream =
+boundedWriteEndpoint :: Pkg.Name -> V.Version -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
+boundedWriteEndpoint pkg vsn dir stream =
     boundedRead 0 ""
   where
-    boundedRead size bits =
+    boundedRead size bytes =
       if 1000 < size then
         return $ Left "The hash of your assets should not be more than 1kb"
 
@@ -280,27 +281,27 @@ boundedWriteEndpoint name version dir stream =
         do  maybeChunk <- Stream.read stream
             case maybeChunk of
               Just chunk ->
-                boundedRead (BS.length chunk + size) (bits <> chunk)
+                boundedRead (BS.length chunk + size) (bytes <> chunk)
 
               Nothing ->
-                case Text.decodeUtf8' bits of
-                  Left _ ->
-                    return $ Left "The hash of your assets is malformed"
+                if BSV.isUtf8 bytes
+                then
+                  do  writeEndpoint pkg vsn dir (BSC.unpack bytes)
+                      return $ Right "endpoint.json"
+                else
+                  return $ Left "The hash of your assets is malformed"
 
-                  Right hash ->
-                    do  writeEndpoint name version dir hash
-                        return $ Right "endpoint.json"
 
 
-writeEndpoint :: Pkg.Name -> Pkg.Version -> FilePath -> Text -> IO ()
-writeEndpoint name version dir hash =
-  Encode.writeUgly (dir </> "endpoint.json") $
-    Encode.object
-      [ ("url", Encode.text (toGithubUrl name version))
-      , ("hash", Encode.text hash)
+writeEndpoint :: Pkg.Name -> V.Version -> FilePath -> String -> IO ()
+writeEndpoint pkg vsn dir hash =
+  E.writeUgly (dir </> "endpoint.json") $
+    E.object
+      [ "url" ==> E.chars (toGithubUrl pkg vsn)
+      , "hash" ==> E.chars hash
       ]
 
 
-toGithubUrl :: Pkg.Name -> Pkg.Version -> Text.Text
-toGithubUrl name version =
-  "https://github.com/" <> Text.pack (Pkg.toUrl name) <> "/zipball/" <> Pkg.versionToText version <> "/"
+toGithubUrl :: Pkg.Name -> V.Version -> String
+toGithubUrl pkg vsn =
+  "https://github.com/" ++ Pkg.toUrl pkg ++ "/zipball/" ++ V.toChars vsn ++ "/"
