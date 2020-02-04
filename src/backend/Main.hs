@@ -29,6 +29,7 @@ import qualified Package.Register as Register
 import qualified Server.Router as Router
 import Server.Router (Route, top, s, int, bytes, (</>), (==>))
 import qualified ServeFile
+import qualified ServeGzip
 
 
 
@@ -258,9 +259,9 @@ serveVersion memory pkg maybeVersion vsnRoute =
             Just vsn ->
               case vsnRoute of
                 VsnOverview        -> ServeFile.version pkg vsn Nothing
-                Vsn__elm_json      -> serveFile (Path.directory pkg vsn ++ "/elm.json")
-                Vsn__docs_json     -> serveFile (Path.directory pkg vsn ++ "/docs.json")
-                Vsn__README_md     -> serveFile (Path.directory pkg vsn ++ "/README.md")
+                Vsn__elm_json      -> ServeGzip.serveGzippedFile "application/json" (Path.directory pkg vsn ++ "/elm.json.gz")
+                Vsn__docs_json     -> ServeGzip.serveGzippedFile "application/json" (Path.directory pkg vsn ++ "/docs.json.gz")
+                Vsn__README_md     -> ServeGzip.serveGzippedFile "text/markdown; charset=UTF-8" (Path.directory pkg vsn ++ "/README.md.gz")
                 Vsn__endpoint_json -> serveFile (Path.directory pkg vsn ++ "/endpoint.json")
                 VsnModule name     -> ServeFile.version pkg vsn (Just name)
 
