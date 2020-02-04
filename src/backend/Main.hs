@@ -21,6 +21,7 @@ import qualified Parse.Primitives as P
 
 import qualified Artifacts
 import qualified GitHub
+import qualified Legacy
 import qualified Memory
 import qualified Memory.History as History
 import qualified Package.Path as Path
@@ -96,6 +97,9 @@ serve :: GitHub.Token -> Memory.Memory -> S.Snap ()
 serve token memory =
   asum
     [
+      -- LEGACY USERS (<0.19)
+      Legacy.getElmVersion >>= Legacy.serve
+    ,
       -- NORMAL ROUTES
       Router.serve $ Router.oneOf $
         [ top ==> ServeFile.misc "Elm Packages"
