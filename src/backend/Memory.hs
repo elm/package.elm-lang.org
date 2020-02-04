@@ -22,17 +22,20 @@ import qualified Data.ByteString as BS
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
-import qualified Data.Text as Text
+import qualified Data.Utf8 as Utf8
 import Snap.Core (Snap)
 import qualified System.Directory as Dir
 import System.FilePath ((</>))
 
+import qualified Elm.Constraint as C
+import qualified Elm.Licenses as License
+import qualified Elm.Outline as Outline
 import qualified Elm.Package as Pkg
-import qualified Elm.Project.Constraint as Con
-import qualified Elm.Project.Json as Project
-import qualified Elm.Project.Licenses as License
-import qualified Json.Decode as Decode
-import qualified Json.Encode as Encode
+import qualified Elm.Version as V
+import qualified Json.Decode as D
+import qualified Json.Encode as E
+import Json.Encode ((==>))
+import qualified Json.String as Json
 
 import Memory.History (History)
 import qualified Memory.History as History
@@ -63,33 +66,36 @@ data State =
 
 data Summary =
   Summary
-    { _versions :: [Pkg.Version]
-    , _details :: Maybe ( Text.Text, License.License )
+    { _versions :: [V.Version]
+    , _details :: Maybe ( Json.String, License.License )
     , _weight :: Int
     }
 
 
-toSummary :: Pkg.Name -> [Pkg.Version] -> IO Summary
-toSummary name versions =
-  do  let path = toElmJsonPath name (maximum versions)
+toSummary :: Pkg.Name -> [V.Version] -> IO Summary
+toSummary pkg versions =
+  do  let path = toElmJsonPath pkg (maximum versions)
       bytes <- BS.readFile path
-      case Decode.parse "summary" (const []) Project.pkgDecoder bytes of
+      case D.fromByteString Outline.decoder bytes of
         Left _ ->
           return (Summary versions Nothing (-1))
 
-        Right (Project.PkgInfo _ summary license _ _ _ _ constraint) ->
+        Right (Outline.App _) ->
+          return (Summary versions Nothing (-1))
+
+        Right (Outline.Pkg (Outline.PkgOutline _ summary license _ _ _ _ elmConstraint)) ->
           let
             details =
-              if is19 constraint
+              if is19 elmConstraint
                 then Just ( summary, license )
                 else Nothing
           in
-          return $ Summary versions details (getWeight name)
+          return $ Summary versions details (getWeight pkg)
 
 
-toElmJsonPath :: Pkg.Name -> Pkg.Version -> FilePath
-toElmJsonPath name version =
-  "packages" </> Pkg.toFilePath name </> Pkg.versionToString version </> "elm.json"
+toElmJsonPath :: Pkg.Name -> V.Version -> FilePath
+toElmJsonPath pkg vsn =
+  "packages" </> Pkg.toFilePath pkg </> V.toChars vsn </> "elm.json"
 
 
 
@@ -126,13 +132,13 @@ getPackages (Memory mvar _) =
   liftIO (_packages <$> readMVar mvar)
 
 
-addPackage :: Memory -> Project.PkgInfo -> Snap ()
-addPackage (Memory mvar worker) info@(Project.PkgInfo name _ _ version _ _ _ _) =
+addPackage :: Memory -> Outline.PkgOutline -> Snap ()
+addPackage (Memory mvar worker) outline@(Outline.PkgOutline pkg _ _ vsn _ _ _ _) =
   liftIO $
   do  (State history packages) <- takeMVar mvar
 
-      let newHistory = History.add name version history
-      let newPackages = Map.alter (Just . add info) name packages
+      let newHistory = History.add pkg vsn history
+      let newPackages = Map.alter (Just . add outline) pkg packages
 
       generateAllPackagesJson newPackages
       writeChan worker $
@@ -142,24 +148,24 @@ addPackage (Memory mvar worker) info@(Project.PkgInfo name _ _ version _ _ _ _) 
       putMVar mvar $ State newHistory newPackages
 
 
-add :: Project.PkgInfo -> Maybe Summary -> Summary
-add (Project.PkgInfo name summary license version _ _ _ constraint) maybeSummary =
+add :: Outline.PkgOutline -> Maybe Summary -> Summary
+add (Outline.PkgOutline pkg summary license vsn _ _ _ elmConstraint) maybeSummary =
   let
     versions =
-      maybe [] _versions maybeSummary ++ [version]
+      maybe [] _versions maybeSummary ++ [vsn]
 
     details =
-      if is19 constraint then
+      if is19 elmConstraint then
         Just ( summary, license )
       else
         Nothing
   in
-  Summary versions details (getWeight name)
+  Summary versions details (getWeight pkg)
 
 
-is19 :: Con.Constraint -> Bool
-is19 constraint =
-  any (Con.satisfies constraint) [ Pkg.Version 0 19 0, Pkg.Version 0 19 1 ]
+is19 :: C.Constraint -> Bool
+is19 elmConstraint =
+  any (C.satisfies elmConstraint) [ V.Version 0 19 0, V.Version 0 19 1 ]
 
 
 
@@ -169,7 +175,7 @@ is19 constraint =
 generateAllPackagesJson :: Map.Map Pkg.Name Summary -> IO ()
 generateAllPackagesJson packages =
   write "all-packages.json" $
-    Encode.dict Pkg.toText (Encode.list Pkg.encodeVersion . _versions) packages
+    E.dict Pkg.toJsonString (E.list V.encode . _versions) packages
 
 
 
@@ -189,39 +195,39 @@ generateSitemap packages =
 generateSearchJson :: Map.Map Pkg.Name Summary -> IO ()
 generateSearchJson packages =
   write "search.json" $
-    Encode.list id $ Maybe.mapMaybe maybeEncodeSummary $
+    E.list id $ Maybe.mapMaybe maybeEncodeSummary $
       List.sortOn (negate . _weight . snd) (Map.toList packages)
 
 
-maybeEncodeSummary :: ( Pkg.Name, Summary ) -> Maybe Encode.Value
-maybeEncodeSummary ( name, Summary versions maybeDetails _ ) =
+maybeEncodeSummary :: ( Pkg.Name, Summary ) -> Maybe E.Value
+maybeEncodeSummary ( pkg, Summary versions maybeDetails _ ) =
   case maybeDetails of
     Nothing ->
       Nothing
 
     Just ( summary, license ) ->
-      Just $ Encode.object $
-        [ ( "name", Pkg.encode name )
-        , ( "summary", Encode.text summary )
-        , ( "license", License.encode license )
-        , ( "versions", Encode.list Pkg.encodeVersion (toVersionHighlights versions) )
+      Just $ E.object $
+        [ "name" ==> Pkg.encode pkg
+        , "summary" ==> E.string summary
+        , "license" ==> License.encode license
+        , "versions" ==> E.list V.encode (toVersionHighlights versions)
         ]
 
 
-toVersionHighlights :: [Pkg.Version] -> [Pkg.Version]
+toVersionHighlights :: [V.Version] -> [V.Version]
 toVersionHighlights versions =
   reverse $ map last $ take 3 $ reverse $ List.groupBy sameMajor $ List.sort versions
 
 
-sameMajor :: Pkg.Version -> Pkg.Version -> Bool
+sameMajor :: V.Version -> V.Version -> Bool
 sameMajor v1 v2 =
-  Pkg._major v1 == Pkg._major v2
+  V._major v1 == V._major v2
 
 
-write :: FilePath -> Encode.Value -> IO ()
+write :: FilePath -> E.Value -> IO ()
 write path json =
   do  let temp = "temp-" ++ path
-      Encode.writeUgly temp json
+      E.writeUgly temp json
       Dir.renameFile temp path
 
 
@@ -262,77 +268,81 @@ getWeight (Pkg.Name author _) =
 -- likely to be hooked into core development and update packages promptly? Have
 -- they thought about their design carefully enough to make a talk of it? Etc.
 --
-weights :: Map.Map Text.Text Int
+weights :: Map.Map Pkg.Author Int
 weights =
-  Map.insert "elm" 100000 $
-  Map.insert "elm-explorations" 1000 $
-    foldr (\author dict -> Map.insertWith (+) author 1 dict) Map.empty $
-      -- elm-conf 2016 - https://2016.elm-conf.us/speaker/
-      [ "evancz"
-      , "ohanhi"
-      , "lukewestby"
-      , "tesk9"
-      , "mdgriffith"
-      , "abadi199"
-      , "JoelQ"
-      , "jschomay"
-      , "jessitron"
-      , "splodingsocks"
-      , "rtfeldman"
-      -- elm-conf 2017 - https://2017.elm-conf.us/talks/
-      , "evancz"
-      , "klaftertief"
-      , "tesk9"
-      , "splodingsocks"
-      , "lukewestby"
-      , "jfairbank"
-      , "pzingg"
-      , "w0rm"
-      , "terezka"
-      , "rtfeldman"
-      -- Elm Europe 2017 - https://2017.elmeurope.org/
-      , "evancz"
-      , "rtfeldman"
-      , "Janiczek"
-      , "eeue56"
-      , "Skinney"
-      , "pickled"
-      , "thebritican"
-      , "gampleman"
-      , "amitaibu"
-      , "jsteiner"
-      , "jschomay"
-      , "supermario"
-      , "mdgriffith"
-      , "BrianHicks"
-      , "Fenntasy"
-      , "tomekwi"
-      , "terezka"
-      , "myrho"
-      , "w0rm"
-      , "noahzgordon"
-      , "sebcreme"
-      , "cbenz"
-      -- Elm Europe 2018 - https://2018.elmeurope.org/
-      , "evancz"
-      , "rtfeldman"
-      , "Janiczek"
-      , "jxxcarlson"
-      , "BrianHicks"
-      , "bakkdoor"
-      , "JoelQ"
-      , "ianmackenzie"
-      , "lukewestby"
-      , "mdgriffith"
-      , "paulsonnentag"
-      , "Arkham"
-      , "bitterjug"
-      , "decioferreira"
-      , "emmacunningham"
-      , "tibastral"
-      , "kachkaev"
-      , "supermario"
-      , "myrho"
-      , "w0rm"
-      , "celine-m-s"
-      ]
+  let
+    one author =
+      ( Utf8.fromChars author, 1 )
+  in
+  Map.fromListWith (+)
+    [ ( Utf8.fromChars "elm", 100000 )
+    , ( Utf8.fromChars "elm-explorations", 1000 )
+    -- elm-conf 2016 - https://2016.elm-conf.us/speaker/
+    , one "evancz"
+    , one "ohanhi"
+    , one "lukewestby"
+    , one "tesk9"
+    , one "mdgriffith"
+    , one "abadi199"
+    , one "JoelQ"
+    , one "jschomay"
+    , one "jessitron"
+    , one "splodingsocks"
+    , one "rtfeldman"
+    -- elm-conf 2017 - https://2017.elm-conf.us/talks/
+    , one "evancz"
+    , one "klaftertief"
+    , one "tesk9"
+    , one "splodingsocks"
+    , one "lukewestby"
+    , one "jfairbank"
+    , one "pzingg"
+    , one "w0rm"
+    , one "terezka"
+    , one "rtfeldman"
+    -- Elm Europe 2017 - https://2017.elmeurope.org/
+    , one "evancz"
+    , one "rtfeldman"
+    , one "Janiczek"
+    , one "eeue56"
+    , one "Skinney"
+    , one "pickled"
+    , one "thebritican"
+    , one "gampleman"
+    , one "amitaibu"
+    , one "jsteiner"
+    , one "jschomay"
+    , one "supermario"
+    , one "mdgriffith"
+    , one "BrianHicks"
+    , one "Fenntasy"
+    , one "tomekwi"
+    , one "terezka"
+    , one "myrho"
+    , one "w0rm"
+    , one "noahzgordon"
+    , one "sebcreme"
+    , one "cbenz"
+    -- Elm Europe 2018 - https://2018.elmeurope.org/
+    , one "evancz"
+    , one "rtfeldman"
+    , one "Janiczek"
+    , one "jxxcarlson"
+    , one "BrianHicks"
+    , one "bakkdoor"
+    , one "JoelQ"
+    , one "ianmackenzie"
+    , one "lukewestby"
+    , one "mdgriffith"
+    , one "paulsonnentag"
+    , one "Arkham"
+    , one "bitterjug"
+    , one "decioferreira"
+    , one "emmacunningham"
+    , one "tibastral"
+    , one "kachkaev"
+    , one "supermario"
+    , one "myrho"
+    , one "w0rm"
+    , one "celine-m-s"
+    ]

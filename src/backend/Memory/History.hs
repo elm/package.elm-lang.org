@@ -15,14 +15,14 @@ module Memory.History
 import Control.Monad (foldM)
 import qualified Data.List as List
 import qualified Data.Map as Map
-import Data.Monoid ((<>))
-import qualified Data.Text as Text
 import qualified Data.Time.Clock as Time
+import qualified Data.Utf8 as Utf8
 import qualified System.Directory as Dir
 import System.FilePath ((</>))
 
 import qualified Elm.Package as Pkg
-import qualified Json.Encode as Encode
+import qualified Elm.Version as V
+import qualified Json.Encode as E
 import qualified Package.Releases as Releases
 
 
@@ -40,7 +40,7 @@ data History =
 data Event =
   Event
     { _name :: !Pkg.Name
-    , _vsn :: !Pkg.Version
+    , _vsn :: !V.Version
     }
 
 
@@ -48,9 +48,9 @@ data Event =
 -- HELPERS
 
 
-add :: Pkg.Name -> Pkg.Version -> History -> History
-add name version (History size events) =
-  History (size + 1) (Event name version : events)
+add :: Pkg.Name -> V.Version -> History -> History
+add pkg vsn (History size events) =
+  History (size + 1) (Event pkg vsn : events)
 
 
 since :: Int -> History -> [Event]
@@ -58,11 +58,11 @@ since index (History size events) =
   take (size - index) events
 
 
-groupByName :: History -> Map.Map Pkg.Name [Pkg.Version]
+groupByName :: History -> Map.Map Pkg.Name [V.Version]
 groupByName (History _ events) =
   let
-    insert dict (Event name version) =
-      Map.insertWith (++) name [version] dict
+    insert dict (Event pkg vsn) =
+      Map.insertWith (++) pkg [vsn] dict
   in
     List.foldl' insert Map.empty events
 
@@ -71,10 +71,10 @@ groupByName (History _ events) =
 -- JSON
 
 
-encodeEvent :: Event -> Encode.Value
-encodeEvent (Event name version) =
-  Encode.text $
-    Pkg.toText name <> "@" <> Pkg.versionToText version
+encodeEvent :: Event -> E.Value
+encodeEvent (Event pkg vsn) =
+  E.chars $
+    Pkg.toChars pkg ++ "@" ++ V.toChars vsn
 
 
 
@@ -84,12 +84,12 @@ encodeEvent (Event name version) =
 load :: IO History
 load =
   do  times <- crawl
-      let addEvent events (name, version) = Event name version : events
+      let addEvent events (pkg, vsn) = Event pkg vsn : events
       return $ History (Map.size times) (Map.foldl addEvent [] times)
 
 
 type TimeDict =
-  Map.Map Time.NominalDiffTime (Pkg.Name, Pkg.Version)
+  Map.Map Time.NominalDiffTime (Pkg.Name, V.Version)
 
 
 crawl :: IO TimeDict
@@ -106,12 +106,14 @@ crawlUser dict user =
 
 crawlProject :: String -> TimeDict -> String -> IO TimeDict
 crawlProject user dict project =
-  do  let name = Pkg.Name (Text.pack user) (Text.pack project)
+  let
+    pkg =
+      Pkg.Name (Utf8.fromChars user) (Utf8.fromChars project)
 
-      let addRelease d (Releases.Release version time) =
-            Map.insert time (name, version) d
-
-      List.foldl' addRelease dict <$> Releases.read name
+    addRelease d (Releases.Release vsn time) =
+      Map.insert time (pkg, vsn) d
+  in
+  List.foldl' addRelease dict <$> Releases.read pkg
 
 
 
