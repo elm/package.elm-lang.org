@@ -10,7 +10,10 @@ module Page.Docs exposing
 
 
 import Browser.Dom as Dom
+import Elm.Constraint as Constraint exposing (Constraint)
 import Elm.Docs as Docs
+import Elm.License as License
+import Elm.Package as Package
 import Elm.Project as Project
 import Elm.Version as V
 import Html exposing (..)
@@ -28,6 +31,7 @@ import Task
 import Url.Builder as Url
 import Utils.Markdown as Markdown
 import Utils.OneOrMore exposing (OneOrMore)
+import Time
 
 
 
@@ -45,6 +49,7 @@ type alias Model =
   , readme : Status String
   , docs : Status (List Docs.Module)
   , manifest : Status Project.PackageInfo
+  , time : Status Time.Posix
   }
 
 
@@ -57,6 +62,7 @@ type alias Info =
 
 type Focus
   = Readme
+  | About
   | Module String (Maybe String)
 
 
@@ -89,14 +95,21 @@ init session author project version focus =
       , readme = Loading
       , docs = Loading
       , manifest = Loading
+      , time = Loading
       }
   in
   case Session.getReleases session author project of
     Just releases ->
       let
-        latest = Release.getLatestVersion releases
+        latest =
+          Release.getLatestVersion releases
+
+        time =
+          Release.getTime (Maybe.withDefault latest version) releases
+            |> Maybe.map Success
+            |> Maybe.withDefault Failure
       in
-        getInfo latest { model | latest = Success latest }
+      getInfo latest { model | latest = Success latest, time = time }
 
     Nothing ->
       ( model
@@ -182,17 +195,26 @@ update msg model =
                 | latest = Failure
                 , readme = Failure
                 , docs = Failure
+                , manifest = Failure
+                , time = Failure
             }
           , Cmd.none
           )
 
         Ok releases ->
           let
-            latest = Release.getLatestVersion releases
+            latest =
+              Release.getLatestVersion releases
+
+            time =
+              Release.getTime (Maybe.withDefault latest model.version) releases
+                |> Maybe.map Success
+                |> Maybe.withDefault Failure
           in
           getInfo latest
             { model
                 | latest = Success latest
+                , time = time
                 , session = Session.addReleases model.author model.project releases model.session
             }
 
@@ -268,6 +290,9 @@ toTitle model =
     Readme ->
       toGenericTitle model
 
+    About ->
+      toGenericTitle model
+
     Module name _ ->
       name ++ " - " ++ toGenericTitle model
 
@@ -310,6 +335,9 @@ toHeader model =
       Readme ->
         []
 
+      About ->
+        []
+
       Module name _ ->
         [ Skeleton.moduleSegment model.author model.project model.version name
         ]
@@ -346,6 +374,9 @@ toNewerUrl model =
     Readme ->
       Href.toVersion model.author model.project Nothing
 
+    About ->
+      Href.toAbout model.author model.project Nothing
+
     Module name tag ->
       Href.toModule model.author model.project Nothing name tag
 
@@ -359,6 +390,9 @@ viewContent model =
   case model.focus of
     Readme ->
       lazy viewReadme model.readme
+
+    About ->
+      lazy2 viewAbout model.manifest model.time
 
     Module name tag ->
       lazy5 viewModule model.author model.project model.version name model.docs
@@ -438,10 +472,12 @@ viewSidebar model =
   div
     [ class "pkg-nav"
     ]
-    [ lazy4 viewReadmeLink model.author model.project model.version model.focus
-    , br [] []
-    , lazy4 viewBrowseSourceLink model.author model.project model.version model.latest
-    , h2 [] [ text "Module Docs" ]
+    [ ul []
+        [ li [] [ lazy4 viewReadmeLink model.author model.project model.version model.focus ]
+        , li [] [ lazy4 viewAboutLink model.author model.project model.version model.focus ]
+        , li [] [ lazy4 viewBrowseSourceLink model.author model.project model.version model.latest ]
+        ]
+    , h2 [] [ text "Modules Docs" ]
     , input
         [ placeholder "Search"
         , value model.query
@@ -467,7 +503,8 @@ viewSidebarModules model =
           viewEntry docs =
             li [] [ viewModuleLink model docs.name ]
         in
-        ul [] (List.map viewEntry modules)
+        ul []
+          (List.map viewEntry modules)
 
       else
         let
@@ -539,6 +576,20 @@ viewReadmeLink author project version focus =
   navLink "README" (Href.toVersion author project version) <|
     case focus of
       Readme -> True
+      About -> False
+      Module _ _ -> False
+
+
+
+-- VIEW "ABOUT" LINK
+
+
+viewAboutLink : String -> String -> Maybe V.Version -> Focus -> Html msg
+viewAboutLink author project version focus =
+  navLink "About" (Href.toAbout author project version) <|
+    case focus of
+      Readme -> False
+      About -> True
       Module _ _ -> False
 
 
@@ -573,7 +624,7 @@ viewBrowseSourceLinkHelp author project version =
         [ author, project, "tree", V.toString version ]
         []
   in
-  a [ class "pkg-nav-module", href url ] [ text "Browse Source" ]
+  a [ href url ] [ text "Browse Source" ]
 
 
 
@@ -586,9 +637,12 @@ viewModuleLink model name =
     url =
       Href.toModule model.author model.project model.version name Nothing
   in
-  navLink name url <|
+  navModuleLink name url <|
     case model.focus of
       Readme ->
+        False
+
+      About ->
         False
 
       Module selectedName _ ->
@@ -601,7 +655,179 @@ viewValueItem { author, project, version } moduleName ownerName valueName =
     url =
       Href.toModule author project version moduleName (Just ownerName)
   in
-  li [ class "pkg-nav-value" ] [ navLink valueName url False ]
+  li [ class "pkg-nav-value" ] [ navModuleLink valueName url False ]
+
+
+
+-- VIEW ABOUT
+
+
+viewAbout : Status Project.PackageInfo -> Status Time.Posix -> Html msg
+viewAbout manifestStatus time =
+  case manifestStatus of
+    Success manifest ->
+      div [ class "block-list pkg-about" ]
+        [ h1 [ class "block-list-title" ] [ text "About" ]
+        , text manifest.summary
+        , viewInstall manifest
+        , viewRelease manifest time
+        , viewLicense manifest
+        , viewDependencies manifest
+        ]
+
+    Loading ->
+      div [ class "block-list pkg-about" ] [ text "" ] -- TODO
+
+    Failure ->
+      div
+        (class "block-list pkg-about" :: Problem.styles)
+        (Problem.offline "elm.json")
+
+
+viewInstall : Project.PackageInfo -> Html msg
+viewInstall manifest =
+  if requiresElmCore manifest.deps then
+    -- >= 0.19
+    viewInstallHelp "elm install" (Package.toString manifest.name)
+
+  else if requiresElmLangCore manifest.deps then
+    -- < 0.19.0
+    viewInstallHelp "elm-package install" (Package.toString manifest.name)
+
+  else
+    -- /core packages and unknown versions
+    text ""
+
+
+requiresElmCore : Project.Deps Constraint -> Bool
+requiresElmCore deps =
+  List.any (\(name, _) -> Package.toString name == "elm/core") deps
+
+
+requiresElmLangCore : Project.Deps Constraint -> Bool
+requiresElmLangCore deps =
+  List.any (\(name, _) -> Package.toString name == "elm-lang/core") deps
+
+
+viewInstallHelp : String -> String -> Html msg
+viewInstallHelp command package =
+  div []
+    [ h1 [] [ text "Install" ]
+    , pre []
+        [ code [] [ text (command ++ " " ++ package) ]
+        ]
+    ]
+
+
+
+-- VIEW RELEASE
+
+
+viewRelease : Project.PackageInfo -> Status Time.Posix -> Html msg
+viewRelease manifest timeStatus =
+  case timeStatus of
+    Failure ->
+      text "" -- TODO
+
+    Loading ->
+      text "" -- TODO
+
+    Success time ->
+      div []
+        [ h1 [] [ text "Release" ]
+        , viewTime manifest time
+        ]
+
+
+viewTime : Project.PackageInfo -> Time.Posix -> Html msg
+viewTime manifest time =
+  let
+    releasesUrl =
+      Url.crossOrigin "https://github.com" [ Package.toString manifest.name, "releases" ] []
+  in
+  a [ href releasesUrl ]
+    [ text <|
+        String.concat
+          [ monthToString (Time.toMonth Time.utc time)
+          , " "
+          , String.fromInt (Time.toDay Time.utc time)
+          , ", "
+          , String.fromInt (Time.toYear Time.utc time)
+          ]
+    ]
+
+
+monthToString : Time.Month -> String
+monthToString month =
+  case month of
+    Time.Jan -> "January"
+    Time.Feb -> "February"
+    Time.Mar -> "March"
+    Time.Apr -> "April"
+    Time.May -> "May"
+    Time.Jun -> "June"
+    Time.Jul -> "July"
+    Time.Aug -> "August"
+    Time.Sep -> "September"
+    Time.Oct -> "October"
+    Time.Nov -> "November"
+    Time.Dec -> "December"
+
+
+
+-- VIEW LICENSE
+
+
+viewLicense : Project.PackageInfo -> Html msg
+viewLicense manifest =
+  let
+    licenseUrl =
+      Url.crossOrigin
+        "https://github.com"
+        [ Package.toString manifest.name, "blob", V.toString manifest.version, "LICENSE" ]
+        []
+  in
+  div []
+    [ h1 [] [ text "License" ]
+    , a [ href licenseUrl ] [ text (License.toString manifest.license) ]
+    ]
+
+
+
+-- VIEW DEPENDENCIES
+
+
+viewDependencies : Project.PackageInfo -> Html msg
+viewDependencies manifest =
+  div []
+    [ h1 [] [ text "Dependencies" ]
+    , ul [] <|
+        li [] [ viewElmDependency manifest.elm ]
+          :: List.map viewDependency manifest.deps
+    ]
+
+
+viewElmDependency : Constraint -> Html msg
+viewElmDependency constraint =
+  li []
+    [ a [ href "https://guide.elm-lang.org/install/elm.html" ]
+        [ text "elm" ]
+    , text " "
+    , text (Constraint.toString constraint)
+    ]
+
+
+viewDependency : (Package.Name, Constraint) -> Html msg
+viewDependency (packageName, constraint) =
+  let
+    name = Package.toString packageName
+  in
+  li []
+    [ a [ href (Url.absolute [ "packages", name, "latest", "" ] []) ]
+        [ text name ]
+    , text " "
+    , span [ class "pkg-constraint" ] [ text (Constraint.toString constraint) ]
+    ]
 
 
 
@@ -609,16 +835,26 @@ viewValueItem { author, project, version } moduleName ownerName valueName =
 
 
 navLink : String -> String -> Bool -> Html msg
-navLink name url isBold =
+navLink =
+  navLinkHelp "pkg-nav-link"
+
+
+navModuleLink : String -> String -> Bool -> Html msg
+navModuleLink =
+  navLinkHelp "pkg-nav-module"
+
+
+navLinkHelp : String -> String -> String -> Bool -> Html msg
+navLinkHelp linkClass name url isBold =
   let
     attributes =
       if isBold then
-        [ class "pkg-nav-module"
+        [ class linkClass
         , style "font-weight" "bold"
         , style "text-decoration" "underline"
         ]
       else
-        [ class "pkg-nav-module"
+        [ class linkClass
         ]
   in
   a (href url :: attributes) [ text name ]
