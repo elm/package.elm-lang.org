@@ -1,9 +1,9 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Http
+module GitHub
   ( Token
   , init
-  , fetchGithub
+  , fetchPath
   )
   where
 
@@ -36,7 +36,7 @@ init :: String -> IO Token
 init githubToken =
   do  manager <- Http.newManager Http.tlsManagerSettings
       let token = Token manager (BS.pack ("token " ++ githubToken))
-      response <- fetchGithub token "/"
+      response <- fetchPath token "/"
       case response of
         Left err ->
           error $ "Bad OAuth access token for GitHub.\n" ++ err
@@ -49,15 +49,15 @@ init githubToken =
 -- GITHUB REQUESTS
 
 
-fetchGithub :: Token -> String -> IO (Either String LBS.ByteString)
-fetchGithub (Token manager token) path =
+fetchPath :: Token -> String -> IO (Either String LBS.ByteString)
+fetchPath (Token manager token) path =
   let
     attempt =
       do  request <- Http.parseUrlThrow $ "https://api.github.com" ++ path
           response <- Http.httpLbs (addGitHubHeaders token request) manager
           return $ Right $ Http.responseBody response
   in
-    attempt `catch` recover
+  attempt `catch` recover
 
 
 recover :: SomeException -> IO (Either String a)
