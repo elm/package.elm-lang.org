@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE BangPatterns, GADTs, OverloadedStrings, UnboxedTuples #-}
 module Server.Router
-  ( Route, top, s, int, text, custom
+  ( Route, top, s, int, bytes, custom
   , (</>), map, oneOf
   , (==>)
   , serve
@@ -14,10 +14,9 @@ import Control.Applicative ((<|>))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import Data.ByteString.Unsafe (unsafeIndex)
+import qualified Data.ByteString.Validate as BSV
 import qualified Data.Char as Char
 import qualified Data.List as List
-import qualified Data.Text.Encoding as Text
-import Data.Text (Text)
 import Data.Word (Word8)
 import qualified Snap.Core as Snap
 import Snap.Core (Snap)
@@ -31,7 +30,7 @@ data Route a b where
   Top :: Route a a
   Exact :: ByteString -> Route a a
   Integer :: Route (Int -> a) a
-  Custom :: (Text -> Maybe a) -> Route (a -> b) b
+  Custom :: (BS.ByteString -> Maybe a) -> Route (a -> b) b
   Slash :: Route a b -> Route b c -> Route a c
   Map :: a -> Route a b -> Route (b -> c) c
   OneOf :: [Route a b] -> Route a b
@@ -52,12 +51,12 @@ int =
   Integer
 
 
-text :: Route (Text -> a) a
-text =
+bytes :: Route (BS.ByteString -> a) a
+bytes =
   Custom Just
 
 
-custom :: (Text -> Maybe a) -> Route (a -> b) b
+custom :: (BS.ByteString -> Maybe a) -> Route (a -> b) b
 custom =
   Custom
 
@@ -177,7 +176,7 @@ try route state@(State url offset length value) =
         else
           [State url newOffset newLength (value number)]
 
-    Custom checker ->
+    Custom check ->
       let
         (# endOffset, newOffset, newLength #) =
           chompSegment url offset length
@@ -190,17 +189,13 @@ try route state@(State url offset length value) =
             !subByteString =
               BS.take (endOffset - offset) (BS.drop offset url)
           in
-            case Text.decodeUtf8' subByteString of
-              Left _ ->
-                []
-
-              Right txt ->
-                case checker txt of
-                  Nothing ->
-                    []
-
-                  Just nextValue ->
-                    [State url newOffset newLength (value nextValue)]
+          if BSV.isUtf8 subByteString
+          then
+            case check subByteString of
+              Just nextValue -> [State url newOffset newLength (value nextValue)]
+              Nothing        -> []
+          else
+            []
 
     Slash before after ->
       concatMap (try after) (try before state)
