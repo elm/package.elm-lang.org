@@ -167,6 +167,25 @@ pre {
 }
 
 
+
+/* ABOUT */
+
+
+.pkg-about h1 {
+  margin-bottom: 10px;
+}
+
+.pkg-about ul {
+  list-style: none;
+  padding: 0;
+}
+
+.pkg-constraint {
+  white-space: nowrap;
+}
+
+
+
 /* PACKAGE NAVIGATION */
 
 

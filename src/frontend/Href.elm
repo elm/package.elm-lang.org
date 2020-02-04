@@ -2,6 +2,7 @@ module Href exposing
   ( toProject
   , toVersion
   , toModule
+  , toAbout
   )
 
 
@@ -26,6 +27,11 @@ toVersion author project version =
 toModule : String -> String -> Maybe V.Version -> String -> Maybe String -> String
 toModule author project version moduleName maybeValue =
   Url.custom Url.Absolute [ "packages", author, project, vsnToString version, String.replace "." "-" moduleName ] [] maybeValue
+
+
+toAbout : String -> String -> Maybe V.Version -> String
+toAbout author project version =
+  Url.absolute [ "packages", author, project, vsnToString version, "about" ] []
 
 
 
