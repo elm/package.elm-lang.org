@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wall #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Sitemap
   ( generate
   )
@@ -10,21 +9,19 @@ import Control.Monad (void)
 import qualified Data.ByteString.Lazy as BS
 import qualified Data.Map as Map
 import Data.Map (Map)
-import Data.Monoid ((<>))
-import Data.Text (Text)
 import Text.Blaze.Internal ((!))
 import qualified Text.Blaze.Internal as Blaze
 import qualified Text.Blaze.Renderer.Utf8 as Blaze (renderMarkup)
 
-import Elm.Package (Name, Version)
 import qualified Elm.Package as Pkg
+import qualified Elm.Version as V
 
 
 
 -- GENERATE
 
 
-generate :: Map Name a -> IO ()
+generate :: Map Pkg.Name a -> IO ()
 generate packages =
   BS.writeFile "sitemap.xml" $
     Blaze.renderMarkup (generateSitemap packages)
@@ -34,39 +31,33 @@ generate packages =
 -- SITEMAP XML
 
 
-generateSitemap :: Map Name a -> Blaze.Markup
+generateSitemap :: Map Pkg.Name a -> Blaze.Markup
 generateSitemap packages =
-  do  Blaze.preEscapedText "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+  do  Blaze.preEscapedString "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
       urlset ! xmlns "http://www.sitemaps.org/schemas/sitemap/0.9" $
         void $ Map.traverseWithKey genPackageUrls packages
 
 
-genPackageUrls :: Name -> a -> Blaze.Markup
+genPackageUrls :: Pkg.Name -> a -> Blaze.Markup
 genPackageUrls name _ =
   do  genLatestUrl name
       -- void $ traverse (genExactUrl name) (getVersions summary)
 
 
-genLatestUrl :: Name -> Blaze.Markup
-genLatestUrl name =
-  Blaze.customParent "url" $ do
-    tag "loc" (url name "latest")
-    tag "changefreq" "monthly"
-    tag "priority" "0.8"
+genLatestUrl :: Pkg.Name -> Blaze.Markup
+genLatestUrl pkg =
+  url $
+    do  loc pkg "latest"
+        changefreq "monthly"
+        priority "0.8"
 
 
-genExactUrl :: Name -> Version -> Blaze.Markup
-genExactUrl name version =
-  Blaze.customParent "url" $ do
-    tag "loc" (url name (Pkg.versionToText version))
-    tag "changefreq" "never"
-    tag "priority" "0.3"
-
-
-url :: Name -> Text -> Text
-url name version =
-  "https://package.elm-lang.org/packages/"
-  <> Pkg.toText name <> "/" <> version
+_genExactUrl :: Pkg.Name -> V.Version -> Blaze.Markup
+_genExactUrl pkg version =
+  url $
+    do  loc pkg (V.toChars version)
+        changefreq "never"
+        priority "0.3"
 
 
 
@@ -76,15 +67,30 @@ url name version =
 {-# INLINE urlset #-}
 urlset :: Blaze.Markup -> Blaze.Markup
 urlset =
-  Blaze.customParent (Blaze.textTag "urlset")
+  Blaze.customParent (Blaze.stringTag "urlset")
 
 
-xmlns :: Text -> Blaze.Attribute
+xmlns :: String -> Blaze.Attribute
 xmlns value =
-  Blaze.customAttribute (Blaze.textTag "xmlns") (Blaze.textValue value)
+  Blaze.customAttribute (Blaze.stringTag "xmlns") (Blaze.stringValue value)
 
 
-{-# INLINE tag #-}
-tag :: Text -> Text -> Blaze.Markup
-tag name content =
-  Blaze.customParent (Blaze.textTag name) (Blaze.text content)
+url :: Blaze.Markup -> Blaze.Markup
+url =
+  Blaze.customParent (Blaze.stringTag "url")
+
+
+loc :: Pkg.Name -> String -> Blaze.Markup
+loc pkg vsn =
+  Blaze.customParent (Blaze.stringTag "loc") $ Blaze.string $
+    "https://package.elm-lang.org/packages/" ++ Pkg.toChars pkg ++ "/" ++ vsn
+
+
+changefreq :: String -> Blaze.Markup
+changefreq value =
+  Blaze.customParent (Blaze.stringTag "changefreq") (Blaze.string value)
+
+
+priority :: String -> Blaze.Markup
+priority value =
+  Blaze.customParent (Blaze.stringTag "priority") (Blaze.string value)
