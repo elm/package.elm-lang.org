@@ -1,6 +1,7 @@
 module Release exposing
   ( Release
   , getLatestVersion
+  , getTime
   , decoder
   )
 
@@ -42,6 +43,28 @@ getLatestVersionHelp releases maxRelease =
             release
         else
             maxRelease
+
+
+
+-- GET TIME
+
+
+getTime : V.Version -> OneOrMore Release -> Maybe Time.Posix
+getTime version (OneOrMore r rs) =
+  getTimeHelp version (r :: rs)
+
+
+getTimeHelp : V.Version -> List Release -> Maybe Time.Posix
+getTimeHelp version releases =
+  case releases of
+    r :: rs ->
+      if r.version == version then
+        Just r.time
+      else
+        getTimeHelp version rs
+
+    [] ->
+      Nothing
 
 
 
