@@ -50,6 +50,8 @@ Executable run-server
     directory,
     edit-distance,
     filepath,
+    ghc-prim,
+    HTTP,
     http-client,
     http-client-tls,
     http-types,
@@ -60,10 +62,12 @@ Executable run-server
     process,
     raw-strings-qq,
     scientific,
+    SHA,
     snap-core,
     snap-server,
     text,
     time,
     unordered-containers,
     utf8-string,
-    vector
+    vector,
+    zip-archive
