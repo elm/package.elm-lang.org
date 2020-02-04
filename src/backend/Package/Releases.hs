@@ -10,19 +10,20 @@ module Package.Releases
 
 
 import Prelude hiding (read)
-import Control.Monad (forM)
 import qualified Data.ByteString as BS
-import qualified Data.HashMap.Lazy as HashMap
 import qualified Data.List as List
 import qualified Data.Time.Clock.POSIX as Time
-import System.Directory (doesFileExist)
+import qualified System.Directory as Dir
 import System.Exit (exitFailure)
 import System.IO (hPutStr, stderr)
 
 import qualified Elm.Package as Pkg
-import qualified Json.Decode as Decode
-import qualified Json.Encode as Encode
+import qualified Elm.Version as V
+import qualified Json.Decode as D
+import qualified Json.Encode as E
+import qualified Json.String as Json
 import qualified Package.Path as Path
+import qualified Parse.Primitives as P
 
 
 
@@ -31,7 +32,7 @@ import qualified Package.Path as Path
 
 data Release =
   Release
-    { _version :: Pkg.Version
+    { _version :: V.Version
     , _time :: Time.POSIXTime
     }
   deriving (Eq, Ord)
@@ -42,14 +43,14 @@ data Release =
 
 
 read :: Pkg.Name -> IO [Release]
-read name =
-  do  json <- BS.readFile (Path.releases name)
-      case Decode.parse "releases" (const []) releasesDecoder json of
+read pkg =
+  do  json <- BS.readFile (Path.releases pkg)
+      case D.fromByteString decoder json of
         Right releases ->
           return releases
 
         Left _ ->
-          do  hPutStr stderr $ "The JSON in " ++ Path.releases name ++ " is corrupt."
+          do  hPutStr stderr $ "The JSON in " ++ Path.releases pkg ++ " is corrupt."
               exitFailure
 
 
@@ -57,31 +58,43 @@ read name =
 -- ADD
 
 
-add :: Pkg.Name -> Pkg.Version -> Time.POSIXTime -> IO ()
-add name version time =
-  do  let path = Path.releases name
-      exists <- doesFileExist path
-      releases <- if exists then read name else return []
-      Encode.write path $ encode $ Release version time : releases
+add :: Pkg.Name -> V.Version -> Time.POSIXTime -> IO ()
+add pkg vsn time =
+  do  let path = Path.releases pkg
+      exists <- Dir.doesFileExist path
+      releases <- if exists then read pkg else return []
+      E.write path $ encode $ Release vsn time : releases
 
 
 
 -- JSON
 
 
-encode :: [Release] -> Encode.Value
+encode :: [Release] -> E.Value
 encode releases =
-  Encode.object $ flip map (List.sort releases) $ \(Release version time) ->
-    ( Pkg.versionToText version, Encode.int (floor time) )
+  E.object $
+    map encodeRelease (List.sort releases)
 
 
-releasesDecoder :: Decode.Decoder () [Release]
-releasesDecoder =
-  do  pairs <- HashMap.toList <$> Decode.dict Decode.int
-      forM (List.sort pairs) $ \(vsn, int) ->
-        case Pkg.versionFromText vsn of
-          Just version ->
-            Decode.succeed (Release version (fromIntegral int))
+encodeRelease :: Release -> (Json.String, E.Value)
+encodeRelease (Release vsn time) =
+  ( Json.fromChars (V.toChars vsn)
+  , E.int (floor time)
+  )
 
-          Nothing ->
-            Decode.fail ()
+
+decoder :: D.Decoder () [Release]
+decoder =
+  map (uncurry Release) <$>
+    D.pairs versionKeyDecoder (fromIntegral <$> D.int)
+
+
+versionKeyDecoder :: D.KeyDecoder () V.Version
+versionKeyDecoder =
+  let
+    keyParser =
+      P.specialize (\_ _ _ -> ()) V.parser
+  in
+  D.KeyDecoder keyParser (\_ _ -> ())
+
+
