@@ -12,14 +12,15 @@ module ServeFile
 import qualified Data.ByteString.Builder as B
 import qualified Data.Map as Map
 import Data.Monoid ((<>))
-import qualified Data.Text as Text
+import qualified Data.Utf8 as Utf8
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
 import System.IO.Unsafe (unsafePerformIO)
 import Text.RawString.QQ (r)
 
-import qualified Elm.Compiler.Module as Module
+import qualified Elm.ModuleName as ModuleName
 import qualified Elm.Package as Pkg
+import qualified Elm.Version as V
 
 
 
@@ -37,67 +38,74 @@ misc title =
 
 project :: Pkg.Name -> Snap ()
 project pkg =
-  makeHtml (B.stringUtf8 (Pkg.toString pkg)) mempty
+  makeHtml (B.stringUtf8 (Pkg.toChars pkg)) mempty
 
 
 
 -- VERSION
 
 
-version :: Pkg.Name -> Pkg.Version -> Maybe Module.Raw -> Snap ()
-version pkg@(Pkg.Name _ prjct) vsn maybeName =
-  let
-    versionString =
-      Pkg.versionToString vsn
+version :: Pkg.Name -> V.Version -> Maybe ModuleName.Raw -> Snap ()
+version pkg vsn maybeName =
+  makeHtml
+    (B.stringUtf8 (toTitle pkg vsn maybeName))
+    (makeCanonicalLink pkg maybeName)
 
-    maybeStringName =
-      fmap Module.nameToString maybeName
 
-    title =
-      maybe "" (++" - ") maybeStringName
-      ++ Text.unpack prjct ++ " " ++ versionString
-  in
-  makeHtml (B.stringUtf8 title) (makeCanonicalLink pkg maybeName)
+toTitle :: Pkg.Name -> V.Version -> Maybe ModuleName.Raw -> String
+toTitle (Pkg.Name _ proj) vsn maybeName =
+  case maybeName of
+    Nothing ->
+      Utf8.toChars proj ++ " " ++ V.toChars vsn
+
+    Just name ->
+      ModuleName.toChars name ++ " - " ++
+      Utf8.toChars proj ++ " " ++ V.toChars vsn
+
 
 
 
 -- CANONICAL LINKS
 
 
-makeCanonicalLink :: Pkg.Name -> Maybe Module.Raw -> B.Builder
+makeCanonicalLink :: Pkg.Name -> Maybe ModuleName.Raw -> B.Builder
 makeCanonicalLink pkg maybeName =
-  let
-    canonicalPackage =
-      Map.findWithDefault pkg pkg renames
-  in
   [r|<link rel="canonical" href="/packages/|]
-    <> B.stringUtf8 (Pkg.toUrl canonicalPackage)
+    <> toCanonicalPackage pkg
     <> [r|/latest/|]
-    <> maybe "" (B.stringUtf8 . Module.nameToString) maybeName
+    <> maybe "" (B.stringUtf8 . ModuleName.toChars) maybeName
     <> [r|">|]
 
 
-renames :: Map.Map Pkg.Name Pkg.Name
+toCanonicalPackage :: Pkg.Name -> B.Builder
+toCanonicalPackage pkg =
+  let
+    url = Pkg.toUrl pkg
+  in
+  B.stringUtf8 (Map.findWithDefault url url renames)
+
+
+renames :: Map.Map String String
 renames =
   Map.fromList
-    [ Pkg.Name "evancz" "elm-effects" ==> Pkg.Name "elm" "core"
-    , Pkg.Name "evancz" "elm-html" ==> Pkg.Name "elm" "html"
-    , Pkg.Name "evancz" "elm-http" ==> Pkg.Name "elm" "http"
-    , Pkg.Name "evancz" "elm-svg" ==> Pkg.Name "elm" "svg"
-    , Pkg.Name "evancz" "start-app" ==> Pkg.Name "elm" "html"
-    , Pkg.Name "evancz" "virtual-dom" ==> Pkg.Name "elm" "virtual-dom"
+    [ "evancz/elm-effects" ==> "elm/core"
+    , "evancz/elm-html" ==> "elm/html"
+    , "evancz/elm-http" ==> "elm/http"
+    , "evancz/elm-svg" ==> "elm/svg"
+    , "evancz/start-app" ==> "elm/html"
+    , "evancz/virtual-dom" ==> "elm/virtual-dom"
 
-    , Pkg.Name "elm-lang" "animation-frame" ==> Pkg.Name "elm" "browser"
-    , Pkg.Name "elm-lang" "core" ==> Pkg.Name "elm" "core"
-    , Pkg.Name "elm-lang" "html" ==> Pkg.Name "elm" "html"
-    , Pkg.Name "elm-lang" "http" ==> Pkg.Name "elm" "http"
-    , Pkg.Name "elm-lang" "svg" ==> Pkg.Name "elm" "svg"
-    , Pkg.Name "elm-lang" "virtual-dom" ==> Pkg.Name "elm" "virtual-dom"
+    , "elm-lang/animation-frame" ==> "elm/browser"
+    , "elm-lang/core" ==> "elm/core"
+    , "elm-lang/html" ==> "elm/html"
+    , "elm-lang/http" ==> "elm/http"
+    , "elm-lang/svg" ==> "elm/svg"
+    , "elm-lang/virtual-dom" ==> "elm/virtual-dom"
 
-    , Pkg.Name "elm-community" "elm-list-extra" ==> Pkg.Name "elm-community" "list-extra"
-    , Pkg.Name "elm-community" "elm-linear-algebra" ==> Pkg.Name "elm-community" "linear-algebra"
-    , Pkg.Name "elm-community" "elm-lazy-list" ==> Pkg.Name "elm-community" "lazy-list"
-    , Pkg.Name "elm-community" "elm-json-extra" ==> Pkg.Name "elm-community" "json-extra"
+    , "elm-community/elm-list-extra" ==> "elm-community/list-extra"
+    , "elm-community/elm-linear-algebra" ==> "elm-community/linear-algebra"
+    , "elm-community/elm-lazy-list" ==> "elm-community/lazy-list"
+    , "elm-community/elm-json-extra" ==> "elm-community/json-extra"
     ]
 
 
