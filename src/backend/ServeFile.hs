@@ -22,32 +22,34 @@ import qualified Elm.ModuleName as ModuleName
 import qualified Elm.Package as Pkg
 import qualified Elm.Version as V
 
+import qualified Artifacts as A
+
 
 
 -- TYPICAL PAGES / NO PORTS
 
 
-misc :: B.Builder -> Snap ()
-misc title =
-  makeHtml title mempty
+misc :: A.Artifacts -> B.Builder -> Snap ()
+misc artifacts title =
+  makeHtml artifacts title mempty
 
 
 
 -- PROJECT
 
 
-project :: Pkg.Name -> Snap ()
-project pkg =
-  makeHtml (B.stringUtf8 (Pkg.toChars pkg)) mempty
+project :: A.Artifacts -> Pkg.Name -> Snap ()
+project artifacts pkg =
+  makeHtml artifacts (B.stringUtf8 (Pkg.toChars pkg)) mempty
 
 
 
 -- VERSION
 
 
-version :: Pkg.Name -> V.Version -> Maybe ModuleName.Raw -> Snap ()
-version pkg vsn maybeName =
-  makeHtml
+version :: A.Artifacts -> Pkg.Name -> V.Version -> Maybe ModuleName.Raw -> Snap ()
+version artifacts pkg vsn maybeName =
+  makeHtml artifacts
     (B.stringUtf8 (toTitle pkg vsn maybeName))
     (makeCanonicalLink pkg maybeName)
 
@@ -118,8 +120,8 @@ renames =
 -- SKELETON
 
 
-makeHtml :: B.Builder -> B.Builder -> Snap ()
-makeHtml title canonicalLink =
+makeHtml :: A.Artifacts -> B.Builder -> B.Builder -> Snap ()
+makeHtml artifacts title canonicalLink =
   writeBuilder $
     [r|<!DOCTYPE HTML>
 <html>
@@ -130,7 +132,7 @@ makeHtml title canonicalLink =
   <link rel="stylesheet" href="/assets/highlight/styles/default.css?|] <> uniqueToken <> [r|">
   <link rel="stylesheet" href="/assets/style.css?|] <> uniqueToken <> [r|">
   <script src="/assets/highlight/highlight.pack.js?|] <> uniqueToken <> [r|"></script>
-  <script src="/artifacts/elm.js?|] <> uniqueToken <> [r|"></script>
+  <script src="/artifacts/|] <> B.byteString (A._elmHash artifacts) <> [r|"></script>
 </head>
 <body>
 <script>
