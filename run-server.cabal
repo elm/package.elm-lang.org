@@ -67,6 +67,7 @@ Executable run-server
     snap-server,
     text,
     time,
+    unix-compat,
     unordered-containers,
     utf8-string,
     vector,
