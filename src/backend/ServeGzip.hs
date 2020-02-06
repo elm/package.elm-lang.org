@@ -5,17 +5,23 @@ module ServeGzip
   where
 
 
+import Control.Monad.Trans (liftIO)
 import qualified Data.Binary.Builder as B
 import qualified Data.ByteString as BS
+import Data.Word (Word64)
 import Snap.Core
-  ( Snap, finishWith, getHeader, getRequest, getResponse
-  , modifyResponse, rqURI, sendFile
-  , setContentType, setHeader, setResponseBody, setResponseStatus
+  ( Snap, emptyResponse, finishWith
+  , getHeader, getRequest, getResponse
+  , modifyResponse, rqURI
+  , sendFile, setContentLength, setContentType, setHeader
+  , setResponseBody, setResponseCode, setResponseStatus
   , writeBuilder
   )
+import qualified Snap.Internal.Http.Types as I
 import qualified System.IO.Streams.Core as S
 import qualified System.IO.Streams.File as SF
 import qualified System.IO.Streams.Zlib as SZ
+import qualified System.PosixCompat.Files as File
 
 
 
@@ -34,13 +40,15 @@ import qualified System.IO.Streams.Zlib as SZ
 
 serveGzippedFile :: BS.ByteString -> FilePath -> Snap ()
 serveGzippedFile mimeType filePath =
-  do  encoding <- getAcceptableEncoding
+  do  fileSize <- setLastModifiedOr304 filePath
+      encoding <- getAcceptableEncoding
       case encoding of
         Gzip ->
           do  sendFile filePath
               finishWith
                 . setHeader "Content-Encoding" "gzip"
                 . setHeader "Vary" "Accept-Encoding"
+                . setContentLength fileSize
                 . setContentType mimeType
                 =<< getResponse
 
@@ -50,10 +58,12 @@ serveGzippedFile mimeType filePath =
                 Curl ->
                   do  modifyResponse $ setResponseStatus 406 "Bad Accept-Encoding"
                       writeBuilder . toCurlError . rqURI =<< getRequest
+                      finishWith =<< getResponse
 
                 Wget ->
                   do  modifyResponse $ setResponseStatus 406 "Bad Accept-Encoding"
                       writeBuilder . toWgetError . rqURI =<< getRequest
+                      finishWith =<< getResponse
 
                 Browser ->
                   finishWith
@@ -144,7 +154,8 @@ toCurlError uri =
   \    curl -sH 'accept-encoding: gzip' https://package.elm-lang.org" <> B.fromByteString uri <> " | gunzip\n\
   \\n\
   \Server costs are paid by individual community members, not some big company, so\n\
-  \thank you for helping out like this!\n\n"
+  \thank you for helping out like this!\n\
+  \\n"
 
 
 toWgetError :: BS.ByteString -> B.Builder
@@ -156,4 +167,31 @@ toWgetError uri =
   \    wget --header=\"accept-encoding: gzip\" https://package.elm-lang.org" <> B.fromByteString uri <> " | gunzip\n\
   \\n\
   \Server costs are paid by individual community members, not some big company, so\n\
-  \thank you for helping out like this!\n\n"
+  \thank you for helping out like this!\n\
+  \\n"
+
+
+
+-- SET LAST MODIFIED OR 304
+
+
+setLastModifiedOr304 :: FilePath -> Snap Word64
+setLastModifiedOr304 filePath =
+  do  req <- getRequest
+      fileStatus <- liftIO $ File.getFileStatus filePath
+      case getHeader "if-modified-since" req of
+        Nothing ->
+          setLastModified fileStatus
+
+        Just header ->
+          do  clientTime <- liftIO $ I.parseHttpTime header
+              if File.modificationTime fileStatus <= clientTime
+                then finishWith $ setResponseCode 304 emptyResponse
+                else setLastModified fileStatus
+
+
+setLastModified :: File.FileStatus -> Snap Word64
+setLastModified fileStatus =
+  do  lastModified <- liftIO $ I.formatHttpTime (File.modificationTime fileStatus)
+      modifyResponse $ setHeader "last-modified" lastModified
+      return $ fromIntegral $ File.fileSize fileStatus
