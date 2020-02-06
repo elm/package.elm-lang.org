@@ -39,7 +39,6 @@ import qualified ServeGzip
 data Flags =
   Flags
     { port :: Int
-    , bootstrap :: Bool
     , github :: String
     }
     deriving (Data,Typeable,Show,Eq)
@@ -50,8 +49,6 @@ flags =
   Flags
     { port = 8000
         &= help "set the port of the server"
-    , bootstrap = False
-        &= help "avoid downloading packages from server that is currently down"
     , github = ""
         &= help "OAuth token for talking to GitHub"
     }
@@ -66,14 +63,11 @@ main =
   do  setNumCapabilities =<< getNumProcessors
       cargs <- cmdArgs flags
 
-      if bootstrap cargs
-        then return ()
-        else Artifacts.compile
-
+      artifacts <- Artifacts.init
       memory <- Memory.init
       token <- GitHub.init (github cargs)
 
-      S.httpServe (config (port cargs)) (serve token memory)
+      S.httpServe (config (port cargs)) (serve artifacts token memory)
 
 
 config :: Int -> S.Config S.Snap a
@@ -94,8 +88,8 @@ config port =
 -- SERVE
 
 
-serve :: GitHub.Token -> Memory.Memory -> S.Snap ()
-serve token memory =
+serve :: Artifacts.Artifacts -> GitHub.Token -> Memory.Memory -> S.Snap ()
+serve artifacts token memory =
   asum
     [
       -- LEGACY USERS (<0.19)
@@ -103,23 +97,23 @@ serve token memory =
     ,
       -- NORMAL ROUTES
       Router.serve $ Router.oneOf $
-        [ top ==> ServeFile.misc "Elm Packages"
+        [ top ==> ServeFile.misc artifacts "Elm Packages"
         , s "packages" ==> S.redirect' "/" 301
-        , s "packages" </> bytes </> bytes </> packageRoute ==> servePackageInfo memory
+        , s "packages" </> bytes </> bytes </> packageRoute ==> servePackageInfo artifacts memory
         , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "register" ==> Register.register token memory
+        , s "artifacts" </> bytes ==> Artifacts.serve artifacts
         , s "help" </>
             Router.oneOf
-              [ s "design-guidelines" ==> ServeFile.misc "Design Guidelines"
-              , s "documentation-format" ==> ServeFile.misc "Documentation Format"
+              [ s "design-guidelines" ==> ServeFile.misc artifacts "Design Guidelines"
+              , s "documentation-format" ==> ServeFile.misc artifacts "Documentation Format"
               ]
         ]
     ,
       -- STATIC STUFF
       S.route
         [ ("assets", serveDirectory "assets")
-        , ("artifacts", serveDirectory "artifacts")
         , ("search.json", serveFile "search.json")
         , ("robots.txt", serveFile "robots.txt")
         , ("sitemap.xml", serveFile "sitemap.xml")
@@ -129,7 +123,7 @@ serve token memory =
       do  S.modifyResponse $ S.setResponseStatus 404 "Not Found"
           request <- S.getRequest
           if S.rqMethod request == S.GET
-            then ServeFile.misc "Not Found"
+            then ServeFile.misc artifacts "Not Found"
             else S.writeBuilder "Not Found"
 
     ]
@@ -223,8 +217,8 @@ toDot word =
 -- SERVE PACKAGE INFO
 
 
-servePackageInfo :: Memory.Memory -> BS.ByteString -> BS.ByteString -> PackageRoute -> S.Snap ()
-servePackageInfo memory author project pkgRoute =
+servePackageInfo :: Artifacts.Artifacts -> Memory.Memory -> BS.ByteString -> BS.ByteString -> PackageRoute -> S.Snap ()
+servePackageInfo artifacts memory author project pkgRoute =
   case P.fromByteString Pkg.parser (,) (BS.concat [author,"/",project]) of
     Left _ ->
       S.pass
@@ -234,18 +228,18 @@ servePackageInfo memory author project pkgRoute =
         PkgOverview ->
           do  pkgs <- Memory.getPackages memory
               if Map.member pkg pkgs
-                then ServeFile.project pkg
+                then ServeFile.project artifacts pkg
                 else S.pass
 
         Pkg__releases_json ->
           serveFile (Path.releases pkg)
 
         PkgVersion maybeVersion vsnRoute ->
-          serveVersion memory pkg maybeVersion vsnRoute
+          serveVersion artifacts memory pkg maybeVersion vsnRoute
 
 
-serveVersion :: Memory.Memory -> Pkg.Name -> Maybe V.Version -> VsnRoute -> S.Snap ()
-serveVersion memory pkg maybeVersion vsnRoute =
+serveVersion :: Artifacts.Artifacts -> Memory.Memory -> Pkg.Name -> Maybe V.Version -> VsnRoute -> S.Snap ()
+serveVersion artifacts memory pkg maybeVersion vsnRoute =
   do  pkgs <- Memory.getPackages memory
       case Map.lookup pkg pkgs of
         Nothing ->
@@ -258,12 +252,12 @@ serveVersion memory pkg maybeVersion vsnRoute =
 
             Just vsn ->
               case vsnRoute of
-                VsnOverview        -> ServeFile.version pkg vsn Nothing
+                VsnOverview        -> ServeFile.version artifacts pkg vsn Nothing
                 Vsn__elm_json      -> ServeGzip.serveGzippedFile "application/json" (Path.directory pkg vsn ++ "/elm.json.gz")
                 Vsn__docs_json     -> ServeGzip.serveGzippedFile "application/json" (Path.directory pkg vsn ++ "/docs.json.gz")
                 Vsn__README_md     -> ServeGzip.serveGzippedFile "text/markdown; charset=UTF-8" (Path.directory pkg vsn ++ "/README.md.gz")
                 Vsn__endpoint_json -> serveFile (Path.directory pkg vsn ++ "/endpoint.json")
-                VsnModule name     -> ServeFile.version pkg vsn (Just name)
+                VsnModule name     -> ServeFile.version artifacts pkg vsn (Just name)
 
 
 verifyVersion :: Maybe V.Version -> [V.Version] -> Maybe V.Version
