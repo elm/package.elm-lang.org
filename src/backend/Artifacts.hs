@@ -12,9 +12,9 @@ import Prelude hiding (init)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Snap.Core as S
-import System.IO (hFlush, hPutStr, hPutStrLn, stdout)
 import qualified System.Process as Process
 
+import qualified Helpers
 import qualified ServeGzip
 
 
@@ -34,10 +34,8 @@ data Artifacts =
 
 init :: IO Artifacts
 init =
-  do  hPutStr stdout "Creating artifacts... "
-      hFlush stdout
-      elmHash <- Process.readProcess "bash" ["build.sh"] ""
-      hPutStrLn stdout "DONE"
+  Helpers.report "Artifacts" $
+  do  elmHash <- Process.readProcess "bash" ["build.sh"] ""
       return (Artifacts (BSC.pack elmHash))
 
 

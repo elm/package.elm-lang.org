@@ -37,6 +37,7 @@ import qualified Json.Encode as E
 import Json.Encode ((==>))
 import qualified Json.String as Json
 
+import qualified Helpers
 import Memory.History (History)
 import qualified Memory.History as History
 import qualified Sitemap
@@ -104,6 +105,7 @@ toElmJsonPath pkg vsn =
 
 init :: IO Memory
 init =
+  Helpers.report "Memory" $
   do  history <- History.load
       packages <- Map.traverseWithKey toSummary (History.groupByName history)
 

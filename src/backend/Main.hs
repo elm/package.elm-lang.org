@@ -67,6 +67,7 @@ main =
       memory <- Memory.init
       token <- GitHub.init (github cargs)
 
+      putStrLn $ "Serving at http://localhost:" ++ show (port cargs)
       S.httpServe (config (port cargs)) (serve artifacts token memory)
 
 

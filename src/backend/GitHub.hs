@@ -16,6 +16,8 @@ import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http
 import qualified Network.HTTP.Types.Header as Http (hAcceptEncoding, hAuthorization, hUserAgent)
 
+import qualified Helpers
+
 
 
 -- TOKEN
@@ -34,6 +36,7 @@ data Token =
 
 init :: String -> IO Token
 init githubToken =
+  Helpers.report "GitHub" $
   do  manager <- Http.newManager Http.tlsManagerSettings
       let token = Token manager (BS.pack ("token " ++ githubToken))
       response <- fetchPath token "/"
