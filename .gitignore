@@ -1,10 +1,13 @@
 cabal.sandbox.config
 dist
 log
-elm-stuff
+node_modules
+package-lock.json
+
 artifacts
-packages
-packages-18
-search.json
+elm-stuff
+
 all-packages.json
+packages
+search.json
 sitemap.xml
