@@ -1,52 +1,79 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Artifacts
-  ( directory
-  , js
-  , compile
+  ( Artifacts(..)
+  , init
+  , serve
   )
   where
 
 
-import qualified System.Exit as Exit
-import qualified System.IO as IO
+import Prelude hiding (init)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
+import qualified Snap.Core as S
+import System.IO (hFlush, hPutStr, hPutStrLn, stdout)
 import qualified System.Process as Process
 
-
-
--- PATHS
-
-
-directory :: FilePath
-directory =
-  "artifacts"
-
-
-js :: String
-js =
-  "/" ++ directory ++ "/elm.js"
+import qualified ServeGzip
 
 
 
--- COMPILE
+-- ARTIFACTS
 
 
-compile :: IO ()
-compile =
-  do  putStrLn "Compiling artifacts..."
+data Artifacts =
+  Artifacts
+    { _elmHash :: BS.ByteString
+    }
 
-      exitCode <-
-        Process.rawSystem "elm"
-          [ "make"
-          , "src/frontend/Main.elm"
-          , "--optimize"
-          , "--output=artifacts/elm.js"
-          ]
 
-      case exitCode of
-        Exit.ExitSuccess ->
-          return ()
 
-        Exit.ExitFailure _ ->
-          do  IO.hPutStrLn IO.stderr "Compilation failed!"
-              Exit.exitFailure
+-- INIT
+
+
+init :: IO Artifacts
+init =
+  do  hPutStr stdout "Creating artifacts... "
+      hFlush stdout
+      elmHash <- Process.readProcess "bash" ["build.sh"] ""
+      hPutStrLn stdout "DONE"
+      return (Artifacts (BSC.pack elmHash))
+
+
+
+-- SERVE
+
+
+serve :: Artifacts -> BS.ByteString -> S.Snap ()
+serve (Artifacts elmHash) hash
+  | hash == elmHash = serveGzippedArtifact "application/javascript" elmHash
+  | otherwise       =
+      do  S.modifyResponse $ S.setResponseStatus 404 "Not Found"
+          S.writeBuilder "404 Not Found"
+          S.finishWith =<< S.getResponse
+
+
+serveGzippedArtifact :: BS.ByteString -> BS.ByteString -> S.Snap ()
+serveGzippedArtifact mimeType hash =
+  do  setETagOr304 hash
+      S.modifyResponse $ S.setHeader "cache-control" "immutable"
+      ServeGzip.serveGzippedFile mimeType ("artifacts/" ++ BSC.unpack hash)
+
+
+
+-- SET ETAG OR 304
+
+
+setETagOr304 :: BS.ByteString -> S.Snap ()
+setETagOr304 hash =
+  do  req <- S.getRequest
+      let etag = BS.concat ["\"", hash, "\""]
+      case S.getHeader "if-none-match" req of
+        Nothing ->
+          S.modifyResponse $ S.setHeader "ETag" etag
+
+        Just clientETag ->
+          if etag == clientETag
+          then S.finishWith $ S.setResponseCode 304 S.emptyResponse
+          else S.modifyResponse $ S.setHeader "ETag" etag
