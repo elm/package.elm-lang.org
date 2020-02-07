@@ -212,18 +212,8 @@ maybeEncodeSummary ( pkg, Summary versions maybeDetails _ ) =
         [ "name" ==> Pkg.encode pkg
         , "summary" ==> E.string summary
         , "license" ==> License.encode license
-        , "versions" ==> E.list V.encode (toVersionHighlights versions)
+        , "version" ==> V.encode (List.maximum versions)
         ]
-
-
-toVersionHighlights :: [V.Version] -> [V.Version]
-toVersionHighlights versions =
-  reverse $ map last $ take 3 $ reverse $ List.groupBy sameMajor $ List.sort versions
-
-
-sameMajor :: V.Version -> V.Version -> Bool
-sameMajor v1 v2 =
-  V._major v1 == V._major v2
 
 
 write :: FilePath -> E.Value -> IO ()

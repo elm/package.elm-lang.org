@@ -19,7 +19,7 @@ type alias Entry =
   , project : String
   , summary : String
   , license : String
-  , versions : List V.Version
+  , version : V.Version
   }
 
 
@@ -60,10 +60,10 @@ decoder =
     (D.field "name" (D.andThen splitName D.string))
     (D.field "summary" D.string)
     (D.field "license" D.string)
-    (D.field "versions" (D.list V.decoder))
+    (D.field "version" V.decoder)
 
 
-splitName : String -> D.Decoder (String -> String -> List V.Version -> Entry)
+splitName : String -> D.Decoder (String -> String -> V.Version -> Entry)
 splitName name =
   case String.split "/" name of
     [author, project] ->

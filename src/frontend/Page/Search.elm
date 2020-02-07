@@ -175,26 +175,19 @@ viewEntryHelp ({ author, project, summary } as entry) =
 viewExactVersions : Entry.Entry -> Html msg
 viewExactVersions entry =
   let
-    exactVersion v =
-      a [ href (Href.toVersion entry.author entry.project (Just v))
-        ]
-        [ text (V.toString v)
-        ]
-
-    allVersions =
-      List.intersperse (text " … ") (List.map exactVersion entry.versions)
-      ++
-      [ text " — "
-      , a [ href (Href.toProject entry.author entry.project) ] [ text "Overview" ]
-      ]
+    latestUrl = Href.toVersion entry.author entry.project (Just entry.version)
+    latestName = V.toString entry.version
+    latestLink = a [ href latestUrl ] [ text latestName ]
   in
   span [ class "pkg-summary-hints" ] <|
-    case Maybe.map V.toTuple (List.head entry.versions) of
-      Just (1,0,0) ->
-        allVersions
-
-      _ ->
-        text "… " :: allVersions
+    if V.toTuple entry.version == (1,0,0) then
+      [ latestLink
+      ]
+    else
+      [ a [ href (Href.toProject entry.author entry.project) ] [ text "…" ]
+      , text " "
+      , latestLink
+      ]
 
 
 
