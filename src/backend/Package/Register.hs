@@ -6,6 +6,7 @@ module Package.Register
   where
 
 
+import qualified Control.Exception as Ex
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import qualified Data.ByteString as BS
@@ -19,9 +20,11 @@ import Data.Monoid ((<>))
 import qualified Snap.Core as Snap
 import qualified Snap.Util.FileUploads as Snap
 import qualified System.Directory as Dir
-import System.FilePath ((</>))
-import qualified System.IO as IO
-import qualified System.IO.Streams as Stream
+import System.FilePath ((</>), (<.>))
+import qualified System.IO.Streams.ByteString as SB
+import qualified System.IO.Streams.Core as SC
+import qualified System.IO.Streams.File as SF
+import qualified System.IO.Streams.Zlib as SZ
 
 import qualified Elm.Outline as Outline
 import qualified Elm.Package as Pkg
@@ -164,9 +167,9 @@ tagDecoder =
 {-| After a successful upload of tom/queue, the following files will be created:
 
     packages/tom/queue/2.0.0/
-        README.md
-        elm.json
-        docs.json
+        README.md.gz
+        elm.json.gz
+        docs.json.gz
         endpoint.json
         time.dat
 
@@ -220,17 +223,17 @@ revert pkg vsn details =
       Error.string 400 details
 
 
-handlePart :: Pkg.Name -> V.Version -> FilePath -> Snap.PartInfo -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
+handlePart :: Pkg.Name -> V.Version -> FilePath -> Snap.PartInfo -> SC.InputStream BS.ByteString -> IO (Either String FilePath)
 handlePart pkg vsn dir info stream =
   case Snap.partFieldName info of
     "README.md" ->
-      boundedWrite dir "README.md" stream
+      boundedGzipAndWrite dir "README.md" stream
 
     "elm.json" ->
-      boundedWrite dir "elm.json" stream
+      boundedGzipAndWrite dir "elm.json" stream
 
     "docs.json" ->
-      boundedWrite dir "docs.json" stream
+      boundedGzipAndWrite dir "docs.json" stream
 
     "github-hash" ->
       boundedWriteEndpoint pkg vsn dir stream
@@ -240,36 +243,31 @@ handlePart pkg vsn dir info stream =
 
 
 
--- WRITE FILE
+-- BOUNDED GZIP AND WRITE
 
 
-boundedWrite :: FilePath -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
-boundedWrite dir path stream =
-  IO.withBinaryFile (dir </> path) IO.WriteMode $ \handle ->
-    boundedWriteHelp path handle 0 stream
+boundedGzipAndWrite :: FilePath -> FilePath -> SC.InputStream BS.ByteString -> IO (Either String FilePath)
+boundedGzipAndWrite dir path input =
+  Ex.handle (exceededMaxBytes path) $
+  SF.withFileAsOutput (dir </> path <.> "gz") $ \output ->
+    do  boundedInput <- SB.throwIfProducesMoreThan 512000 input
+        gzipper <- SZ.gzip (SZ.CompressionLevel 9) output
+        SC.connect boundedInput gzipper
+        return (Right path)
 
 
-boundedWriteHelp :: FilePath -> IO.Handle -> Int -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
-boundedWriteHelp path handle size stream =
-  if size < 512000 then
-    do  maybeChunk <- Stream.read stream
-        case maybeChunk of
-          Nothing ->
-            return (Right path)
-
-          Just chunk ->
-            do  BS.hPut handle chunk
-                boundedWriteHelp path handle (BS.length chunk + size) stream
-  else
-    return $ Left $
-      "Your " ++ path ++ " is too big. Must be less than 512kb. Let us know if this limit is too low!"
+exceededMaxBytes :: FilePath -> SB.TooManyBytesReadException -> IO (Either String a)
+exceededMaxBytes path _ =
+  return $ Left $
+    "Your " ++ path ++ " is too big. Must be less than 512kb.\n\
+    \Let us know if this limit is too low!"
 
 
 
--- WRITE ENDPOINTS
+-- BOUNDED WRITE ENDPOINTS
 
 
-boundedWriteEndpoint :: Pkg.Name -> V.Version -> FilePath -> Stream.InputStream BS.ByteString -> IO (Either String FilePath)
+boundedWriteEndpoint :: Pkg.Name -> V.Version -> FilePath -> SC.InputStream BS.ByteString -> IO (Either String FilePath)
 boundedWriteEndpoint pkg vsn dir stream =
     boundedRead 0 ""
   where
@@ -278,7 +276,7 @@ boundedWriteEndpoint pkg vsn dir stream =
         return $ Left "The hash of your assets should not be more than 1kb"
 
       else
-        do  maybeChunk <- Stream.read stream
+        do  maybeChunk <- SC.read stream
             case maybeChunk of
               Just chunk ->
                 boundedRead (BS.length chunk + size) (bytes <> chunk)
@@ -290,7 +288,6 @@ boundedWriteEndpoint pkg vsn dir stream =
                       return $ Right "endpoint.json"
                 else
                   return $ Left "The hash of your assets is malformed"
-
 
 
 writeEndpoint :: Pkg.Name -> V.Version -> FilePath -> String -> IO ()
