@@ -78,19 +78,18 @@ pre {
 .spacey-char { margin: 0 10px; }
 
 .header-underbar {
-  background-color: #1293D8;
+  background-color: #f2e19e;
   margin: 0;
 }
 
 .version-warning {
-  text-align: center;
-  margin: 0;
-  padding: 4px 0;
-  color: white;
+  margin: 0 0 0 calc((100% - 920px) / 2);
+  padding: 7px 0;
+  color: #750707;
 }
 
 .version-warning a {
-  color: white;
+  color: #750707;
   text-decoration: underline;
 }
 
