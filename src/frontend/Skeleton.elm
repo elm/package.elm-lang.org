@@ -107,12 +107,12 @@ view toMsg details =
 
 viewHeader : List Segment -> Html msg
 viewHeader segments =
-  div
-    [ style "background-color" "#eeeeee"
-    ]
-    [ div [class "center"]
-        [ h1 [ class "header" ] <|
-            viewLogo :: List.intersperse slash (List.map viewSegment segments)
+  div [class "header"]
+    [ div [class "nav"]
+        [ viewLogo
+        , case segments of
+            [] -> text ""
+            _  -> h1 [] (List.intersperse slash (List.map viewSegment segments))
         ]
     ]
 
@@ -173,24 +173,21 @@ viewLogo : Html msg
 viewLogo =
   a [ href "/"
     , style "text-decoration" "none"
+    , style "margin-right" "32px"
+    , style "display" "flex"
+    , style "align-items" "center"
     ]
-    [
-      div
-        [ style "display" "-webkit-display"
-        , style "display" "-ms-flexbox"
-        , style "display" "flex"
-        ]
-        [ Logo.logo 30
+    [ Logo.logo 32
+    , div
+        [ style "padding-left" "8px" ]
+        [ div
+            [ style "line-height" "24px"
+            , style "font-size" "30px"
+            ]
+            [ text "elm" ]
         , div
-            [ style "color" "black"
-            , style "padding-left" "8px"
+            [ style "font-size" "12px"
             ]
-            [ div [ style "line-height" "20px" ] [ text "elm" ]
-            , div
-                [ style "line-height" "10px"
-                , style "font-size" "0.5em"
-                ]
-                [ text "packages" ]
-            ]
+            [ text "packages" ]
         ]
     ]

@@ -7,7 +7,7 @@ html, head, body {
 
 body {
   font-family: 'Source Sans Pro', 'Trebuchet MS', 'Lucida Grande', 'Bitstream Vera Sans', 'Helvetica Neue', sans-serif;
-  color: #293c4b;
+  color: #000E16;
 }
 
 h1, h2, h3, h4 {
@@ -18,14 +18,8 @@ p, li {
   line-height: 1.5em;
 }
 
-a {
-  color: #1184CE;
-  text-decoration: none;
-}
-a:hover {
-  color: rgb(234,21,122);
-  text-decoration: underline;
-}
+a { color: #1293D8; text-decoration: none; }
+a:hover { text-decoration: underline; }
 a .light { color: #5FABDC; }
 a:hover .light { color: rgb(234,21,122); }
 
@@ -51,8 +45,7 @@ pre {
 
 
 
-/* HEADER */
-
+/* CENTER */
 
 .center {
   width: 920px;
@@ -60,27 +53,33 @@ pre {
   margin-right: auto;
 }
 
+
+
+/* HEADER */
+
 .header {
+  background-color: #5FABDC;
+  width: calc(100% - 40px);
+  padding-left: 20px;
+  padding-right: 20px;
+  overflow-x: hidden;
+}
+
+.nav {
+  max-width: 920px;
+  height: 64px;
+  margin: 0 auto;
   display: flex;
-  padding: 10px 0;
-  color: #333333;
-  font-size: 24px;
-  margin: 0;
-  text-overflow: ellipsis;
+  align-items: center;
 }
 
-.header > a:first-of-type {
-  margin-right: 20px;
-}
-
-.header a:hover {
-  color: #333333;
-}
+.nav { color: #F5F5F5; }
+.nav a { color: #F5F5F5; }
+.spacey-char { margin: 0 10px; }
 
 .header-underbar {
-  background-color: #60B5CC;
+  background-color: #1293D8;
   margin: 0;
-  padding: 1px 0;
 }
 
 .version-warning {
@@ -93,10 +92,6 @@ pre {
 .version-warning a {
   color: white;
   text-decoration: underline;
-}
-
-.spacey-char {
-  margin: 0 10px;
 }
 
 
