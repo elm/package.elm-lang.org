@@ -146,7 +146,7 @@ viewWarning warning =
 
       NewerVersion url version ->
         [ p [ class "version-warning" ]
-            [ text "Warning! The latest version of this package is "
+            [ text "NOTE — the latest version is "
             , a [ href url ] [ text (V.toString version) ]
             ]
         ]
