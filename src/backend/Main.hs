@@ -115,7 +115,7 @@ serve artifacts token memory =
       -- STATIC STUFF
       S.route
         [ ("assets", serveDirectory "assets")
-        , ("search.json", serveFile "search.json")
+        , ("search.json", ServeGzip.serveGzippedFile "application/json" "search.json.gz")
         , ("robots.txt", serveFile "robots.txt")
         , ("sitemap.xml", serveFile "sitemap.xml")
         ]

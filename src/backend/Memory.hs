@@ -19,6 +19,7 @@ import Control.Concurrent
 import Control.Monad (forever, join)
 import Control.Monad.Trans (liftIO)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Builder as B
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
@@ -26,6 +27,10 @@ import qualified Data.Utf8 as Utf8
 import Snap.Core (Snap)
 import qualified System.Directory as Dir
 import System.FilePath ((</>))
+import qualified System.IO.Streams.ByteString as SB
+import qualified System.IO.Streams.Core as S
+import qualified System.IO.Streams.File as SF
+import qualified System.IO.Streams.Zlib as SZ
 
 import qualified Elm.Constraint as C
 import qualified Elm.Licenses as License
@@ -180,6 +185,12 @@ generateAllPackagesJson packages =
     E.dict Pkg.toJsonString (E.list V.encode . _versions) packages
 
 
+write :: FilePath -> E.Value -> IO ()
+write path json =
+  do  let temp = "temp-" ++ path
+      E.writeUgly temp json
+      Dir.renameFile temp path
+
 
 
 -- GENERATE sitemap.xml
@@ -196,7 +207,7 @@ generateSitemap packages =
 
 generateSearchJson :: Map.Map Pkg.Name Summary -> IO ()
 generateSearchJson packages =
-  write "search.json" $
+  gzipAndWrite "search.json.gz" $
     E.list id $ Maybe.mapMaybe maybeEncodeSummary $
       List.sortOn (negate . _weight . snd) (Map.toList packages)
 
@@ -216,10 +227,15 @@ maybeEncodeSummary ( pkg, Summary versions maybeDetails _ ) =
         ]
 
 
-write :: FilePath -> E.Value -> IO ()
-write path json =
+gzipAndWrite :: FilePath -> E.Value -> IO ()
+gzipAndWrite path json =
   do  let temp = "temp-" ++ path
-      E.writeUgly temp json
+      let lbs = B.toLazyByteString (E.encodeUgly json)
+      input <- SB.fromLazyByteString lbs
+
+      SF.withFileAsOutput temp $ \output ->
+        S.connect input =<< SZ.gzip (SZ.CompressionLevel 9) output
+
       Dir.renameFile temp path
 
 
