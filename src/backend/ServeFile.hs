@@ -129,9 +129,9 @@ makeHtml artifacts title canonicalLink =
   <meta charset="UTF-8">
   <link rel="shortcut icon" size="16x16, 32x32, 48x48, 64x64, 128x128, 256x256" href="/assets/favicon.ico">
   <title>|] <> title <> [r|</title>|] <> canonicalLink <> [r|
-  <link rel="stylesheet" href="/assets/highlight/styles/default.css?|] <> uniqueToken <> [r|">
-  <link rel="stylesheet" href="/assets/style.css?|] <> uniqueToken <> [r|">
-  <script src="/assets/highlight/highlight.pack.js?|] <> uniqueToken <> [r|"></script>
+  <link rel="stylesheet" href="/assets/highlight/styles/default.css">
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="/assets/highlight/highlight.pack.js"></script>
   <script src="/artifacts/|] <> B.byteString (A._elmHash artifacts) <> [r|"></script>
 </head>
 <body>
@@ -140,10 +140,3 @@ Elm.Main.init();
 </script>
 </body>
 </html>|]
-
-
-uniqueToken :: B.Builder
-uniqueToken =
-  unsafePerformIO $
-    do  time <- getPOSIXTime
-        return $ B.string7 $ show (floor time :: Integer)
