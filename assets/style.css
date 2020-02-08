@@ -72,8 +72,8 @@ pre {
   align-items: center;
 }
 
-.nav { color: #F5F5F5; }
-.nav a { color: #F5F5F5; }
+.nav { color: white; }
+.nav a { color: white; }
 .nav h1 { font-size: 24px; }
 .spacey-char { margin: 0 10px; }
 
