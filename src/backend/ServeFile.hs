@@ -13,9 +13,7 @@ import qualified Data.ByteString.Builder as B
 import qualified Data.Map as Map
 import Data.Monoid ((<>))
 import qualified Data.Utf8 as Utf8
-import Data.Time.Clock.POSIX (getPOSIXTime)
 import Snap.Core (Snap, writeBuilder)
-import System.IO.Unsafe (unsafePerformIO)
 import Text.RawString.QQ (r)
 
 import qualified Elm.ModuleName as ModuleName
