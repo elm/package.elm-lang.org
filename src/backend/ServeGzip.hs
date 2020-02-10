@@ -11,7 +11,7 @@ import qualified Data.ByteString as BS
 import Data.Word (Word64)
 import Snap.Core
   ( Snap, emptyResponse, finishWith
-  , getHeader, getRequest, getResponse
+  , getHeader, getRequest, getsRequest, getResponse
   , modifyResponse, rqURI
   , sendFile, setContentLength, setContentType, setHeader
   , setResponseBody, setResponseCode, setResponseStatus
@@ -107,7 +107,7 @@ data Encoding
 
 getAcceptableEncoding :: Snap Encoding
 getAcceptableEncoding =
-  do  maybeHeader <- getHeader "Accept-Encoding" <$> getRequest
+  do  maybeHeader <- getsRequest (getHeader "Accept-Encoding")
       case maybeHeader of
         Nothing ->
           return Identity
@@ -130,7 +130,7 @@ data UserAgent
 
 detectUserAgent :: Snap UserAgent
 detectUserAgent =
-  do  maybeHeader <- getHeader "User-Agent" <$> getRequest
+  do  maybeHeader <- getsRequest (getHeader "User-Agent")
       case maybeHeader of
         Nothing ->
           return Browser
@@ -177,9 +177,9 @@ toWgetError uri =
 
 setLastModifiedOr304 :: FilePath -> Snap Word64
 setLastModifiedOr304 filePath =
-  do  req <- getRequest
+  do  maybeHeader <- getsRequest (getHeader "if-modified-since")
       fileStatus <- liftIO $ File.getFileStatus filePath
-      case getHeader "if-modified-since" req of
+      case maybeHeader of
         Nothing ->
           setLastModified fileStatus
 

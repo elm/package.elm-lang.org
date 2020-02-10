@@ -65,9 +65,9 @@ serveGzippedArtifact mimeType hash =
 
 setETagOr304 :: BS.ByteString -> S.Snap ()
 setETagOr304 hash =
-  do  req <- S.getRequest
-      let etag = BS.concat ["\"", hash, "\""]
-      case S.getHeader "if-none-match" req of
+  do  let etag = BS.concat ["\"", hash, "\""]
+      maybeHeader <- S.getsRequest (S.getHeader "if-none-match")
+      case maybeHeader of
         Nothing ->
           S.modifyResponse $ S.setHeader "ETag" etag
 

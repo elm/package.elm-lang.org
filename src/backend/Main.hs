@@ -122,8 +122,8 @@ serve artifacts token memory =
     ,
       -- NOT FOUND
       do  S.modifyResponse $ S.setResponseStatus 404 "Not Found"
-          request <- S.getRequest
-          if S.rqMethod request == S.GET
+          method <- S.getsRequest S.rqMethod
+          if method == S.GET
             then ServeFile.misc artifacts "Not Found"
             else S.writeBuilder "Not Found"
 
