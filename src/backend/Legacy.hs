@@ -67,7 +67,6 @@ serve version =
     , s "description" ==> servePackageFile "elm-package.json"
     , s "documentation" ==> servePackageFile "documentation.json"
     , s "all-packages" ==> serveAllPackages version
-    , s "new-packages" ==> serveFile ("legacy" </> "new-packages.json")
     ]
 
 
