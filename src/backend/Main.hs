@@ -181,6 +181,7 @@ toVersion bytes =
 
 data VsnRoute
   = VsnOverview
+  | VsnAbout
   | VsnModule ModuleName.Raw
   | Vsn__elm_json
   | Vsn__docs_json
@@ -192,6 +193,7 @@ vsnRoute :: Route (VsnRoute -> a) a
 vsnRoute =
   Router.oneOf
     [ top ==> VsnOverview
+    , s "about" ==> VsnAbout
     , s "elm.json" ==> Vsn__elm_json
     , s "docs.json" ==> Vsn__docs_json
     , s "README.md" ==> Vsn__README_md
@@ -254,6 +256,7 @@ serveVersion artifacts memory pkg maybeVersion vsnRoute =
             Just vsn ->
               case vsnRoute of
                 VsnOverview        -> ServeFile.version artifacts pkg vsn Nothing
+                VsnAbout           -> ServeFile.version artifacts pkg vsn Nothing
                 Vsn__elm_json      -> ServeGzip.serveGzippedFile "application/json" (Path.directory pkg vsn ++ "/elm.json.gz")
                 Vsn__docs_json     -> ServeGzip.serveGzippedFile "application/json" (Path.directory pkg vsn ++ "/docs.json.gz")
                 Vsn__README_md     -> ServeGzip.serveGzippedFile "text/markdown; charset=UTF-8" (Path.directory pkg vsn ++ "/README.md.gz")
