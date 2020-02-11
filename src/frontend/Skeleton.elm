@@ -34,7 +34,9 @@ type alias Details msg =
 
 type Warning
   = NoProblems
-  | NewerVersion String V.Version
+  | WarnOld
+  | WarnMoved String String
+  | WarnNewerVersion String V.Version
 
 
 
@@ -132,7 +134,22 @@ viewWarning warning =
       NoProblems ->
         []
 
-      NewerVersion url version ->
+      WarnOld ->
+        [ p [ class "version-warning" ]
+            [ text "NOTE — this package is not compatible with Elm 0.19.1"
+            ]
+        ]
+
+      WarnMoved author project ->
+        [ p [ class "version-warning" ]
+            [ text "NOTE — this package moved to "
+            , a [ href (Href.toVersion author project Nothing) ]
+                [ text (author ++ "/" ++ project)
+                ]
+            ]
+        ]
+
+      WarnNewerVersion url version ->
         [ p [ class "version-warning" ]
             [ text "NOTE — the latest version is "
             , a [ href url ] [ text (V.toString version) ]

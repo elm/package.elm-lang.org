@@ -10,6 +10,7 @@ module Page.Docs exposing
 
 
 import Browser.Dom as Dom
+import Dict
 import Elm.Constraint as C
 import Elm.Docs as Docs
 import Elm.License as License
@@ -297,39 +298,89 @@ toHeader model =
 
 toWarning : Model -> Skeleton.Warning
 toWarning model =
-  case model.version of
-    Nothing ->
-      Skeleton.NoProblems
+  case Dict.get (model.author ++ "/" ++ model.project) renames of
+    Just (author, project) ->
+      Skeleton.WarnMoved author project
 
+    Nothing ->
+      case model.outline of
+        Failure -> warnIfNewer model
+        Loading -> warnIfNewer model
+        Success outline ->
+          if isOld outline.elm then Skeleton.WarnOld else warnIfNewer model
+
+
+warnIfNewer : Model -> Skeleton.Warning
+warnIfNewer model =
+  case model.version of
+    Nothing -> Skeleton.NoProblems
     Just version ->
       case model.releases of
+        Failure ->  Skeleton.NoProblems
+        Loading ->  Skeleton.NoProblems
         Success releases ->
-          let
-            latest = Release.getLatestVersion releases
-          in
-          if version == latest then
-            Skeleton.NoProblems
-          else
-            Skeleton.NewerVersion (toNewerUrl model) latest
-
-        Loading ->
-          Skeleton.NoProblems
-
-        Failure ->
-          Skeleton.NoProblems
+          let latest = Release.getLatestVersion releases in
+          if version == latest
+          then Skeleton.NoProblems
+          else Skeleton.WarnNewerVersion (toNewerUrl model) latest
 
 
 toNewerUrl : Model -> String
 toNewerUrl model =
   case model.focus of
-    Readme ->
-      Href.toVersion model.author model.project Nothing
+    Readme     -> Href.toVersion model.author model.project Nothing
+    About      -> Href.toAbout model.author model.project Nothing
+    Module m v -> Href.toModule model.author model.project Nothing m v
 
-    About ->
-      Href.toAbout model.author model.project Nothing
 
-    Module name tag ->
-      Href.toModule model.author model.project Nothing name tag
+renames : Dict.Dict String (String, String)
+renames =
+  Dict.fromList
+    [ ("evancz/elm-effects", ("elm","core"))
+    , ("evancz/elm-html", ("elm","html"))
+    , ("evancz/elm-http", ("elm","http"))
+    , ("evancz/elm-svg", ("elm","svg"))
+    , ("evancz/start-app", ("elm","html"))
+    , ("evancz/virtual-dom", ("elm","virtual-dom"))
+
+    , ("elm-lang/animation-frame", ("elm","browser"))
+    , ("elm-lang/core", ("elm","core"))
+    , ("elm-lang/html", ("elm","html"))
+    , ("elm-lang/http", ("elm","http"))
+    , ("elm-lang/svg", ("elm","svg"))
+    , ("elm-lang/virtual-dom", ("elm","virtual-dom"))
+
+    , ("elm-community/elm-list-extra", ("elm-community","list-extra"))
+    , ("elm-community/elm-linear-algebra", ("elm-community","linear-algebra"))
+    , ("elm-community/elm-lazy-list", ("elm-community","lazy-list"))
+    , ("elm-community/elm-json-extra", ("elm-community","json-extra"))
+    ]
+
+
+isOld : C.Constraint -> Bool
+isOld elmConstraint =
+  case String.split " " (C.toString elmConstraint) of
+    [mini,minop,_,maxop,maxi] ->
+      Maybe.withDefault False <|
+        Maybe.map4 (\low lop hop high -> not (lop low (0,19,1) && hop (0,19,1) high))
+          (getVsn mini) (getOp minop) (getOp maxop) (getVsn maxi)
+    _ ->
+      False
+
+
+getVsn : String -> Maybe (Int,Int,Int)
+getVsn vsn =
+  case List.filterMap String.toInt (String.split "." vsn) of
+    [x,y,z] -> Just (x,y,z)
+    _       -> Nothing
+
+
+getOp : String -> Maybe (comparable -> comparable -> Bool)
+getOp op =
+  case op of
+    "<"  -> Just (<)
+    "<=" -> Just (<=)
+    _    -> Nothing
 
 
 
