@@ -12,15 +12,15 @@ module Session exposing
   , getDocs
   , addDocs
   , fetchDocs
-  , getManifest
-  , addManifest
-  , fetchManifest
+  , getOutline
+  , addOutline
+  , fetchOutline
   )
 
 
 import Dict
 import Elm.Docs as Docs
-import Elm.Project as Project
+import Elm.Project as Outline
 import Elm.Version as V
 import Http
 import Json.Decode as Decode
@@ -39,7 +39,7 @@ type alias Data =
   , releases : Dict.Dict String (OneOrMore Release.Release)
   , readmes : Dict.Dict String String
   , docs : Dict.Dict String (List Docs.Module)
-  , manifests: Dict.Dict String Project.PackageInfo
+  , outlines: Dict.Dict String Outline.PackageInfo
   }
 
 
@@ -150,33 +150,35 @@ fetchDocs author project version =
 -- ELM.JSON
 
 
-getManifest : Data -> String -> String -> V.Version -> Maybe Project.PackageInfo
-getManifest data author project version =
-  Dict.get (toVsnKey author project version) data.manifests
+getOutline : Data -> String -> String -> V.Version -> Maybe Outline.PackageInfo
+getOutline data author project version =
+  Dict.get (toVsnKey author project version) data.outlines
 
 
-addManifest : String -> String -> V.Version -> Project.PackageInfo -> Data -> Data
-addManifest author project version manifest data =
+addOutline : String -> String -> V.Version -> Outline.PackageInfo -> Data -> Data
+addOutline author project version outline data =
   let
-    newManifests =
-      Dict.insert (toVsnKey author project version) manifest data.manifests
+    newOutlines =
+      Dict.insert (toVsnKey author project version) outline data.outlines
   in
-  { data | manifests = newManifests }
+  { data | outlines = newOutlines }
 
 
-fetchManifest : String -> String -> V.Version -> Http.Request Project.PackageInfo
-fetchManifest author project version =
+fetchOutline : String -> String -> V.Version -> Http.Request Outline.PackageInfo
+fetchOutline author project version =
   Http.get
     (Url.absolute [ "packages", author, project, V.toString version, "elm.json" ] [])
-    packageInfoDecoder
+    outlineDecoder
 
 
-packageInfoDecoder : Decode.Decoder Project.PackageInfo
-packageInfoDecoder =
-  Decode.andThen
-    (\project ->
-      case project of
-        Project.Application _ -> Decode.fail "Unexpected application"
-        Project.Package info  -> Decode.succeed info
-    )
-  Project.decoder
+outlineDecoder : Decode.Decoder Outline.PackageInfo
+outlineDecoder =
+  Outline.decoder
+    |> Decode.andThen getPkgOutline
+
+
+getPkgOutline : Outline.Project -> Decode.Decoder Outline.PackageInfo
+getPkgOutline outline =
+  case outline of
+    Outline.Application _ -> Decode.fail "Unexpected application"
+    Outline.Package info  -> Decode.succeed info
