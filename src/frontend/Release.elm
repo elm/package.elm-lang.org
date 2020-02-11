@@ -18,7 +18,7 @@ import Time
 
 type alias Release =
   { version : V.Version
-  , time : Time.Posix
+  , time : Int
   }
 
 
@@ -39,10 +39,7 @@ getLatestVersionHelp releases maxRelease =
 
     release :: otherReleases ->
       getLatestVersionHelp otherReleases <|
-        if Time.posixToMillis release.time > Time.posixToMillis maxRelease.time then
-            release
-        else
-            maxRelease
+        if release.time > maxRelease.time then release else maxRelease
 
 
 
@@ -59,7 +56,7 @@ getTimeHelp version releases =
   case releases of
     r :: rs ->
       if r.version == version then
-        Just r.time
+        Just (Time.millisToPosix (r.time * 1000))
       else
         getTimeHelp version rs
 
@@ -73,11 +70,11 @@ getTimeHelp version releases =
 
 decoder : D.Decoder (OneOrMore Release)
 decoder =
-  D.keyValuePairs (D.map (\i -> Time.millisToPosix (i * 1000)) D.int)
+  D.keyValuePairs D.int
     |> D.andThen (decoderHelp [])
 
 
-decoderHelp : List Release -> List (String, Time.Posix) -> D.Decoder (OneOrMore Release)
+decoderHelp : List Release -> List (String, Int) -> D.Decoder (OneOrMore Release)
 decoderHelp revReleases pairs =
   case pairs of
     [] ->
