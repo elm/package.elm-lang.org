@@ -631,8 +631,15 @@ viewAbout outlineStatus releases =
             [ text "Elm version "
             , code [] [ text (C.toString outline.elm) ]
             ]
-        , h2 [ style "padding-top" "1em" ] [ text "Dependencies" ]
-        , table [] (List.map viewDependency outline.deps)
+        , case outline.deps of
+            [] ->
+              text ""
+
+            _ :: _ ->
+              div []
+                [ h1 [ style "margin-top" "2em", style "margin-bottom" "0.5em" ] [ text "Dependencies" ]
+                , table [] (List.map viewDependency outline.deps)
+                ]
         ]
 
     Loading ->
