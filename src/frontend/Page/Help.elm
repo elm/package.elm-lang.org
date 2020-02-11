@@ -66,7 +66,7 @@ update msg model =
 view : Model -> Skeleton.Details msg
 view model =
   { title = model.title
-  , header = [Skeleton.helpSegment]
+  , header = []
   , warning = Skeleton.NoProblems
   , attrs = []
   , kids = [ viewContent model.title model.content ]

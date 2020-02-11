@@ -3,11 +3,9 @@ module Skeleton exposing
   , Warning(..)
   , view
   , Segment
-  , helpSegment
   , authorSegment
   , projectSegment
   , versionSegment
-  , moduleSegment
   )
 
 
@@ -48,11 +46,6 @@ type Segment
   | Link String String
 
 
-helpSegment : Segment
-helpSegment =
-  Text "help"
-
-
 authorSegment : String -> Segment
 authorSegment author =
   Text author
@@ -66,11 +59,6 @@ projectSegment author project =
 versionSegment : String -> String -> Maybe V.Version -> Segment
 versionSegment author project version =
   Link (Href.toVersion author project version) (vsnToString version)
-
-
-moduleSegment : String -> String -> Maybe V.Version -> String -> Segment
-moduleSegment author project version moduleName =
-  Link (Href.toModule author project version moduleName Nothing) moduleName
 
 
 vsnToString : Maybe V.Version -> String
