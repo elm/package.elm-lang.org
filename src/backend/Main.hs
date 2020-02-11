@@ -5,12 +5,14 @@ module Main where
 
 import qualified Data.ByteString as BS
 import Data.Foldable (asum)
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Word (Word8)
 import GHC.Conc
 import qualified Snap.Core as S
 import qualified Snap.Http.Server as S
-import Snap.Util.FileServe (serveFile, serveDirectory)
+import qualified Snap.Util.FileServe as S
+import Snap.Util.FileServe (serveFile, serveDirectoryWith)
 import System.Console.CmdArgs
 
 import qualified Elm.ModuleName as ModuleName
@@ -114,7 +116,7 @@ serve artifacts token memory =
     ,
       -- STATIC STUFF
       S.route
-        [ ("assets", serveDirectory "assets")
+        [ ("assets", serveDirectoryWith customDirectoryConfig "assets")
         , ("search.json", ServeGzip.serveGzippedFile "application/json" "search.json.gz")
         , ("robots.txt", serveFile "robots.txt")
         , ("sitemap.xml", serveFile "sitemap.xml")
@@ -128,6 +130,13 @@ serve artifacts token memory =
             else S.writeBuilder "Not Found"
 
     ]
+
+
+customDirectoryConfig :: S.DirectoryConfig S.Snap
+customDirectoryConfig =
+  S.simpleDirectoryConfig
+    { S.mimeTypes = HashMap.insert ".woff2" "font/woff2" S.defaultMimeTypes
+    }
 
 
 
