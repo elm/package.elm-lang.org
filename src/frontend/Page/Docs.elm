@@ -10,11 +10,11 @@ module Page.Docs exposing
 
 
 import Browser.Dom as Dom
-import Elm.Constraint as Constraint exposing (Constraint)
+import Elm.Constraint as C
 import Elm.Docs as Docs
 import Elm.License as License
-import Elm.Package as Package
-import Elm.Project as Project
+import Elm.Package as Pkg
+import Elm.Project as Outline
 import Elm.Version as V
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -45,18 +45,10 @@ type alias Model =
   , version : Maybe V.Version
   , focus : Focus
   , query : String
-  , latest : Status V.Version
+  , releases : Status (OneOrMore Release.Release)
   , readme : Status String
   , docs : Status (List Docs.Module)
-  , manifest : Status Project.PackageInfo
-  , time : Status Time.Posix
-  }
-
-
-type alias Info =
-  { readme : String
-  , docs : List Docs.Module
-  , manifest : Project.PackageInfo
+  , outline : Status Outline.PackageInfo
   }
 
 
@@ -83,36 +75,13 @@ type DocsError
 
 init : Session.Data -> String -> String -> Maybe V.Version -> Focus -> ( Model, Cmd Msg )
 init session author project version focus =
-  let
-    model =
-      { session = session
-      , author = author
-      , project = project
-      , version = version
-      , focus = focus
-      , query = ""
-      , latest = Loading
-      , readme = Loading
-      , docs = Loading
-      , manifest = Loading
-      , time = Loading
-      }
-  in
   case Session.getReleases session author project of
     Just releases ->
-      let
-        latest =
-          Release.getLatestVersion releases
-
-        time =
-          Release.getTime (Maybe.withDefault latest version) releases
-            |> Maybe.map Success
-            |> Maybe.withDefault Failure
-      in
-      getInfo latest { model | latest = Success latest, time = time }
+      getInfo (Release.getLatestVersion releases) <|
+        Model session author project version focus "" (Success releases) Loading Loading Loading
 
     Nothing ->
-      ( model
+      ( Model session author project version focus "" Loading Loading Loading Loading
       , Http.send GotReleases (Session.fetchReleases author project)
       )
 
@@ -124,10 +93,10 @@ getInfo latest model =
     project = model.project
     version = Maybe.withDefault latest model.version
     maybeInfo =
-      Maybe.map3 Info
+      Maybe.map3 (\a b c -> (a,b,c))
         (Session.getReadme model.session author project version)
         (Session.getDocs model.session author project version)
-        (Session.getManifest model.session author project version)
+        (Session.getOutline model.session author project version)
   in
   case maybeInfo of
     Nothing ->
@@ -135,15 +104,15 @@ getInfo latest model =
       , Cmd.batch
           [ Http.send (GotReadme version) (Session.fetchReadme author project version)
           , Http.send (GotDocs version) (Session.fetchDocs author project version)
-          , Http.send (GotManifest version) (Session.fetchManifest author project version)
+          , Http.send (GotOutline version) (Session.fetchOutline author project version)
           ]
       )
 
-    Just info ->
+    Just (readme, docs, outline) ->
       ( { model
-            | readme = Success info.readme
-            , docs = Success info.docs
-            , manifest = Success info.manifest
+            | readme = Success readme
+            , docs = Success docs
+            , outline = Success outline
         }
       , scrollIfNeeded model.focus
       )
@@ -172,7 +141,7 @@ type Msg
   | GotReleases (Result Http.Error (OneOrMore Release.Release))
   | GotReadme V.Version (Result Http.Error String)
   | GotDocs V.Version (Result Http.Error (List Docs.Module))
-  | GotManifest V.Version (Result Http.Error Project.PackageInfo)
+  | GotOutline V.Version (Result Http.Error Outline.PackageInfo)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -192,29 +161,18 @@ update msg model =
       case result of
         Err _ ->
           ( { model
-                | latest = Failure
+                | releases = Failure
                 , readme = Failure
                 , docs = Failure
-                , manifest = Failure
-                , time = Failure
+                , outline = Failure
             }
           , Cmd.none
           )
 
         Ok releases ->
-          let
-            latest =
-              Release.getLatestVersion releases
-
-            time =
-              Release.getTime (Maybe.withDefault latest model.version) releases
-                |> Maybe.map Success
-                |> Maybe.withDefault Failure
-          in
-          getInfo latest
+          getInfo (Release.getLatestVersion releases)
             { model
-                | latest = Success latest
-                , time = time
+                | releases = Success releases
                 , session = Session.addReleases model.author model.project releases model.session
             }
 
@@ -248,20 +206,21 @@ update msg model =
           , scrollIfNeeded model.focus
           )
 
-    GotManifest version result ->
+    GotOutline version result ->
       case result of
         Err _ ->
-          ( { model | manifest = Failure }
+          ( { model | outline = Failure }
           , Cmd.none
           )
 
-        Ok manifest ->
+        Ok outline ->
           ( { model
-                | manifest = Success manifest
-                , session = Session.addManifest model.author model.project version manifest model.session
+                | outline = Success outline
+                , session = Session.addOutline model.author model.project version outline model.session
             }
           , Cmd.none
           )
+
 
 
 -- VIEW
@@ -314,8 +273,8 @@ getVersion model =
       model.version
 
     Nothing ->
-      case model.latest of
-        Success version -> Just version
+      case model.releases of
+        Success releases -> Just (Release.getLatestVersion releases)
         Loading -> Nothing
         Failure -> Nothing
 
@@ -330,17 +289,6 @@ toHeader model =
   , Skeleton.projectSegment model.author model.project
   , Skeleton.versionSegment model.author model.project (getVersion model)
   ]
-  ++
-    case model.focus of
-      Readme ->
-        []
-
-      About ->
-        []
-
-      Module name _ ->
-        [ Skeleton.moduleSegment model.author model.project model.version name
-        ]
 
 
 
@@ -354,8 +302,11 @@ toWarning model =
       Skeleton.NoProblems
 
     Just version ->
-      case model.latest of
-        Success latest ->
+      case model.releases of
+        Success releases ->
+          let
+            latest = Release.getLatestVersion releases
+          in
           if version == latest then
             Skeleton.NoProblems
           else
@@ -392,7 +343,7 @@ viewContent model =
       lazy viewReadme model.readme
 
     About ->
-      lazy2 viewAbout model.manifest model.time
+      lazy2 viewAbout model.outline model.releases
 
     Module name tag ->
       lazy5 viewModule model.author model.project model.version name model.docs
@@ -475,9 +426,9 @@ viewSidebar model =
     [ ul []
         [ li [] [ lazy4 viewReadmeLink model.author model.project model.version model.focus ]
         , li [] [ lazy4 viewAboutLink model.author model.project model.version model.focus ]
-        , li [] [ lazy4 viewBrowseSourceLink model.author model.project model.version model.latest ]
+        , li [] [ lazy4 viewBrowseSourceLink model.author model.project model.version model.releases ]
         ]
-    , h2 [] [ text "Modules Docs" ]
+    , h2 [] [ text "Module Docs" ]
     , input
         [ placeholder "Search"
         , value model.query
@@ -503,8 +454,7 @@ viewSidebarModules model =
           viewEntry docs =
             li [] [ viewModuleLink model docs.name ]
         in
-        ul []
-          (List.map viewEntry modules)
+        ul [] (List.map viewEntry modules)
 
       else
         let
@@ -597,16 +547,16 @@ viewAboutLink author project version focus =
 -- VIEW "BROWSE SOURCE" LINK
 
 
-viewBrowseSourceLink : String -> String -> Maybe V.Version -> Status V.Version -> Html msg
-viewBrowseSourceLink author project maybeVersion latest =
+viewBrowseSourceLink : String -> String -> Maybe V.Version -> Status (OneOrMore Release.Release) -> Html msg
+viewBrowseSourceLink author project maybeVersion releasesStatus =
   case maybeVersion of
     Just version ->
       viewBrowseSourceLinkHelp author project version
 
     Nothing ->
-      case latest of
-        Success version ->
-          viewBrowseSourceLinkHelp author project version
+      case releasesStatus of
+        Success releases ->
+          viewBrowseSourceLinkHelp author project (Release.getLatestVersion releases)
 
         Loading ->
           text "Browse Source"
@@ -624,7 +574,7 @@ viewBrowseSourceLinkHelp author project version =
         [ author, project, "tree", V.toString version ]
         []
   in
-  a [ href url ] [ text "Browse Source" ]
+  a [ class "pkg-nav-module", href url ] [ text "Browse Source" ]
 
 
 
@@ -637,7 +587,7 @@ viewModuleLink model name =
     url =
       Href.toModule model.author model.project model.version name Nothing
   in
-  navModuleLink name url <|
+  navLink name url <|
     case model.focus of
       Readme ->
         False
@@ -655,24 +605,34 @@ viewValueItem { author, project, version } moduleName ownerName valueName =
     url =
       Href.toModule author project version moduleName (Just ownerName)
   in
-  li [ class "pkg-nav-value" ] [ navModuleLink valueName url False ]
+  li [ class "pkg-nav-value" ] [ navLink valueName url False ]
 
 
 
 -- VIEW ABOUT
 
 
-viewAbout : Status Project.PackageInfo -> Status Time.Posix -> Html msg
-viewAbout manifestStatus time =
-  case manifestStatus of
-    Success manifest ->
+viewAbout : Status Outline.PackageInfo -> Status (OneOrMore Release.Release) -> Html msg
+viewAbout outlineStatus releases =
+  case outlineStatus of
+    Success outline ->
       div [ class "block-list pkg-about" ]
         [ h1 [ class "block-list-title" ] [ text "About" ]
-        , text manifest.summary
-        , viewInstall manifest
-        , viewRelease manifest time
-        , viewLicense manifest
-        , viewDependencies manifest
+        , p [] [ text outline.summary ]
+        , pre [] [ code [] [ text ("elm install " ++ Pkg.toString outline.name) ] ]
+        , p []
+            [ text "Published "
+            , viewReleaseTime outline releases
+            , text " under the "
+            , a [ href (toLicenseUrl outline) ] [ code [] [ text (License.toString outline.license) ] ]
+            , text " license."
+            ]
+        , p []
+            [ text "Elm version "
+            , code [] [ text (C.toString outline.elm) ]
+            ]
+        , h2 [ style "padding-top" "1em" ] [ text "Dependencies" ]
+        , table [] (List.map viewDependency outline.deps)
         ]
 
     Loading ->
@@ -684,149 +644,64 @@ viewAbout manifestStatus time =
         (Problem.offline "elm.json")
 
 
-viewInstall : Project.PackageInfo -> Html msg
-viewInstall manifest =
-  if requiresElmCore manifest.deps then
-    -- >= 0.19
-    viewInstallHelp "elm install" (Package.toString manifest.name)
-
-  else if requiresElmLangCore manifest.deps then
-    -- < 0.19.0
-    viewInstallHelp "elm-package install" (Package.toString manifest.name)
-
-  else
-    -- /core packages and unknown versions
-    text ""
+viewReleaseTime : Outline.PackageInfo -> Status (OneOrMore Release.Release) -> Html msg
+viewReleaseTime outline releasesStatus =
+  case releasesStatus of
+    Failure -> text ""
+    Loading -> text ""
+    Success releases ->
+      case Release.getTime outline.version releases of
+        Nothing   -> text ""
+        Just time -> span [] [ text "on ", code [] [ text (timeToString time) ] ]
 
 
-requiresElmCore : Project.Deps Constraint -> Bool
-requiresElmCore deps =
-  List.any (\(name, _) -> Package.toString name == "elm/core") deps
-
-
-requiresElmLangCore : Project.Deps Constraint -> Bool
-requiresElmLangCore deps =
-  List.any (\(name, _) -> Package.toString name == "elm-lang/core") deps
-
-
-viewInstallHelp : String -> String -> Html msg
-viewInstallHelp command package =
-  div []
-    [ h1 [] [ text "Install" ]
-    , pre []
-        [ code [] [ text (command ++ " " ++ package) ]
-        ]
-    ]
-
-
-
--- VIEW RELEASE
-
-
-viewRelease : Project.PackageInfo -> Status Time.Posix -> Html msg
-viewRelease manifest timeStatus =
-  case timeStatus of
-    Failure ->
-      text "" -- TODO
-
-    Loading ->
-      text "" -- TODO
-
-    Success time ->
-      div []
-        [ h1 [] [ text "Release" ]
-        , viewTime manifest time
-        ]
-
-
-viewTime : Project.PackageInfo -> Time.Posix -> Html msg
-viewTime manifest time =
-  let
-    releasesUrl =
-      Url.crossOrigin "https://github.com" [ Package.toString manifest.name, "releases" ] []
-  in
-  a [ href releasesUrl ]
-    [ text <|
-        String.concat
-          [ monthToString (Time.toMonth Time.utc time)
-          , " "
-          , String.fromInt (Time.toDay Time.utc time)
-          , ", "
-          , String.fromInt (Time.toYear Time.utc time)
-          ]
-    ]
+timeToString : Time.Posix -> String
+timeToString time =
+  String.fromInt (Time.toDay Time.utc time) ++ " " ++
+  monthToString (Time.toMonth Time.utc time) ++ " " ++
+  String.fromInt (Time.toYear Time.utc time)
 
 
 monthToString : Time.Month -> String
 monthToString month =
   case month of
-    Time.Jan -> "January"
-    Time.Feb -> "February"
-    Time.Mar -> "March"
-    Time.Apr -> "April"
+    Time.Jan -> "Jan"
+    Time.Feb -> "Feb"
+    Time.Mar -> "Mar"
+    Time.Apr -> "Apr"
     Time.May -> "May"
-    Time.Jun -> "June"
-    Time.Jul -> "July"
-    Time.Aug -> "August"
-    Time.Sep -> "September"
-    Time.Oct -> "October"
-    Time.Nov -> "November"
-    Time.Dec -> "December"
+    Time.Jun -> "Jun"
+    Time.Jul -> "Jul"
+    Time.Aug -> "Aug"
+    Time.Sep -> "Sep"
+    Time.Oct -> "Oct"
+    Time.Nov -> "Nov"
+    Time.Dec -> "Dec"
 
 
-
--- VIEW LICENSE
-
-
-viewLicense : Project.PackageInfo -> Html msg
-viewLicense manifest =
-  let
-    licenseUrl =
-      Url.crossOrigin
-        "https://github.com"
-        [ Package.toString manifest.name, "blob", V.toString manifest.version, "LICENSE" ]
-        []
-  in
-  div []
-    [ h1 [] [ text "License" ]
-    , a [ href licenseUrl ] [ text (License.toString manifest.license) ]
-    ]
+toLicenseUrl : Outline.PackageInfo -> String
+toLicenseUrl outline =
+  Url.crossOrigin
+    "https://github.com"
+    [ Pkg.toString outline.name, "blob", V.toString outline.version, "LICENSE" ]
+    []
 
 
+viewDependency : (Pkg.Name, C.Constraint) -> Html msg
+viewDependency (pkg, constraint) =
+  tr []
+    [ td []
+        [ case String.split "/" (Pkg.toString pkg) of
+            [author,project] ->
+              a [ href (Href.toVersion author project Nothing) ]
+                [ span [ class "light" ] [ text (author ++ "/") ]
+                , text project
+                ]
 
--- VIEW DEPENDENCIES
-
-
-viewDependencies : Project.PackageInfo -> Html msg
-viewDependencies manifest =
-  div []
-    [ h1 [] [ text "Dependencies" ]
-    , ul [] <|
-        li [] [ viewElmDependency manifest.elm ]
-          :: List.map viewDependency manifest.deps
-    ]
-
-
-viewElmDependency : Constraint -> Html msg
-viewElmDependency constraint =
-  li []
-    [ a [ href "https://guide.elm-lang.org/install/elm.html" ]
-        [ text "elm" ]
-    , text " "
-    , text (Constraint.toString constraint)
-    ]
-
-
-viewDependency : (Package.Name, Constraint) -> Html msg
-viewDependency (packageName, constraint) =
-  let
-    name = Package.toString packageName
-  in
-  li []
-    [ a [ href (Url.absolute [ "packages", name, "latest", "" ] []) ]
-        [ text name ]
-    , text " "
-    , span [ class "pkg-constraint" ] [ text (Constraint.toString constraint) ]
+            _ ->
+              text (Pkg.toString pkg)
+        ]
+    , td [] [ code [] [ text (C.toString constraint) ] ]
     ]
 
 
@@ -835,26 +710,16 @@ viewDependency (packageName, constraint) =
 
 
 navLink : String -> String -> Bool -> Html msg
-navLink =
-  navLinkHelp "pkg-nav-link"
-
-
-navModuleLink : String -> String -> Bool -> Html msg
-navModuleLink =
-  navLinkHelp "pkg-nav-module"
-
-
-navLinkHelp : String -> String -> String -> Bool -> Html msg
-navLinkHelp linkClass name url isBold =
+navLink name url isBold =
   let
     attributes =
       if isBold then
-        [ class linkClass
+        [ class "pkg-nav-module"
         , style "font-weight" "bold"
         , style "text-decoration" "underline"
         ]
       else
-        [ class linkClass
+        [ class "pkg-nav-module"
         ]
   in
   a (href url :: attributes) [ text name ]

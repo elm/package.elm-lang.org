@@ -129,6 +129,7 @@ pre {
 
 .block-list-title {
   font-size: 3em;
+  margin-bottom: 16px;
 }
 
 .markdown-block h1 {
@@ -165,17 +166,13 @@ pre {
 /* ABOUT */
 
 
-.pkg-about h1 {
-  margin-bottom: 10px;
+.pkg-about table {
+  font-family: 'Source Code Pro', Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  width: 100%;
 }
 
-.pkg-about ul {
-  list-style: none;
-  padding: 0;
-}
-
-.pkg-constraint {
-  white-space: nowrap;
+.pkg-about td {
+  padding: 4px 0;
 }
 
 
