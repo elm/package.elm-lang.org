@@ -202,7 +202,7 @@ viewSidebar =
         List.map viewPopularPackage [ "core", "html", "json", "browser", "url", "http" ]
     , h2 [] [ text "Resources" ]
     , ul []
-        [ li [] [ a [ href "https://klaftertief.github.io/elm-search/" ] [ text "Fancy Search" ] ]
+        [ li [] [ a [ href "https://klaftertief.github.io/elm-search/" ] [ text "Search by Type" ] ]
         , li [] [ a [ href "https://github.com/elm-lang/elm-package/blob/master/README.md" ] [ text "Using Packages" ] ]
         , li [] [ a [ href "/help/design-guidelines" ] [ text "API Design Guidelines" ] ]
         , li [] [ a [ href "/help/documentation-format" ] [ text "Write great docs" ] ]
