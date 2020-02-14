@@ -85,7 +85,7 @@ view toMsg details =
       [ viewHeader details.header
       , lazy viewWarning details.warning
       , Html.map toMsg <|
-          div (class "center" :: details.attrs) details.kids
+          div (class "center" :: style "flex" "1" :: details.attrs) details.kids
       , viewFooter
       ]
   }
