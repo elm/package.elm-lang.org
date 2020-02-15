@@ -164,9 +164,8 @@ viewWarning warning =
 viewFooter : Html msg
 viewFooter =
   div [class "footer"]
-    [ text "All code for this site is open source and written in Elm. "
-    , a [ class "grey-link", href "https://github.com/elm/package.elm-lang.org/" ] [ text "Check it out" ]
-    , text "! — © 2012-present Evan Czaplicki"
+    [ a [ class "grey-link", href "https://github.com/elm/package.elm-lang.org/" ] [ text "Site Source" ]
+    , text " — © 2012-2020 Evan Czaplicki"
     ]
 
 
