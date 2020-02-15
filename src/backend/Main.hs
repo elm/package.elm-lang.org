@@ -23,6 +23,7 @@ import qualified Parse.Primitives as P
 
 import qualified Artifacts
 import qualified GitHub
+import qualified Gzip
 import qualified Legacy
 import qualified Memory
 import qualified Memory.History as History
@@ -31,7 +32,6 @@ import qualified Package.Register as Register
 import qualified Server.Router as Router
 import Server.Router (Route, top, s, int, bytes, (</>), (==>))
 import qualified ServeFile
-import qualified ServeGzip
 
 
 
@@ -117,7 +117,7 @@ serve artifacts token memory =
       -- STATIC STUFF
       S.route
         [ ("assets", serveDirectoryWith customDirectoryConfig "assets")
-        , ("search.json", ServeGzip.serveGzippedFile "application/json" "search.json.gz")
+        , ("search.json", Gzip.serveFile "application/json" "search.json.gz")
         , ("robots.txt", serveFile "robots.txt")
         , ("sitemap.xml", serveFile "sitemap.xml")
         ]
@@ -266,9 +266,9 @@ serveVersion artifacts memory pkg maybeVersion vsnRoute =
               case vsnRoute of
                 VsnOverview        -> ServeFile.version artifacts pkg vsn Nothing
                 VsnAbout           -> ServeFile.version artifacts pkg vsn Nothing
-                Vsn__elm_json      -> ServeGzip.serveGzippedFile "application/json" (Path.directory pkg vsn ++ "/elm.json.gz")
-                Vsn__docs_json     -> ServeGzip.serveGzippedFile "application/json" (Path.directory pkg vsn ++ "/docs.json.gz")
-                Vsn__README_md     -> ServeGzip.serveGzippedFile "text/markdown; charset=UTF-8" (Path.directory pkg vsn ++ "/README.md.gz")
+                Vsn__elm_json      -> Gzip.serveFile "application/json" (Path.directory pkg vsn ++ "/elm.json.gz")
+                Vsn__docs_json     -> Gzip.serveFile "application/json" (Path.directory pkg vsn ++ "/docs.json.gz")
+                Vsn__README_md     -> Gzip.serveFile "text/markdown; charset=UTF-8" (Path.directory pkg vsn ++ "/README.md.gz")
                 Vsn__endpoint_json -> serveFile (Path.directory pkg vsn ++ "/endpoint.json")
                 VsnModule name     -> ServeFile.version artifacts pkg vsn (Just name)
 

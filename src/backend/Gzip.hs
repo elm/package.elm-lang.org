@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
-module ServeGzip
-  ( serveGzippedFile
+module Gzip
+  ( serveFile
   , inflateFile
   )
   where
@@ -55,8 +55,8 @@ inflateFile path =
 -- have an "Accept-Encoding: gzip" header.
 
 
-serveGzippedFile :: BS.ByteString -> FilePath -> Snap ()
-serveGzippedFile mimeType filePath =
+serveFile :: BS.ByteString -> FilePath -> Snap ()
+serveFile mimeType filePath =
   do  fileSize <- setLastModifiedOr304 filePath
       encoding <- getAcceptableEncoding
       case encoding of

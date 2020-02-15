@@ -37,11 +37,11 @@ import qualified Json.String as Json
 import qualified Parse.Primitives as P
 
 import qualified GitHub
+import qualified Gzip
 import qualified Memory
 import qualified Package.Path as Path
 import qualified Package.Releases as Releases
 import qualified Server.Error as Error
-import qualified ServeGzip
 
 
 {- Be sure to check:
@@ -187,7 +187,7 @@ uploadFiles pkg vsn time =
               requireFile pkg vsn "elm.json" files
               requireFile pkg vsn "docs.json" files
               requireHash pkg vsn dir files
-              bytes <- liftIO $ ServeGzip.inflateFile (dir </> "elm.json.gz")
+              bytes <- liftIO $ Gzip.inflateFile (dir </> "elm.json.gz")
               case D.fromByteString Outline.decoder bytes of
                 Left _ ->
                   revert pkg vsn $ "Invalid content in elm.json file."

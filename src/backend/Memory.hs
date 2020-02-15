@@ -41,10 +41,10 @@ import qualified Json.Encode as E
 import Json.Encode ((==>))
 import qualified Json.String as Json
 
+import qualified Gzip
 import qualified Helpers
 import Memory.History (History)
 import qualified Memory.History as History
-import qualified ServeGzip
 import qualified Sitemap
 
 
@@ -81,7 +81,7 @@ data Summary =
 toSummary :: Pkg.Name -> [V.Version] -> IO Summary
 toSummary pkg versions =
   do  let path = toElmJsonPath pkg (maximum versions)
-      bytes <- ServeGzip.inflateFile path
+      bytes <- Gzip.inflateFile path
       case D.fromByteString Outline.decoder bytes of
         Left _ ->
           return (Summary versions Nothing (-1))
