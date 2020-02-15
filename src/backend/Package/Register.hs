@@ -14,9 +14,10 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Validate as BSV
 import qualified Data.Either as Either
-import qualified Data.Time.Clock.POSIX as Time
+import Data.Int (Int64)
 import qualified Data.Map as Map
 import Data.Monoid ((<>))
+import qualified Data.Time.Clock.POSIX as Time
 import qualified Snap.Core as Snap
 import qualified Snap.Util.FileUploads as Snap
 import qualified System.Directory as Dir
@@ -227,13 +228,13 @@ handlePart :: Pkg.Name -> V.Version -> FilePath -> Snap.PartInfo -> SC.InputStre
 handlePart pkg vsn dir info stream =
   case Snap.partFieldName info of
     "README.md" ->
-      boundedGzipAndWrite dir "README.md" stream
+      boundedGzipAndWrite 512000 dir "README.md" stream
 
     "elm.json" ->
-      boundedGzipAndWrite dir "elm.json" stream
+      boundedGzipAndWrite 128000 dir "elm.json" stream
 
     "docs.json" ->
-      boundedGzipAndWrite dir "docs.json" stream
+      boundedGzipAndWrite 768000 dir "docs.json" stream
 
     "github-hash" ->
       boundedWriteEndpoint pkg vsn dir stream
@@ -257,21 +258,22 @@ readElmJson dir =
 -- BOUNDED GZIP AND WRITE
 
 
-boundedGzipAndWrite :: FilePath -> FilePath -> SC.InputStream BS.ByteString -> IO (Either String FilePath)
-boundedGzipAndWrite dir path input =
-  Ex.handle (exceededMaxBytes path) $
+boundedGzipAndWrite :: Int64 -> FilePath -> FilePath -> SC.InputStream BS.ByteString -> IO (Either String FilePath)
+boundedGzipAndWrite maxBytes dir path input =
+  Ex.handle (exceededMaxBytes maxBytes path) $
   SF.withFileAsOutput (dir </> path <.> "gz") $ \output ->
-    do  boundedInput <- SB.throwIfProducesMoreThan 512000 input
+    do  boundedInput <- SB.throwIfProducesMoreThan maxBytes input
         gzipper <- SZ.gzip (SZ.CompressionLevel 9) output
         SC.connect boundedInput gzipper
         return (Right path)
 
 
-exceededMaxBytes :: FilePath -> SB.TooManyBytesReadException -> IO (Either String a)
-exceededMaxBytes path _ =
+exceededMaxBytes :: Int64 -> FilePath -> SB.TooManyBytesReadException -> IO (Either String a)
+exceededMaxBytes maxBytes path _ =
   return $ Left $
-    "Your " ++ path ++ " is too big. Must be less than 512kb.\n\
-    \Let us know if this limit is too low!"
+    "Your " ++ path ++ " is too big. Must be less than "
+    ++ show (div maxBytes 1000) ++
+    "kb.\nLet us know if this limit is too low!"
 
 
 
