@@ -80,8 +80,7 @@ data Summary =
 
 toSummary :: Pkg.Name -> [V.Version] -> IO Summary
 toSummary pkg versions =
-  do  let path = toElmJsonPath pkg (maximum versions)
-      bytes <- Gzip.inflateFile path
+  do  bytes <- Gzip.inflateFile $ "packages" </> Pkg.toFilePath pkg </> V.toChars (maximum versions) </> "elm.json.gz"
       case D.fromByteString Outline.decoder bytes of
         Left _ ->
           return (Summary versions Nothing (-1))
@@ -97,11 +96,6 @@ toSummary pkg versions =
                 else Nothing
           in
           return $ Summary versions details (getWeight pkg)
-
-
-toElmJsonPath :: Pkg.Name -> V.Version -> FilePath
-toElmJsonPath pkg vsn =
-  "packages" </> Pkg.toFilePath pkg </> V.toChars vsn </> "elm.json"
 
 
 
