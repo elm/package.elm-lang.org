@@ -14,8 +14,8 @@ import qualified Data.ByteString.Char8 as BSC
 import qualified Snap.Core as S
 import qualified System.Process as Process
 
+import qualified Gzip
 import qualified Helpers
-import qualified ServeGzip
 
 
 
@@ -56,7 +56,7 @@ serveGzippedArtifact :: BS.ByteString -> BS.ByteString -> S.Snap ()
 serveGzippedArtifact mimeType hash =
   do  setETagOr304 hash
       S.modifyResponse $ S.setHeader "cache-control" "immutable"
-      ServeGzip.serveGzippedFile mimeType ("artifacts/" ++ BSC.unpack hash)
+      Gzip.serveFile mimeType ("artifacts/" ++ BSC.unpack hash)
 
 
 
