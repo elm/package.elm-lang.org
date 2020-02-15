@@ -7,7 +7,7 @@ module Package.Register
 
 
 import qualified Control.Exception as Ex
-import Control.Monad ((>=>), when)
+import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
@@ -41,6 +41,7 @@ import qualified Memory
 import qualified Package.Path as Path
 import qualified Package.Releases as Releases
 import qualified Server.Error as Error
+import qualified ServeGzip
 
 
 {- Be sure to check:
@@ -186,7 +187,7 @@ uploadFiles pkg vsn time =
               requireFile pkg vsn "elm.json" files
               requireFile pkg vsn "docs.json" files
               requireHash pkg vsn dir files
-              bytes <- liftIO $ readElmJson dir
+              bytes <- liftIO $ ServeGzip.inflateFile (dir </> "elm.json.gz")
               case D.fromByteString Outline.decoder bytes of
                 Left _ ->
                   revert pkg vsn $ "Invalid content in elm.json file."
@@ -241,17 +242,6 @@ handlePart pkg vsn dir info stream =
 
     path ->
       return $ Left $ "Did not recognize " ++ show path ++ " part in form-data"
-
-
-readElmJson :: FilePath -> IO BS.ByteString
-readElmJson dir =
-  SF.withFileAsInput (dir </> "elm.json.gz") (SZ.gunzip >=> unpack "")
-  where
-    unpack bytes input =
-      do  maybeChunk <- SC.read input
-          case maybeChunk of
-            Just chunk -> unpack (bytes <> chunk) input
-            Nothing    -> return bytes
 
 
 

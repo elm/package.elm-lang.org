@@ -1,10 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module ServeGzip
   ( serveGzippedFile
+  , inflateFile
   )
   where
 
 
+import Control.Monad ((>=>))
 import Control.Monad.Trans (liftIO)
 import qualified Data.Binary.Builder as B
 import qualified Data.ByteString as BS
@@ -22,6 +24,21 @@ import qualified System.IO.Streams.Core as S
 import qualified System.IO.Streams.File as SF
 import qualified System.IO.Streams.Zlib as SZ
 import qualified System.PosixCompat.Files as File
+
+
+
+-- INFLATE FILE
+
+
+inflateFile :: FilePath -> IO BS.ByteString
+inflateFile path =
+  SF.withFileAsInput path (SZ.gunzip >=> unpack "")
+  where
+    unpack bytes input =
+      do  maybeChunk <- S.read input
+          case maybeChunk of
+            Just chunk -> unpack (bytes <> chunk) input
+            Nothing    -> return bytes
 
 
 

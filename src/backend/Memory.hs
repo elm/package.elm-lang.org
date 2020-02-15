@@ -18,7 +18,6 @@ import Control.Concurrent
   )
 import Control.Monad (forever, join)
 import Control.Monad.Trans (liftIO)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as B
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -45,6 +44,7 @@ import qualified Json.String as Json
 import qualified Helpers
 import Memory.History (History)
 import qualified Memory.History as History
+import qualified ServeGzip
 import qualified Sitemap
 
 
@@ -81,7 +81,7 @@ data Summary =
 toSummary :: Pkg.Name -> [V.Version] -> IO Summary
 toSummary pkg versions =
   do  let path = toElmJsonPath pkg (maximum versions)
-      bytes <- BS.readFile path
+      bytes <- ServeGzip.inflateFile path
       case D.fromByteString Outline.decoder bytes of
         Left _ ->
           return (Summary versions Nothing (-1))
