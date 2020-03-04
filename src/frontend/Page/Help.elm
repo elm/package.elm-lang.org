@@ -67,7 +67,7 @@ view : Model -> Skeleton.Details msg
 view model =
   { title = model.title
   , header = []
-  , warning = Skeleton.NoProblems
+  , warnings = [Skeleton.NoProblems]
   , attrs = []
   , kids = [ viewContent model.title model.content ]
   }

@@ -96,7 +96,7 @@ view : Model -> Skeleton.Details Msg
 view model =
   { title = "Elm Packages"
   , header = []
-  , warning = Skeleton.NoProblems
+  , warnings = [Skeleton.NoProblems]
   , attrs = []
   , kids =
       [ lazy2 viewSearch model.query model.entries

@@ -231,7 +231,7 @@ view : Model -> Skeleton.Details Msg
 view model =
   { title = toTitle model
   , header = toHeader model
-  , warning = toWarning model
+  , warnings = toWarnings model
   , attrs = []
   , kids =
       [ viewContent model
@@ -296,18 +296,18 @@ toHeader model =
 -- WARNING
 
 
-toWarning : Model -> Skeleton.Warning
-toWarning model =
+toWarnings : Model -> List Skeleton.Warning
+toWarnings model =
   case Dict.get (model.author ++ "/" ++ model.project) renames of
     Just (author, project) ->
-      Skeleton.WarnMoved author project
+      [Skeleton.WarnMoved author project]
 
     Nothing ->
       case model.outline of
-        Failure -> warnIfNewer model
-        Loading -> warnIfNewer model
+        Failure -> [warnIfNewer model]
+        Loading -> [warnIfNewer model]
         Success outline ->
-          if isOld outline.elm then Skeleton.WarnOld else warnIfNewer model
+          if isOld outline.elm then [Skeleton.WarnOld, warnIfNewer model] else [warnIfNewer model]
 
 
 warnIfNewer : Model -> Skeleton.Warning

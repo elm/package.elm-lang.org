@@ -26,7 +26,7 @@ import Utils.Logo as Logo
 type alias Details msg =
   { title : String
   , header : List Segment
-  , warning : Warning
+  , warnings : List Warning
   , attrs : List (Attribute msg)
   , kids : List (Html msg)
   }
@@ -83,7 +83,7 @@ view toMsg details =
       details.title
   , body =
       [ viewHeader details.header
-      , lazy viewWarning details.warning
+      , lazy viewWarnings details.warnings
       , Html.map toMsg <|
           div (class "center" :: style "flex" "1" :: details.attrs) details.kids
       , viewFooter
@@ -126,35 +126,38 @@ viewSegment segment =
 
 -- VIEW WARNING
 
+viewWarnings : List Warning -> Html msg
+viewWarnings warnings =
+  div [ class "header-underbar" ] <|
+    List.map viewWarning warnings
 
 viewWarning : Warning -> Html msg
 viewWarning warning =
-  div [ class "header-underbar" ] <|
-    case warning of
-      NoProblems ->
-        []
+  case warning of
+    NoProblems ->
+      Html.text ""
 
-      WarnOld ->
-        [ p [ class "version-warning" ]
-            [ text "NOTE — this package is not compatible with Elm 0.19.1"
+    WarnOld ->
+      p [ class "version-warning" ]
+        [ text "NOTE — this package is not compatible with Elm 0.19.1"
+        ]
+      
+
+    WarnMoved author project ->
+      p [ class "version-warning" ]
+        [ text "NOTE — this package moved to "
+        , a [ href (Href.toVersion author project Nothing) ]
+            [ text (author ++ "/" ++ project)
             ]
         ]
+      
 
-      WarnMoved author project ->
-        [ p [ class "version-warning" ]
-            [ text "NOTE — this package moved to "
-            , a [ href (Href.toVersion author project Nothing) ]
-                [ text (author ++ "/" ++ project)
-                ]
-            ]
+    WarnNewerVersion url version ->
+      p [ class "version-warning" ]
+        [ text "NOTE — the latest version is "
+        , a [ href url ] [ text (V.toString version) ]
         ]
-
-      WarnNewerVersion url version ->
-        [ p [ class "version-warning" ]
-            [ text "NOTE — the latest version is "
-            , a [ href url ] [ text (V.toString version) ]
-            ]
-        ]
+      
 
 
 
