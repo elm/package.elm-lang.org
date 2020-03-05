@@ -107,6 +107,7 @@ serve artifacts token memory =
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "register" ==> Register.register token memory
         , s "artifacts" </> bytes ==> Artifacts.serve artifacts
+        , s "assets" </> s "fonts.css" ==> serveFonts
         , s "help" </>
             Router.oneOf
               [ s "design-guidelines" ==> ServeFile.misc artifacts "Design Guidelines"
@@ -288,3 +289,20 @@ verifyVersion maybeVersion versions =
           if elem version versions
           then Just version
           else Nothing
+
+
+
+-- SERVE FONTS
+
+
+serveFonts :: S.Snap ()
+serveFonts =
+  do  maybeHeader <- S.getsRequest (S.getHeader "User-Agent")
+      case maybeHeader of
+        Nothing ->
+          return ()
+
+        Just userAgent ->
+          if BS.isInfixOf "Macintosh" userAgent
+          then Gzip.serveFile "text/css" "assets/fonts/_hints_off.css.gz"
+          else Gzip.serveFile "text/css" "assets/fonts/_hints_on.css.gz"

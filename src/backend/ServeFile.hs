@@ -127,6 +127,7 @@ makeHtml artifacts title canonicalLink =
   <meta charset="UTF-8">
   <link rel="shortcut icon" size="16x16, 32x32, 48x48, 64x64, 128x128, 256x256" href="/assets/favicon.ico">
   <title>|] <> title <> [r|</title>|] <> canonicalLink <> [r|
+  <link rel="stylesheet" href="/assets/fonts.css">
   <link rel="stylesheet" href="/assets/style.css">
   <script src="/artifacts/|] <> B.byteString (A._elmHash artifacts) <> [r|"></script>
   <script src="/assets/highlight/highlight.pack.js"></script>
