@@ -9,7 +9,7 @@ module Page.Search exposing
 
 import Elm.Version as V
 import Html exposing (..)
-import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
+import Html.Attributes exposing (autofocus, class, href, placeholder, style, value, spellcheck, attribute)
 import Html.Events exposing (..)
 import Html.Lazy exposing (..)
 import Html.Keyed as Keyed
@@ -117,6 +117,9 @@ viewSearch query entries =
         , value query
         , onInput QueryChanged
         , autofocus True
+        , spellcheck False
+        , attribute "autocapitalize" "off"
+        , attribute "autocorrect" "off"
         ]
         []
     , case entries of
