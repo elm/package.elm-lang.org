@@ -1,6 +1,6 @@
 # [package.elm-lang.org][pkg]
 
-The source code for Elm's package website.
+The source code for Elm's lang package website.
 
 The [package website][pkg] hosts hundreds of open source projects. All are created by the Elm community to share useful bits of code with everyone else.
 
