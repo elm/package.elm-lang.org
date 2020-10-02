@@ -13,7 +13,7 @@ It is best practice to use [semantic versioning](http://semver.org/) when choosi
 ![automatic semantic versioning](https://github.com/elm-lang/elm-lang.org/blob/master/assets/home/semver.png?raw=true)
 
 
-## Reliability
+##  Reliability
 
 All community packages are written entirely in Elm, so all the things that make your apps reliable are helping make packages reliable.
 
