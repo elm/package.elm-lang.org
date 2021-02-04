@@ -17,6 +17,4 @@ It is best practice to use [semantic versioning](http://semver.org/) when choosi
 
 All community packages are written entirely in Elm, so all the things that make your apps reliable are helping make packages reliable.
 
-A small set of packages provide access to [The Web Platform](https://platform.html5.org/). These packages are managed by @elm-lang to ensure that (1) the APIs are exposed in a way that makes sense for Elm and (2) they are carefully vetted to make sure the underlying JS code is stable. We cover a decent amount of The Web Platform now, but you can always use [ports][] if something is not covered yet!
-
-[ports]: https://guide.elm-lang.org/interop/javascript.html#ports
+A small set of packages provide access to [The Web Platform](https://platform.html5.org/). These packages are managed by @elm to ensure that (1) the APIs are exposed in a way that makes sense for Elm and (2) they are carefully vetted to make sure the underlying JS code is stable. We cover a decent amount of The Web Platform now, but you can always use [ports](https://guide.elm-lang.org/interop/ports.html) or [custom elements](https://guide.elm-lang.org/interop/custom_elements.html) if something is not covered yet!
