@@ -707,12 +707,6 @@ space =
     text " "
 
 
-
--- arrow : Html msg
--- arrow =
---     span [] [ text "->" ]
-
-
 colon : Html msg
 colon =
     span [] [ text ":" ]
