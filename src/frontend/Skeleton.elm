@@ -11,9 +11,9 @@ module Skeleton exposing
 import Browser
 import Elm.Version as V
 import Href
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Lazy exposing (..)
+import Html exposing (Attribute, Html, a, div, h1, p, span, text)
+import Html.Attributes exposing (class, href, style)
+import Html.Lazy exposing (lazy)
 import Utils.Logo as Logo
 
 

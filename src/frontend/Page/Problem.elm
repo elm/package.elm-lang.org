@@ -7,8 +7,8 @@ module Page.Problem exposing
 
 import Elm.Version as V
 import Href
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Attribute, Html, a, br, code, div, p, text)
+import Html.Attributes exposing (href, style)
 
 
 

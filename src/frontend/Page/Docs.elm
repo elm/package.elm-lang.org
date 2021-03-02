@@ -20,7 +20,7 @@ import Href
 import Html exposing (Html, a, code, div, h1, h2, input, li, p, pre, span, table, td, text, tr, ul)
 import Html.Attributes exposing (class, href, placeholder, style, value)
 import Html.Events exposing (onInput)
-import Html.Lazy exposing (..)
+import Html.Lazy exposing (lazy, lazy2, lazy4, lazy5)
 import Http
 import Page.Docs.Block as Block
 import Page.Problem as Problem

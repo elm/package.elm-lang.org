@@ -9,8 +9,8 @@ import Elm.Docs as Docs
 import Elm.Type as Type
 import Elm.Version as V
 import Href
-import Html exposing (..)
-import Html.Attributes exposing (..)
+import Html exposing (Attribute, Html, a, code, div, span, text)
+import Html.Attributes exposing (class, href, id, style, title)
 import Utils.Markdown as Markdown
 
 

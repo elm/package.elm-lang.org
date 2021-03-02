@@ -8,18 +8,17 @@ module Page.Search exposing
 
 import Elm.Version as V
 import Href
-import Html exposing (..)
+import Html exposing (Html, a, b, br, code, div, h1, h2, i, input, li, p, span, text, ul)
 import Html.Attributes exposing (autofocus, class, href, placeholder, style, value)
-import Html.Events exposing (..)
+import Html.Events exposing (onInput)
 import Html.Keyed as Keyed
-import Html.Lazy exposing (..)
+import Html.Lazy exposing (lazy, lazy2)
 import Http
 import Json.Decode as Decode
 import Page.Problem as Problem
 import Page.Search.Entry as Entry
 import Session
 import Skeleton
-import Url.Builder as Url
 
 
 

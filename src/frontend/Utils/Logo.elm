@@ -1,8 +1,8 @@
 module Utils.Logo exposing (logo)
 
 import Html
-import Svg exposing (..)
-import Svg.Attributes exposing (..)
+import Svg exposing (Svg, polygon, svg)
+import Svg.Attributes exposing (fill, height, points, viewBox)
 
 
 
