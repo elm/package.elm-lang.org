@@ -10,6 +10,8 @@ import Page.Problem as Problem
 import Page.Search as Search
 import Session
 import Skeleton
+import Task
+import Time
 import Url
 import Url.Parser as Parser exposing ((</>), Parser, custom, fragment, map, oneOf, s, top)
 
@@ -37,6 +39,8 @@ main =
 type alias Model =
     { key : Nav.Key
     , page : Page
+    , now : Maybe Time.Posix
+    , timeZone : Time.Zone
     }
 
 
@@ -63,9 +67,19 @@ subscriptions _ =
 
 view : Model -> Browser.Document Msg
 view model =
+    let
+        currentYear =
+            case model.now of
+                Just x ->
+                    Time.toYear model.timeZone x
+
+                Nothing ->
+                    2021
+    in
     case model.page of
         NotFound _ ->
-            Skeleton.view never
+            Skeleton.view currentYear
+                never
                 { title = "Not Found"
                 , header = []
                 , warning = Skeleton.NoProblems
@@ -74,16 +88,16 @@ view model =
                 }
 
         Search search ->
-            Skeleton.view SearchMsg (Search.view search)
+            Skeleton.view currentYear SearchMsg (Search.view search)
 
         Docs docs ->
-            Skeleton.view DocsMsg (Docs.view docs)
+            Skeleton.view currentYear DocsMsg (Docs.view docs)
 
         Diff diff ->
-            Skeleton.view never (Diff.view diff)
+            Skeleton.view currentYear never (Diff.view diff)
 
         Help help ->
-            Skeleton.view never (Help.view help)
+            Skeleton.view currentYear never (Help.view help)
 
 
 
@@ -92,10 +106,16 @@ view model =
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init _ url key =
-    stepUrl url
-        { key = key
-        , page = NotFound Session.empty
-        }
+    let
+        ( model, cmds ) =
+            stepUrl url
+                { key = key
+                , page = NotFound Session.empty
+                , now = Nothing
+                , timeZone = Time.utc
+                }
+    in
+    ( model, Cmd.batch [ cmds, Task.perform SetTime Time.now ] )
 
 
 
@@ -110,6 +130,8 @@ type Msg
     | DiffMsg Diff.Msg
     | DocsMsg Docs.Msg
     | HelpMsg Help.Msg
+    | SetTime Time.Posix
+    | AdjustTimeZone Time.Zone
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -164,6 +186,14 @@ update message model =
 
                 _ ->
                     ( model, Cmd.none )
+
+        SetTime time ->
+            ( { model | now = Just time }, Cmd.none )
+
+        AdjustTimeZone newZone ->
+            ( { model | timeZone = newZone }
+            , Cmd.none
+            )
 
 
 stepSearch : Model -> ( Search.Model, Cmd Search.Msg ) -> ( Model, Cmd Msg )

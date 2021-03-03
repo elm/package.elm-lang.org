@@ -75,8 +75,8 @@ vsnToString maybeVersion =
 -- VIEW
 
 
-view : (a -> msg) -> Details a -> Browser.Document msg
-view toMsg details =
+view : Int -> (a -> msg) -> Details a -> Browser.Document msg
+view currentYear toMsg details =
     { title =
         details.title
     , body =
@@ -84,7 +84,7 @@ view toMsg details =
         , lazy viewWarning details.warning
         , Html.map toMsg <|
             div (class "center" :: style "flex" "1" :: details.attrs) details.kids
-        , viewFooter
+        , viewFooter currentYear
         ]
     }
 
@@ -161,11 +161,11 @@ viewWarning warning =
 -- VIEW FOOTER
 
 
-viewFooter : Html msg
-viewFooter =
+viewFooter : Int -> Html msg
+viewFooter currentYear =
     div [ class "footer" ]
         [ a [ class "grey-link", href "https://github.com/elm/package.elm-lang.org/" ] [ text "Site Source" ]
-        , text " — © 2012-2020 Evan Czaplicki"
+        , text <| " — © 2012-" ++ String.fromInt currentYear ++ " Evan Czaplicki"
         ]
 
 
