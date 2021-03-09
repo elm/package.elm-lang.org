@@ -14,6 +14,7 @@ import Task
 import Time
 import Url
 import Url.Parser as Parser exposing ((</>), Parser, custom, fragment, map, oneOf, s, top)
+import Task
 
 
 
@@ -115,7 +116,7 @@ init _ url key =
                 , timeZone = Time.utc
                 }
     in
-    ( model, Cmd.batch [ cmds, Task.perform SetTime Time.now ] )
+    ( model, Cmd.batch [ cmds, Task.perform AdjustTimeZone Time.here, Task.perform SetTime Time.now ] )
 
 
 
