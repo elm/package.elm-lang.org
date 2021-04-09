@@ -123,13 +123,6 @@ serve artifacts token memory =
     ]
 
 
-customDirectoryConfig :: S.DirectoryConfig S.Snap
-customDirectoryConfig =
-  S.simpleDirectoryConfig
-    { S.mimeTypes = HashMap.insert ".woff2" "font/woff2" S.defaultMimeTypes
-    }
-
-
 
 -- NEW PACKAGES
 
