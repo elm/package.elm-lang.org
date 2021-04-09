@@ -103,24 +103,14 @@ serve artifacts token memory =
         [ top ==> ServeFile.misc artifacts "Elm Packages"
         , s "packages" ==> S.redirect' "/" 301
         , s "packages" </> bytes </> bytes </> packageRoute ==> servePackageInfo artifacts memory
-        , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "register" ==> Register.register token memory
         , s "artifacts" </> bytes ==> Artifacts.serve artifacts
-        , s "assets" </> s "fonts.css" ==> serveFonts
         , s "help" </>
             Router.oneOf
               [ s "design-guidelines" ==> ServeFile.misc artifacts "Design Guidelines"
               , s "documentation-format" ==> ServeFile.misc artifacts "Documentation Format"
               ]
-        ]
-    ,
-      -- STATIC STUFF
-      S.route
-        [ ("assets", serveDirectoryWith customDirectoryConfig "assets")
-        , ("search.json", Gzip.serveFile "application/json" "search.json.gz")
-        , ("robots.txt", serveFile "robots.txt")
-        , ("sitemap.xml", serveFile "sitemap.xml")
         ]
     ,
       -- NOT FOUND
