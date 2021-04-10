@@ -101,9 +101,11 @@ serve artifacts token memory =
         [ top ==> ServeFile.misc artifacts "Elm Packages"
         , s "packages" ==> S.redirect' "/" 301
         , s "packages" </> bytes </> bytes </> packageRoute ==> servePackageInfo artifacts memory
+        , s "search.json" ==> Gzip.serveFile "application/json" "search.json.gz"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "register" ==> Register.register token memory
         , s "artifacts" </> bytes ==> Artifacts.serve artifacts
+        , s "assets" </> s "fonts.css" ==> serveFonts
         , s "help" </>
             Router.oneOf
               [ s "design-guidelines" ==> ServeFile.misc artifacts "Design Guidelines"
