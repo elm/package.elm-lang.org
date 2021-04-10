@@ -82,6 +82,16 @@ serveFile mimeType filePath =
                       writeBuilder . toWgetError . rqURI =<< getRequest
                       finishWith =<< getResponse
 
+                Node ->
+                  do  modifyResponse $ setResponseStatus 406 "Bad Accept-Encoding"
+                      writeBuilder noAcceptEncodingGzip
+                      finishWith =<< getResponse
+
+                Unknown ->
+                  do  modifyResponse $ setResponseStatus 406 "Bad Accept-Encoding"
+                      writeBuilder noAcceptEncodingGzip
+                      finishWith =<< getResponse
+
                 Browser ->
                   finishWith
                     . setHeader "Content-Encoding" "identity"
@@ -143,6 +153,8 @@ data UserAgent
   = Browser
   | Curl
   | Wget
+  | Node
+  | Unknown
 
 
 detectUserAgent :: Snap UserAgent
@@ -150,12 +162,13 @@ detectUserAgent =
   do  maybeHeader <- getsRequest (getHeader "User-Agent")
       case maybeHeader of
         Nothing ->
-          return Browser
+          return Unknown
 
         Just header
-          | BS.isInfixOf "curl" header -> return Curl
-          | BS.isInfixOf "Wget" header -> return Wget
-          | otherwise                  -> return Browser
+          | BS.isInfixOf "curl"    header -> return Curl
+          | BS.isInfixOf "Wget"    header -> return Wget
+          | BS.isInfixOf "node.js" header -> return Node
+          | otherwise                     -> return Browser
 
 
 toCurlError :: BS.ByteString -> B.Builder
@@ -182,6 +195,21 @@ toWgetError uri =
   \Please download the gzipped version to help reduce bandwidth costs!\n\
   \\n\
   \    wget --header=\"accept-encoding: gzip\" https://package.elm-lang.org" <> B.fromByteString uri <> " | gunzip\n\
+  \\n\
+  \Server costs are paid by individual community members, not some big company, so\n\
+  \thank you for helping out like this!\n\
+  \\n"
+
+
+
+noAcceptEncodingGzip :: B.Builder
+noAcceptEncodingGzip =
+  "-- 406 -- MISSING accept-encoding HEADER --------------\n\
+  \\n\
+  \Please download the gzipped version to help reduce bandwidth costs!\n\
+  \I need to see a request header like this:\n\
+  \\n\
+  \    \"accept-encoding: gzip\"\n\
   \\n\
   \Server costs are paid by individual community members, not some big company, so\n\
   \thank you for helping out like this!\n\
