@@ -102,6 +102,7 @@ serve artifacts token memory =
         , s "packages" ==> S.redirect' "/" 301
         , s "packages" </> bytes </> bytes </> packageRoute ==> servePackageInfo artifacts memory
         , s "search.json" ==> Gzip.serveFile "application/json" "search.json.gz"
+        , s "all-packages" ==> serveFile "all-packages.json"
         , s "all-packages" </> s "since" </> int ==> serveNewPackages memory
         , s "register" ==> Register.register token memory
         , s "artifacts" </> bytes ==> Artifacts.serve artifacts
