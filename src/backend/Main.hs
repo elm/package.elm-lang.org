@@ -5,14 +5,12 @@ module Main where
 
 import qualified Data.ByteString as BS
 import Data.Foldable (asum)
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import Data.Word (Word8)
 import GHC.Conc
 import qualified Snap.Core as S
 import qualified Snap.Http.Server as S
-import qualified Snap.Util.FileServe as S
-import Snap.Util.FileServe (serveFile, serveDirectoryWith)
+import Snap.Util.FileServe (serveFile)
 import System.Console.CmdArgs
 
 import qualified Elm.ModuleName as ModuleName
