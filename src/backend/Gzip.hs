@@ -185,6 +185,10 @@ toCurlError uri =
   \\n\
   \Server costs are paid by individual community members, not some big company, so\n\
   \thank you for helping out like this!\n\
+  \\n\
+  \NOTE: Please cache files too! Metadata files do not change, so try to download\n\
+  \them just one time per machine. And check out ~/.elm/0.19.1/packages/ to see if\n\
+  \the files cached by the Elm compiler cover what you need.\n\
   \\n"
 
 
@@ -198,6 +202,10 @@ toWgetError uri =
   \\n\
   \Server costs are paid by individual community members, not some big company, so\n\
   \thank you for helping out like this!\n\
+  \\n\
+  \NOTE: Please cache files too! Metadata files do not change, so try to download\n\
+  \them just one time per machine. And check out ~/.elm/0.19.1/packages/ to see if\n\
+  \the files cached by the Elm compiler cover what you need.\n\
   \\n"
 
 
@@ -213,6 +221,10 @@ noAcceptEncodingGzip =
   \\n\
   \Server costs are paid by individual community members, not some big company, so\n\
   \thank you for helping out like this!\n\
+  \\n\
+  \NOTE: Please cache files too! Metadata files do not change, so try to download\n\
+  \them just one time per machine. And check out ~/.elm/0.19.1/packages/ to see if\n\
+  \the files cached by the Elm compiler cover what you need.\n\
   \\n"
 
 
