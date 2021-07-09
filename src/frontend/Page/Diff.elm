@@ -92,7 +92,7 @@ view model =
       [ Skeleton.authorSegment model.author
       , Skeleton.projectSegment model.author model.project
       ]
-  , warning = Skeleton.NoProblems
+  , warnings = [Skeleton.NoProblems]
   , attrs = [ class "pkg-overview" ]
   , kids =
       case model.releases of

@@ -70,7 +70,7 @@ view model =
       Skeleton.view never
         { title = "Not Found"
         , header = []
-        , warning = Skeleton.NoProblems
+        , warnings = [Skeleton.NoProblems]
         , attrs = Problem.styles
         , kids = Problem.notFound
         }
