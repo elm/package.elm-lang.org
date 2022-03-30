@@ -185,11 +185,13 @@ type alias TypeNameDict =
 makeInfo : String -> String -> Maybe V.Version -> String -> List Docs.Module -> Info
 makeInfo author project version moduleName docsList =
   let
-    addUnion home union docs =
-      Dict.insert (home ++ "." ++ union.name) (home, union.name) docs
+    addEntry home entry docs =
+      Dict.insert (home ++ "." ++ entry.name) (home, entry.name) docs
 
     addModule docs dict =
-      List.foldl (addUnion docs.name) dict docs.unions
+      dict
+        |> \unions -> List.foldl (addEntry docs.name) unions docs.unions
+        |> \aliases -> List.foldl (addEntry docs.name) aliases docs.aliases
   in
     Info author project version moduleName <|
       List.foldl addModule Dict.empty docsList
