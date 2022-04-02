@@ -50,7 +50,7 @@ type alias Model =
   , readme : Status String
   , docs : Status (List Docs.Module)
   , outline : Status Outline.PackageInfo
-  , deps : List Session.ResolvedDep
+  , resolvedDeps : List Session.ResolvedDep
   }
 
 
@@ -115,7 +115,7 @@ getInfo latest model =
             | readme = Success readme
             , docs = Success docs
             , outline = Success outline
-            , deps = resolvedDeps
+            , resolvedDeps = resolvedDeps
         }
       , Cmd.batch
           [ scrollIfNeeded model.focus
@@ -259,7 +259,7 @@ update msg model =
 
     GotResolvedDeps version resolvedDeps ->
           ( { model
-                | deps = resolvedDeps
+                | resolvedDeps = resolvedDeps
                 , session = Session.addResolvedDeps model.author model.project version resolvedDeps model.session
             }
           , getDepsDocs model.session resolvedDeps
@@ -436,11 +436,11 @@ viewContent model =
       lazy viewReadme model.readme
 
     About ->
-      lazy2 viewAbout model.outline model.releases
+      lazy3 viewAbout model.outline model.releases model.resolvedDeps
 
     Module name tag ->
       let depsDocs =
-            model.deps
+            model.resolvedDeps
               |> List.filterMap (\resolvedDep ->
                 Session.getDocs model.session resolvedDep.author resolvedDep.project resolvedDep.version
                   |> Maybe.map (Tuple.pair resolvedDep))
@@ -711,8 +711,8 @@ viewValueItem { author, project, version } moduleName ownerName valueName =
 -- VIEW ABOUT
 
 
-viewAbout : Status Outline.PackageInfo -> Status (OneOrMore Release.Release) -> Html msg
-viewAbout outlineStatus releases =
+viewAbout : Status Outline.PackageInfo -> Status (OneOrMore Release.Release) -> List Session.ResolvedDep -> Html msg
+viewAbout outlineStatus releases resolvedDeps =
   case outlineStatus of
     Success outline ->
       div [ class "block-list pkg-about" ]
@@ -737,7 +737,7 @@ viewAbout outlineStatus releases =
             _ :: _ ->
               div []
                 [ h1 [ style "margin-top" "2em", style "margin-bottom" "0.5em" ] [ text "Dependencies" ]
-                , table [] (List.map viewDependency outline.deps)
+                , table [] (List.map (viewDependency resolvedDeps) outline.deps)
                 ]
         ]
 
@@ -793,13 +793,21 @@ toLicenseUrl outline =
     []
 
 
-viewDependency : (Pkg.Name, C.Constraint) -> Html msg
-viewDependency (pkg, constraint) =
+viewDependency : List Session.ResolvedDep -> (Pkg.Name, C.Constraint) -> Html msg
+viewDependency resolvedDeps (pkg, constraint) =
   tr []
     [ td []
         [ case String.split "/" (Pkg.toString pkg) of
             [author,project] ->
-              a [ href (Href.toVersion author project Nothing) ]
+              let depVersion =
+                    resolvedDeps
+                      |> List.filterMap (\resolvedDep ->
+                        if resolvedDep.author == author && resolvedDep.project == project
+                        then Just resolvedDep.version
+                        else Nothing)
+                      |> List.head
+              in
+              a [ href (Href.toVersion author project depVersion) ]
                 [ span [ class "light" ] [ text (author ++ "/") ]
                 , text project
                 ]
