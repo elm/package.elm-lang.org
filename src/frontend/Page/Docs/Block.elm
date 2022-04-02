@@ -12,6 +12,7 @@ import Elm.Version as V
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Href
+import Session
 import Utils.Markdown as Markdown
 
 
@@ -168,6 +169,20 @@ unionMore info =
 
 -- INFO
 
+type alias LinkInfo r =
+  { r
+  | author : String
+  , project : String
+  , version : Maybe V.Version
+  , moduleName : String
+  }
+
+
+type alias DepInfo =
+  { resolvedDep : Session.ResolvedDep
+  , typeNameDict : TypeNameDict
+  }
+
 
 type alias Info =
   { author : String
@@ -175,6 +190,7 @@ type alias Info =
   , version : Maybe V.Version
   , moduleName : String
   , typeNameDict : TypeNameDict
+  , depsInfo : List DepInfo
   }
 
 
@@ -182,18 +198,28 @@ type alias TypeNameDict =
   Dict.Dict String (String, String)
 
 
-makeInfo : String -> String -> Maybe V.Version -> String -> List Docs.Module -> Info
-makeInfo author project version moduleName docsList =
+typeNameDictFromDocs : List Docs.Module -> TypeNameDict
+typeNameDictFromDocs docsList =
   let
-    addUnion home union docs =
-      Dict.insert (home ++ "." ++ union.name) (home, union.name) docs
+    addEntry home entry docs =
+      Dict.insert (home ++ "." ++ entry.name) (home, entry.name) docs
 
     addModule docs dict =
-      List.foldl (addUnion docs.name) dict docs.unions
+      dict
+        |> \unions -> List.foldl (addEntry docs.name) unions docs.unions
+        |> \aliases -> List.foldl (addEntry docs.name) aliases docs.aliases
   in
-    Info author project version moduleName <|
-      List.foldl addModule Dict.empty docsList
+  List.foldl addModule Dict.empty docsList
 
+
+makeInfo : String -> String -> Maybe V.Version -> String -> List Docs.Module -> List (Session.ResolvedDep, List Docs.Module) -> Info
+makeInfo author project version moduleName docsList depsDocs =
+  let depsInfo =
+        depsDocs
+          |> List.map (\(resolvedDep, depDocs) ->
+              DepInfo resolvedDep (typeNameDictFromDocs depDocs))
+  in
+  Info author project version moduleName (typeNameDictFromDocs docsList) depsInfo
 
 
 -- CREATE LINKS
@@ -209,7 +235,7 @@ bold =
   style "font-weight" "bold"
 
 
-makeLink : Info -> List (Attribute msg) -> String -> String -> Html msg
+makeLink : LinkInfo r -> List (Attribute msg) -> String -> String -> Html msg
 makeLink {author, project, version, moduleName} attrs tagName humanName =
   let
     url =
@@ -222,11 +248,34 @@ toLinkLine : Info -> String -> Lines (Line msg)
 toLinkLine info qualifiedName =
   case Dict.get qualifiedName info.typeNameDict of
     Nothing ->
-      let
-        shortName =
-          last qualifiedName (String.split "." qualifiedName)
+      let depRef =
+            info.depsInfo
+              |> List.filterMap (\i ->
+                  i.typeNameDict
+                    |> Dict.get qualifiedName
+                    |> Maybe.map (Tuple.pair i))
+              |> List.head
       in
-      One (String.length shortName) [ span [ title qualifiedName ] [ text shortName ] ]
+      case depRef of
+        Nothing ->
+          let
+            shortName =
+              last qualifiedName (String.split "." qualifiedName)
+          in
+          One (String.length shortName) [ span [ title qualifiedName ] [ text shortName ] ]
+
+        Just (depInfo, (moduleName, name)) ->
+          One (String.length name)
+            [ makeLink
+              { author = depInfo.resolvedDep.author
+              , project = depInfo.resolvedDep.project
+              , version = Just depInfo.resolvedDep.version
+              , moduleName = moduleName
+              }
+              []
+              name
+              name
+            ]
 
     Just (moduleName, name) ->
       One (String.length name) [ makeLink { info | moduleName = moduleName } [] name name ]

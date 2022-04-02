@@ -50,6 +50,7 @@ type alias Model =
   , readme : Status String
   , docs : Status (List Docs.Module)
   , outline : Status Outline.PackageInfo
+  , resolvedDeps : List Session.ResolvedDep
   }
 
 
@@ -79,13 +80,12 @@ init session author project version focus =
   case Session.getReleases session author project of
     Just releases ->
       getInfo (Release.getLatestVersion releases) <|
-        Model session author project version focus "" (Success releases) Loading Loading Loading
+        Model session author project version focus "" (Success releases) Loading Loading Loading []
 
     Nothing ->
-      ( Model session author project version focus "" Loading Loading Loading Loading
+      ( Model session author project version focus "" Loading Loading Loading Loading []
       , Http.send GotReleases (Session.fetchReleases author project)
       )
-
 
 getInfo : V.Version -> Model -> ( Model, Cmd Msg )
 getInfo latest model =
@@ -94,10 +94,11 @@ getInfo latest model =
     project = model.project
     version = Maybe.withDefault latest model.version
     maybeInfo =
-      Maybe.map3 (\a b c -> (a,b,c))
+      Maybe.map4 (\a b c d -> ((a,b),(c,d)))
         (Session.getReadme model.session author project version)
         (Session.getDocs model.session author project version)
         (Session.getOutline model.session author project version)
+        (Session.getResolvedDeps model.session author project version)
   in
   case maybeInfo of
     Nothing ->
@@ -109,14 +110,31 @@ getInfo latest model =
           ]
       )
 
-    Just (readme, docs, outline) ->
+    Just ((readme, docs), (outline, resolvedDeps)) ->
       ( { model
             | readme = Success readme
             , docs = Success docs
             , outline = Success outline
+            , resolvedDeps = resolvedDeps
         }
-      , scrollIfNeeded model.focus
+      , Cmd.batch
+          [ scrollIfNeeded model.focus
+          , getDepsDocs model.session resolvedDeps
+          ]
       )
+
+
+getDepsDocs : Session.Data -> List Session.ResolvedDep -> Cmd Msg
+getDepsDocs session resolvedDeps =
+  resolvedDeps
+    |> List.filter (\resolvedDep ->
+      case Session.getDocs session resolvedDep.author resolvedDep.project resolvedDep.version of
+        Just _ -> False -- No need to fetch docs once again
+        Maybe.Nothing -> True)
+    |> List.map (\resolvedDep ->
+        Session.fetchDocs resolvedDep.author resolvedDep.project resolvedDep.version
+          |> Http.send (GotDepDocs resolvedDep))
+    |> Cmd.batch
 
 
 scrollIfNeeded : Focus -> Cmd Msg
@@ -143,6 +161,8 @@ type Msg
   | GotReadme V.Version (Result Http.Error String)
   | GotDocs V.Version (Result Http.Error (List Docs.Module))
   | GotOutline V.Version (Result Http.Error Outline.PackageInfo)
+  | GotResolvedDeps V.Version (List Session.ResolvedDep)
+  | GotDepDocs Session.ResolvedDep (Result Http.Error (List Docs.Module))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -207,6 +227,21 @@ update msg model =
           , scrollIfNeeded model.focus
           )
 
+    GotDepDocs resolvedDep result ->
+      case result of
+        Ok docs ->
+          ( { model
+                | session = Session.addDocs resolvedDep.author resolvedDep.project resolvedDep.version docs model.session
+                }
+          , Cmd.none
+          )
+
+        _ ->
+          ( model
+          , Cmd.none
+          )
+
+
     GotOutline version result ->
       case result of
         Err _ ->
@@ -219,9 +254,16 @@ update msg model =
                 | outline = Success outline
                 , session = Session.addOutline model.author model.project version outline model.session
             }
-          , Cmd.none
+          , Task.perform (GotResolvedDeps version) (Session.fetchResolvedDeps outline)
           )
 
+    GotResolvedDeps version resolvedDeps ->
+          ( { model
+                | resolvedDeps = resolvedDeps
+                , session = Session.addResolvedDeps model.author model.project version resolvedDeps model.session
+            }
+          , getDepsDocs model.session resolvedDeps
+          )
 
 
 -- VIEW
@@ -394,10 +436,16 @@ viewContent model =
       lazy viewReadme model.readme
 
     About ->
-      lazy2 viewAbout model.outline model.releases
+      lazy3 viewAbout model.outline model.releases model.resolvedDeps
 
     Module name tag ->
-      lazy5 viewModule model.author model.project model.version name model.docs
+      let depsDocs =
+            model.resolvedDeps
+              |> List.filterMap (\resolvedDep ->
+                Session.getDocs model.session resolvedDep.author resolvedDep.project resolvedDep.version
+                  |> Maybe.map (Tuple.pair resolvedDep))
+      in
+      lazy6 viewModule model.author model.project model.version name model.docs depsDocs
 
 
 
@@ -423,15 +471,15 @@ viewReadme status =
 -- VIEW MODULE
 
 
-viewModule : String -> String -> Maybe V.Version -> String -> Status (List Docs.Module) -> Html msg
-viewModule author project version name status =
+viewModule : String -> String -> Maybe V.Version -> String -> Status (List Docs.Module) -> List (Session.ResolvedDep, List Docs.Module) -> Html msg
+viewModule author project version name status depsDocs =
   case status of
     Success allDocs ->
       case findModule name allDocs of
         Just docs ->
           let
             header = h1 [class "block-list-title"] [ text name ]
-            info = Block.makeInfo author project version name allDocs
+            info = Block.makeInfo author project version name allDocs depsDocs
             blocks = List.map (Block.view info) (Docs.toBlocks docs)
           in
           div [ class "block-list" ] (header :: blocks)
@@ -663,8 +711,8 @@ viewValueItem { author, project, version } moduleName ownerName valueName =
 -- VIEW ABOUT
 
 
-viewAbout : Status Outline.PackageInfo -> Status (OneOrMore Release.Release) -> Html msg
-viewAbout outlineStatus releases =
+viewAbout : Status Outline.PackageInfo -> Status (OneOrMore Release.Release) -> List Session.ResolvedDep -> Html msg
+viewAbout outlineStatus releases resolvedDeps =
   case outlineStatus of
     Success outline ->
       div [ class "block-list pkg-about" ]
@@ -689,7 +737,7 @@ viewAbout outlineStatus releases =
             _ :: _ ->
               div []
                 [ h1 [ style "margin-top" "2em", style "margin-bottom" "0.5em" ] [ text "Dependencies" ]
-                , table [] (List.map viewDependency outline.deps)
+                , table [] (List.map (viewDependency resolvedDeps) outline.deps)
                 ]
         ]
 
@@ -745,13 +793,21 @@ toLicenseUrl outline =
     []
 
 
-viewDependency : (Pkg.Name, C.Constraint) -> Html msg
-viewDependency (pkg, constraint) =
+viewDependency : List Session.ResolvedDep -> (Pkg.Name, C.Constraint) -> Html msg
+viewDependency resolvedDeps (pkg, constraint) =
   tr []
     [ td []
         [ case String.split "/" (Pkg.toString pkg) of
             [author,project] ->
-              a [ href (Href.toVersion author project Nothing) ]
+              let depVersion =
+                    resolvedDeps
+                      |> List.filterMap (\resolvedDep ->
+                        if resolvedDep.author == author && resolvedDep.project == project
+                        then Just resolvedDep.version
+                        else Nothing)
+                      |> List.head
+              in
+              a [ href (Href.toVersion author project depVersion) ]
                 [ span [ class "light" ] [ text (author ++ "/") ]
                 , text project
                 ]
