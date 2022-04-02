@@ -6,6 +6,10 @@ module Session exposing
   , getReleases
   , addReleases
   , fetchReleases
+  , ResolvedDep
+  , getResolvedDeps
+  , addResolvedDeps
+  , fetchResolvedDeps
   , getReadme
   , addReadme
   , fetchReadme
@@ -19,13 +23,16 @@ module Session exposing
 
 
 import Dict
+import Elm.Constraint as C
 import Elm.Docs as Docs
+import Elm.Package as Pkg
 import Elm.Project as Outline
 import Elm.Version as V
 import Http
 import Json.Decode as Decode
 import Page.Search.Entry as Entry
 import Release
+import Task
 import Url.Builder as Url
 import Utils.OneOrMore exposing (OneOrMore(..))
 
@@ -33,19 +40,27 @@ import Utils.OneOrMore exposing (OneOrMore(..))
 
 -- SESSION DATA
 
+{-| Dependencies with the most recent version that matches the constraints of a given package
+-}
+type alias ResolvedDep =
+  { author : String
+  , project : String
+  , version : V.Version
+  }
 
 type alias Data =
   { entries : Maybe (List Entry.Entry)
   , releases : Dict.Dict String (OneOrMore Release.Release)
   , readmes : Dict.Dict String String
   , docs : Dict.Dict String (List Docs.Module)
-  , outlines: Dict.Dict String Outline.PackageInfo
+  , outlines : Dict.Dict String Outline.PackageInfo
+  , deps : Dict.Dict String (List ResolvedDep)
   }
 
 
 empty : Data
 empty =
-  Data Nothing Dict.empty Dict.empty Dict.empty Dict.empty
+  Data Nothing Dict.empty Dict.empty Dict.empty Dict.empty Dict.empty
 
 
 
@@ -91,6 +106,61 @@ fetchReleases author project =
     (Url.absolute [ "packages", author, project, "releases.json" ] [])
     Release.decoder
 
+
+-- ResolvedDeps
+
+getResolvedDeps : Data -> String -> String -> V.Version -> Maybe (List ResolvedDep)
+getResolvedDeps data author project version =
+  Dict.get (toVsnKey author project version) data.deps
+
+addResolvedDeps : String -> String -> V.Version -> List ResolvedDep -> Data -> Data
+addResolvedDeps author project version deps data =
+  let
+    newDeps =
+      Dict.insert (toVsnKey author project version) deps data.deps
+  in
+  { data | deps = newDeps }
+
+{-| Attempt to resolve the most recent version of each dependency matching
+its associated constraints.
+
+If a dependency couldn't be resolved (network issue or not available on
+package.elm-lang.org) it is simply omitted from the list of resolved
+dependencies. Therefore the list of resolved dependencies does not always
+constitute an exhaustive list of the dependencies of a package.
+-}
+fetchResolvedDeps : Outline.PackageInfo -> Task.Task Never (List ResolvedDep)
+fetchResolvedDeps pkgInfo =
+  pkgInfo.deps
+    |> List.map fetchResolvedDep
+    |> Task.sequence
+    |> Task.map (List.filterMap identity)
+
+fetchResolvedDep : (Pkg.Name, C.Constraint) -> Task.Task Never (Maybe ResolvedDep)
+fetchResolvedDep (pkg, constraint) =
+  let mostRecentValidVersion author project releases =
+        releases
+          |> Utils.OneOrMore.toList
+          |> List.filterMap (\release ->
+              if C.check release.version constraint
+              then Just release
+              else Nothing)
+          |> List.sortBy .time
+          |> List.reverse
+          |> List.head
+          |> Maybe.map (\release ->
+            { author = author
+            , project = project
+            , version = release.version
+            })
+  in
+  case String.split "/" (Pkg.toString pkg) of
+      [author,project] ->
+          fetchReleases author project
+            |> Http.toTask
+            |> Task.map (mostRecentValidVersion author project)
+            |> Task.onError (\_ -> Task.succeed Nothing) -- A dep couldn't be resolved at this time
+      _ -> Task.succeed Nothing
 
 
 -- README
