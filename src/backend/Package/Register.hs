@@ -235,7 +235,7 @@ handlePart pkg vsn dir info stream =
       boundedGzipAndWrite 128000 dir "elm.json" stream
 
     "docs.json" ->
-      boundedGzipAndWrite 768000 dir "docs.json" stream
+      boundedGzipAndWrite 1024000  dir "docs.json" stream
 
     "github-hash" ->
       boundedWriteEndpoint pkg vsn dir stream
