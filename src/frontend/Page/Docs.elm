@@ -484,6 +484,9 @@ viewSidebar model =
         [ placeholder "Search"
         , value model.query
         , onInput QueryChanged
+        , spellcheck False
+        , attribute "autocapitalize" "off"
+        , attribute "autocorrect" "off"
         ]
         []
     , viewSidebarModules model
