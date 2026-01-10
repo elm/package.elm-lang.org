@@ -24,7 +24,7 @@ function download {
 		fi
 	done
 
-	sed -i "" "s!https.*/\([a-zA-Z0-9_-]*\.woff2\)!/$DIR/\1!g" $CSS
+	sed -i "s!https.*/\([a-zA-Z0-9_-]*\.woff2\)!/$DIR/\1!g" $CSS
 	gzip -9 $CSS
 }
 
